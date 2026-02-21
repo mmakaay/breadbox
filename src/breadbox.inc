@@ -1,7 +1,14 @@
 .ifndef BREADBOX_INC
 BREADBOX_INC = 1
 
-; Include all macros.
+; Configuration, to be provided by the project that uses BREADBOX.
+.include "config.inc"
+
+; Include all macros. These only have compile-time effect, so it is
+; safe to simply include them all in here, allowing for a simple
+; `.include "breadbox.inc"` in the code that uses macros.
+.include "core/cpu_shims.inc"
+.include "core/delay.inc"
 .include "core/boot.inc"
 .include "core/vectors.inc"
 

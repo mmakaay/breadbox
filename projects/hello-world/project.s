@@ -6,14 +6,10 @@ greeting:
     .asciiz "Hello, world!"
 
 .proc main
-    TRAMPOLINE_TO other
+    TRAMPOLINE_TO jumped_upon
     HALT
 .endproc
 
-.proc other
-    lda #$ff
-    nop
-    nop
-    nop
+.proc jumped_upon
     rts
 .endproc

@@ -5,10 +5,14 @@ help:
 build: clean
     #!/bin/bash
     echo "Building rom.bin for project ..."
-    ca65 -I "{{justfile_directory()}}/src" src/core/boot.s
-    ca65 -I "{{justfile_directory()}}/src" src/core/vectors.s
-    cd "{{invocation_directory()}}"
-    ca65 -I "{{invocation_directory()}}" -I "{{justfile_directory()}}/src/" project.s
+    PROJECT="{{invocation_directory()}}"
+    SRC="{{justfile_directory()}}/src"
+    ca65 -I "$PROJECT" -I "$SRC" src/core/boot.s
+    ca65 -I "$PROJECT" -I "$SRC" src/core/vectors.s
+    ca65 -I "$PROJECT" -I "$SRC" src/core/delay.s
+    ca65 -I "$PROJECT" -I "$SRC" src/core/cpu_shims.s
+    cd "$PROJECT"
+    ca65 -I "$PROJECT" -I "$SRC" project.s
     ld65 \
         --config "{{justfile_directory()}}/src/breadbox.cfg" \
         {{justfile_directory()}}/src/core/*.o \

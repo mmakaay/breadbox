@@ -1,3 +1,6 @@
+.ifndef CORE_BOOT_INC
+CORE_BOOT_INC = 1
+
 ; =========================================================================
 ; Halt program execution.
 
@@ -31,3 +34,5 @@
     sta __core_trampoline_to + 1
     jsr __core_trampoline
 .endmacro
+
+.endif
