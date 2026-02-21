@@ -6,6 +6,14 @@ greeting:
     .asciiz "Hello, world!"
 
 .proc main
-;    PRINT LCD0, greeting
+    TRAMPOLINE_TO other
     HALT
+.endproc
+
+.proc other
+    lda #$ff
+    nop
+    nop
+    nop
+    rts
 .endproc

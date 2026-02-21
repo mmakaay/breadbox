@@ -1,10 +1,8 @@
-.scope KERNAL
+.include "breadbox.inc"
 
-    .include "breadbox.inc"
+.import __core_boot                  ; Import KERNAL boot subprocedure.
 
-    .import __core_boot              ; Import KERNAL boot subprocedure.
-    
-    .constructor init_vectors, 32    ; max priority, to let it run first
+.constructor init_vectors, 32        ; Add constructor, max prio to run early.
 
 .segment "ZEROPAGE"
 
@@ -47,5 +45,3 @@
     .word dispatch_nmi         ; Non-Maskable Interrupt vector
     .word __core_boot          ; Reset vector
     .word dispatch_irq         ; IRQ vector
-
-.endscope

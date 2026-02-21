@@ -1,12 +1,12 @@
-.scope KERNAL
+.export __core_boot = boot           ; Export to make it available to vectors.s
+.export __core_halt = halt
+.exportzp __core_trampoline_to = trampoline_to
+.export __core_trampoline = trampoline
 
-    .export __core_boot = boot       ; Export to make it available to vectors.s
-    .export __core_halt = halt       ; Used by macro `HALT`
-
-    .import main                     ; The subroutine to start after initialization
-    .import __INIT_TABLE__           ; Start of the constructor pointer table
-    .import __INIT_COUNT__           ; Number of entries (word)
-        
+.import main                         ; The subroutine to start after initialization
+.import __INIT_TABLE__               ; Start of the constructor pointer table
+.import __INIT_COUNT__               ; Number of entries (word)
+    
 .segment "ZEROPAGE"        
         
     ptr:            .res 2           ; Scratch space for indirect calls
@@ -80,12 +80,14 @@
 
         ; =========================================================================
         ; Halt program execution.
+        ;
+        ; Use the `HALT` macro to jump to this function.
 
-        ; Can be jumped to (jmp KERNAL::halt), to halt the computer.
-        halt:
+        .proc halt
             sei                      ; Disable interrupts, they must not break loop.
         @loop:                       ; Loop indefinitely.
             jmp @loop
+        .endproc
 
         ; =========================================================================
         ; Classic 6502 JSR trampoline.
@@ -104,16 +106,4 @@
             jmp (trampoline_to)
         .endproc
 
-        .macro TRAMPOLINE_TO _target_routine
-            lda #<_target_routine
-            sta trampoline_to
-            lda #>_target_routine
-            sta trampoline_to + 1
-            jsr trampoline
-        .endmacro
-
 .segment "ZEROPAGE"
-
-
-
-.endscope
