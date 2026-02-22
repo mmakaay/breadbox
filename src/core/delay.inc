@@ -1,7 +1,7 @@
 .ifndef CORE_DELAY_INC
 CORE_DELAY_INC = 1
 
-.importzp __core_delay
+.import   __core_delay
 .importzp __core_delay_iterations
 
 MHZ = 1000000  ; Can be used to define the clock speed (e.g. 4 * MHZ)
@@ -43,7 +43,7 @@ MHZ = 1000000  ; Can be used to define the clock speed (e.g. 4 * MHZ)
     .local ITERATIONS
     ITERATIONS = (us * (::CPU_CLOCK / 1000000)) / 5
     DELAY ITERATIONS
- endmacro
+ .endmacro
 
 ; =========================================================================
 ; Compile-time millisecond delay.

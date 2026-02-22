@@ -2,7 +2,7 @@
 CORE_CPU_SHIMS_INC = 1
 
 ; Macros that make `phx`, `plx`, `phy` and `ply` available for 6502 CPUs.
-; These are only real instructions on a 65C02.
+; These only exist on 65C02.
 
 .if .not .ismnemonic(phx)
     .importzp __core_cpu_shim_scratch_byte

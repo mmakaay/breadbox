@@ -1,6 +1,9 @@
 help:
     @just --list
 
+fix:
+    ruff check --fix
+
 # Build ROM from invocation directory
 build: clean
     #!/bin/bash
@@ -13,10 +16,12 @@ build: clean
     ca65 -I "$PROJECT" -I "$SRC" src/core/cpu_shims.s
     cd "$PROJECT"
     ca65 -I "$PROJECT" -I "$SRC" project.s
+    ca65 -I "$PROJECT" -I "$SRC" generated/hardware.s
     ld65 \
         --config "{{justfile_directory()}}/src/breadbox.cfg" \
         {{justfile_directory()}}/src/core/*.o \
         project.o \
+        generated/*.o \
         -o rom.bin
 
 dump:

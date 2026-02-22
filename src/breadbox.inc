@@ -1,8 +1,8 @@
 .ifndef BREADBOX_INC
 BREADBOX_INC = 1
 
-; Configuration, to be provided by the project that uses BREADBOX.
-.include "config.inc"
+; Generatd code.
+.include "generated/hardware.inc"
 
 ; Include all macros. These only have compile-time effect, so it is
 ; safe to simply include them all in here, allowing for a simple

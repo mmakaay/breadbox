@@ -9,3 +9,5 @@
 /src/config.inc
 /.vscode
 /AGENTS.md
+/.venv
+**/generated/

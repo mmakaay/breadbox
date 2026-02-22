@@ -1,4 +1,4 @@
-.include "breadbox.inc"
+.include "core/vectors.inc"
 
 .import __core_boot                  ; Import KERNAL boot subprocedure.
 

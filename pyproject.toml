@@ -1,0 +1,66 @@
+[project]
+name = "breadbox"
+version = "0.1.0"
+description = "Hardware abstraction layer and code generator for 6502 breadboard computers"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.15",
+    "pyyaml>=6.0",
+    "pydantic>=2.12.5",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pyright",
+  "ruff",
+]
+
+[project.scripts]
+breadbox = "breadbox.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+include = [
+    "breadbox/**/*.py",
+]
+line-length = 120
+indent-width = 4
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "B", # flake8-bugbear
+    "B9",
+    "C4", # flake8-comprehensions
+    "E", # pycodestyle
+    "F", # Pyflakes
+    "I", # isort
+    "PGH", # pygrep-hooks
+    "PIE", # flake8-pie
+    "PYI", # flake8-pyi
+    "RUF",
+    "SIM", # flake8-simplify
+    "TID", # flake8-tidy-imports
+    "UP", # pyupgrade
+]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.flake8-bugbear]
+extend-immutable-calls = ["typer.Option", "typer.Argument"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.pyright]
+include = ["breadbox/"]
