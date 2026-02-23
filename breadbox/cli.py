@@ -11,10 +11,9 @@ app = typer.Typer()
 console = Console()
 
 @app.command()
-def generate(project_dir: Path = typer.Argument(".", help="Project directory")) -> int:
+def generate(project_dir: Path = typer.Argument(".", help="Project directory")) -> None:
     config = BreadboxConfig(project_dir)
-    print(config)
-           
+
 # def gen(
 #     project_dir: Path = typer.Argument(
 #         ".", help="Project directory containing hardware.yml"

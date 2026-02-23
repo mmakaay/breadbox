@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from breadbox.types.device_identifier import DeviceIdentifier
 
+
 class CmndSettings(BaseModel):
     bus: DeviceIdentifier
     rwb_pin: str

@@ -1,4 +1,3 @@
-from breadbox.components.gpio_pin.settings import GpioPinSettings
 from breadbox.types.device import Device
 
 

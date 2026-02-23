@@ -6,6 +6,7 @@ from breadbox.drivers.w65c22 import (
     generate_gpio_group_macros,
     generate_gpio_pin_macros,
     generate_init,
+
 )
 
 DRIVERS = {"w65c22"}

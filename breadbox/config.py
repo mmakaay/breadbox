@@ -1,9 +1,10 @@
 import importlib
 import sys
 from pathlib import Path
-from typing import Any, NoReturn, Protocol
-from pydantic import validate_call
+from typing import Any, NoReturn
+
 import yaml
+from pydantic import validate_call
 from rich.console import Console
 
 from breadbox.types.device import Device
@@ -20,7 +21,8 @@ class BreadboxConfig:
         self.devices: dict[DeviceIdentifier, Device] = {}
         self._resolve_config()
 
-    def error(self, msg) -> NoReturn:
+    @staticmethod
+    def error(msg) -> NoReturn:
         console.print(f"[red]{msg}[/red]")
         sys.exit(1)
 
@@ -29,7 +31,7 @@ class BreadboxConfig:
         try:
             return self.devices[device_id]
         except KeyError:
-            raise ValueError(f"Device ID {device_id!r} not found")
+            raise ValueError(f"Device ID {device_id!r} not found") from None
 
 
     def _find_config_path(self) -> Path:
@@ -57,12 +59,12 @@ class BreadboxConfig:
         for device_id, settings in self.config_data.items():
             console.print(f"  [blue]{device_id}[/blue]")
 
-            # Determine the comopnenet type.
+            # Determine the component type.
             try:
                 component_type = settings["component"]
                 del settings["component"]
             except KeyError:
-                component_type = device_id
+                component_type = device_id.lower()
 
             # Load the python module for the current component type.
             module_name = f"breadbox.components.{component_type}.component"
@@ -71,7 +73,7 @@ class BreadboxConfig:
             except ModuleNotFoundError:
                 self.error(f"No implementation found for component type {component_type!r}")
 
-            device: Device = module.resolve(self, settings)
+            device: Device = module.resolve(self, device_id, settings)
             self.devices[DeviceIdentifier(device_id)] = device
 
             # Show information about the resolved device.

@@ -1,5 +1,5 @@
 CPU: # Special name, triggers automatic selection of component "cpu".
-  component: cpu # <-- therefore this line could be omitted.
+  #component: cpu # <-- therefore this line could be omitted.
   type: 65c02
   clock_mhz: 1.0
 
@@ -19,29 +19,35 @@ STATUS_LED:
   direction: out   # limits generated code to only output macros
   pin: PA0    # Automatically derives use of Port A on the via0 bus
 
-PROGRESS_LEDS:
-  component: gpio_group
-  bus: VIA1
-  direction: both
-  pins:
-    - PA0
-    - PA2
-    - PA5
-    - PA6
-    - PA7
+#PROGRESS_LEDS:
+#  component: gpio_group
+#  bus: VIA1
+#  direction: both
+#  pins:
+#    - PA0
+#    - PA2
+#    - PA5
+#    - PA6
+#    - PA7
+
+#SOME_8BIT_PORT:
+#  component: port
+#  bus: VIA0
+#  port: A
+#  direction: out
 
 LCD0:
   component: lcd_hd44780
    # This is how we can make sure that cmnd and data are both on a
    # single bus.
   cmnd:
-    bus: via0
+    bus: VIA0
     rwb_pin: PA5  # PA* automatically selects Port A for these
     en_pin: PA6
     rs_pin: PA7
   data:
      mode: 4bit # 4bit or 8bit, to indicate 4 or 8 bit data transfers
-     bus: via1
+     bus: VIA1
      # required for 4 bits, pins PB4, PB5, PB6 and PB7, so selecting Port B also.
      # Other options: PA0-3, PA4-7, PB0-3
      # These options keep the pins next to each other, and on a clear "nibble"

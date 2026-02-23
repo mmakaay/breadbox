@@ -1,7 +1,8 @@
 help:
     @just --list
 
-fix:
+check:
+    pyright
     ruff check --fix
 
 # Build ROM from invocation directory

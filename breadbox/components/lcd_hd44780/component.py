@@ -1,23 +1,54 @@
-import importlib
 from typing import Any
 
-from breadbox.components.gpio_pin.abstract_gpio_pin_device import AbstractGpioPinDevice
-from breadbox.components.gpio_pin.settings import GpioPinSettings
 from breadbox.components.lcd_hd44780.device import LcdHd44780Device
 from breadbox.components.lcd_hd44780.settings import LcdHd44780Settings
 from breadbox.config import BreadboxConfig
+from breadbox.components.gpio_pin import component as gpio_pin_component
+from breadbox.types.device_identifier import DeviceIdentifier
 
-
-def resolve(config: BreadboxConfig, device_settings: dict[str, Any]) -> LcdHd44780Device:
+def resolve(
+        breadbox: BreadboxConfig,
+        device_id: DeviceIdentifier,
+        device_settings: dict[str, Any],
+) -> LcdHd44780Device:
     settings = LcdHd44780Settings.model_validate(device_settings)
 
-    #bus_device = config.get(settings.bus)
-    #
-    #bus_type = bus_device.component_type
-    #module_name = f"breadbox.components.{bus_type}.gpio_pin.component"
-    #try:
-    #    module = importlib.import_module(module_name)
-    #except ModuleNotFoundError:
-    #    raise ValueError(f"Bus type {bus_type!r} does not support gpio_pin (no module {module_name})")
+    en_pin = gpio_pin_component.resolve(
+        breadbox,
+        DeviceIdentifier("PIN_EN"),
+        {
+            "bus": settings.cmnd.bus,
+            "pin": settings.cmnd.en_pin,
+            "direction": "out",
+        }
+    )
 
-    return LcdHd44780Device(settings=settings)
+    rs_pin = gpio_pin_component.resolve(
+        breadbox,
+        DeviceIdentifier("PIN_RS"),
+        {
+            "bus": settings.cmnd.bus,
+            "pin": settings.cmnd.rs_pin,
+            "direction": "out",
+        }
+    )
+
+    rwb_pin = gpio_pin_component.resolve(
+        breadbox,
+        DeviceIdentifier("PIN_RWB"),
+        {
+            "bus": settings.cmnd.bus,
+            "pin": settings.cmnd.rwb_pin,
+            "direction": "out",
+        }
+    )
+
+    print(en_pin.device_path)
+
+    return LcdHd44780Device(
+        id=device_id,
+        settings=settings,
+        rs_pin=rs_pin,
+        rwb_pin=rwb_pin,
+        en_pin=en_pin,
+    )

@@ -1,5 +1,6 @@
 import re
-from typing import Annotated, Any
+from typing import Any
+
 from pydantic_core import core_schema
 
 _DEVICE_ID_RE = re.compile(r'^[A-Za-z][A-Za-z0-9_]{3,}$')
@@ -16,6 +17,11 @@ class DeviceIdentifier(str):
     def _validate(cls, value: Any) -> "DeviceIdentifier":
         if not isinstance(value, str):
             raise ValueError(f"Expected a string, got {type(value).__name__!r}")
+
+        # Special value that is allowed, even though it is only 3 chars long.
+        if value.lower() == "cpu":
+            return cls(value)
+
         if not _DEVICE_ID_RE.match(value):
             raise ValueError(
                 f"{value!r} is not a valid DeviceIdentifier "

@@ -1,5 +1,6 @@
-from typing import Annotated, Any
-from pydantic import BaseModel, GetCoreSchemaHandler
+from typing import Any
+
+from pydantic import GetCoreSchemaHandler
 from pydantic_core import core_schema
 
 

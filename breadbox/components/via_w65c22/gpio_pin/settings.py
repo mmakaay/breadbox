@@ -1,8 +1,10 @@
-from breadbox.components.gpio_pin.settings import GpioPinSettings
-from breadbox.components.via_w65c22.device import ViaW65c22Device
 import re
 from typing import Any
+
 from pydantic_core import core_schema
+
+from breadbox.components.gpio_pin.settings import GpioPinSettings
+from breadbox.components.via_w65c22.device import ViaW65c22Device
 
 _PORT_PIN_RE = re.compile(r'^P[AB][0-7]$')
 

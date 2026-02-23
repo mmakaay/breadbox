@@ -2,7 +2,7 @@
 name = "breadbox"
 version = "0.1.0"
 description = "Hardware abstraction layer and code generator for 6502 breadboard computers"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 dependencies = [
     "typer>=0.15",
     "pyyaml>=6.0",
@@ -28,7 +28,7 @@ include = [
 ]
 line-length = 120
 indent-width = 4
-target-version = "py311"
+target-version = "py313"
 
 [tool.ruff.lint]
 select = [
