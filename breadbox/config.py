@@ -19,19 +19,19 @@ class BreadboxConfig:
         self.config_data = self._load_config_data()
         self.devices: dict[DeviceIdentifier, Device] = {}
         self._resolve_config()
-    
+
     def error(self, msg) -> NoReturn:
         console.print(f"[red]{msg}[/red]")
         sys.exit(1)
-    
+
     @validate_call
     def get(self, device_id: DeviceIdentifier) -> Device:
         try:
             return self.devices[device_id]
         except KeyError:
             raise ValueError(f"Device ID {device_id!r} not found")
-        
-    
+
+
     def _find_config_path(self) -> Path:
         """
         Check a couple of configuration file name options, to see which one to use.
@@ -63,7 +63,7 @@ class BreadboxConfig:
                 del settings["component"]
             except KeyError:
                 component_type = device_id
-                
+
             # Load the python module for the current component type.
             module_name = f"breadbox.components.{component_type}.component"
             try:
@@ -71,12 +71,9 @@ class BreadboxConfig:
             except ModuleNotFoundError:
                 self.error(f"No implementation found for component type {component_type!r}")
 
-            # Let the module turn the configuration into a device object.              
             device: Device = module.resolve(self, settings)
-            self.devices[device_id] = device
-            
+            self.devices[DeviceIdentifier(device_id)] = device
+
             # Show information about the resolved device.
             for name, value in device.get_info().items():
                 console.print(f"    [bold]{name}[/bold]: {value}")
-
-    

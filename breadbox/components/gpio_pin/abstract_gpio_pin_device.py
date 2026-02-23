@@ -2,8 +2,7 @@ from breadbox.components.gpio_pin.settings import GpioPinSettings
 from breadbox.types.device import Device
 
 
-class AbstractGpioPinDevice[T: GpioPinSettings](Device):
-    settings: T
+class AbstractGpioPinDevice(Device):
 
     def get_info(self) -> dict[str, str]:
         return {

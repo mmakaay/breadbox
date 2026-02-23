@@ -19,6 +19,17 @@ STATUS_LED:
   direction: out   # limits generated code to only output macros
   pin: PA0    # Automatically derives use of Port A on the via0 bus
 
+PROGRESS_LEDS:
+  component: gpio_group
+  bus: VIA1
+  direction: both
+  pins:
+    - PA0
+    - PA2
+    - PA5
+    - PA6
+    - PA7
+
 LCD0:
   component: lcd_hd44780
    # This is how we can make sure that cmnd and data are both on a

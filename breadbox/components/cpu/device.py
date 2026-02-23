@@ -3,6 +3,7 @@ from breadbox.types.device import Device
 
 
 class CpuDevice(Device):
+    component_type: str = "cpu"
     settings: CpuSettings
 
     def get_info(self) -> dict[str, str]:
