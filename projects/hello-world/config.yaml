@@ -1,39 +1,38 @@
-cpu: # Special name, triggers automatic selection of component "cpu".
+CPU: # Special name, triggers automatic selection of component "cpu".
   component: cpu # <-- therefore this line could be omitted.
   type: 65c02
   clock_mhz: 1.0
 
 # First "bus" device.
-via0:
+VIA0:
   component: via_w65c22
   address: $6000
 
 # Second "bus" device.
-via1:
+VIA1:
   component: via_w65c22
   address: $6100
 
-status_led:
+STATUS_LED:
   component: gpio_pin  # the via0 component has to handle this for codegen
-  bus: via0
+  bus: VIA0
   direction: out   # limits generated code to only output macros
   pin: PA0    # Automatically derives use of Port A on the via0 bus
 
-# lcd0:
-#   component: lcd_hd44780
-#   # This is how we can make sure that cmnd and data are both on a
-#   # single bus.
-#   cmnd:
-#     bus: via0
-#     rwb_pin: PA5  # PA* automatically selects Port A for these
-#     en_pin: PA6
-#     rs_pin: PA7
-#   data:
-#     mode: 4 # 4 or 8, to indicate 4 or 8 bit data transfers
-#     bus: via1
-#     # required for 4 bits, pins PB4, PB5, PB6 and PB7, so selecting Port B also.
-#     # Other options: PA0-3, PA4-7, PB0-3
-#     # These options keep the pins next to each other, and on a clear "nibble"
-#     # set of pins. That is the least complex (and CPU intensive) for driving them.
-#     pins: PB4-7 
-    
+LCD0:
+  component: lcd_hd44780
+   # This is how we can make sure that cmnd and data are both on a
+   # single bus.
+  cmnd:
+    bus: via0
+    rwb_pin: PA5  # PA* automatically selects Port A for these
+    en_pin: PA6
+    rs_pin: PA7
+  data:
+     mode: 4bit # 4bit or 8bit, to indicate 4 or 8 bit data transfers
+     bus: via1
+     # required for 4 bits, pins PB4, PB5, PB6 and PB7, so selecting Port B also.
+     # Other options: PA0-3, PA4-7, PB0-3
+     # These options keep the pins next to each other, and on a clear "nibble"
+     # set of pins. That is the least complex (and CPU intensive) for driving them.
+     pins: PB4-7
