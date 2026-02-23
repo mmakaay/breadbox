@@ -4,6 +4,8 @@
 **/*.lst
 **/*.map
 **/*.sw?
+**/*.pyc
+__pycache__
 /cc65
 /emulator
 /src/config.inc

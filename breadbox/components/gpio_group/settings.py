@@ -1,17 +1,18 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 from breadbox.types.device_identifier import DeviceIdentifier
 from breadbox.types.on_off import OnOff
-from breadbox.types.pin_direction import PinDirection
 
 
-class GpioPinSettings(BaseModel):
+class GpioGroupSettings(BaseModel):
     """
-    Base settings that apply to all GPIO pin devices.
+    Base settings that apply to all GPIO pin groups.
 
-    Additional values (like the actual pin name, which are specific to the pin naming
+    Additional values (like the actual pin names, which are specific to the pin naming
     as used for the bus device in use) are to be handled by the bus device implementation.
     """
     bus: DeviceIdentifier
-    direction: PinDirection = PinDirection("both")
+    direction: Literal["out", "in", "both"] = "both"
     default: OnOff = "off"

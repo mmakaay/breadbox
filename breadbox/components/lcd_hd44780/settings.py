@@ -11,10 +11,11 @@ class CmndSettings(BaseModel):
     en_pin: str
     rs_pin: str
 
+
 class DataSettings(BaseModel):
-    mode: Literal["4bit", "8bit"]
     bus: DeviceIdentifier
-    pins: Literal["PA0-3", "PA4-7", "PB0-3", "PB4-7"]
+    mode: Literal["4bit", "8bit"]
+    port: str
 
 
 class LcdHd44780Settings(BaseModel):

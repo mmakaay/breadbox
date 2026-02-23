@@ -1,23 +1,25 @@
 from abc import ABC
 from functools import cached_property
-from typing import Self, Any
+from typing import Any, Generic, TypeVar
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from breadbox.types.device_identifier import DeviceIdentifier
 
+TSettings = TypeVar("TSettings", bound=BaseModel)
 
-class Device[TSettings: BaseModel](ABC, BaseModel):
+
+class Device(ABC, BaseModel, Generic[TSettings]):
     id: DeviceIdentifier
     component_type: str
     settings: TSettings
 
-    parent: "Device[Any] | None" = None
+    parent: "Device | None" = None
     """
     The parent Device that contains this Device.
     """
 
-    def get_sub_devices(self) -> list["Device[Any]"]:
+    def get_sub_devices(self) -> list["Device"]:
         """
         Returns the sub-devices, contained by this Device.
 
