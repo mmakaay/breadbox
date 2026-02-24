@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import ClassVar
+from dataclasses import dataclass
 
 from breadbox.types.device import Device
 from breadbox.types.device_identifier import DeviceIdentifier
@@ -35,9 +34,4 @@ class DataSettings:
 
 @dataclass(kw_only=True)
 class LcdHd44780Device(Device):
-    cmnd: CmndSettings
-    data: DataSettings
-
-    def __post_init__(self) -> None:
-        super().__post_init__()
-        self._internal_fields.update({"cmnd", "data"})
+    pass

@@ -15,7 +15,7 @@ def resolve(
     cmnd = CmndSettings(**device_settings["cmnd"])
     data = DataSettings(**device_settings["data"])
 
-    device = LcdHd44780Device(id=device_id, cmnd=cmnd, data=data)
+    device = LcdHd44780Device(id=device_id)
 
     device.add(
         gpio_pin_component.resolve(
@@ -43,7 +43,7 @@ def resolve(
 
     mode = data.mode.upper()
     if mode == "4BIT":
-        bits = 0b00001111
+        bits = 0b11110000
     elif mode == "8BIT":
         bits = 0b11111111
     else:

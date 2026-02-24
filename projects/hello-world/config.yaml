@@ -46,8 +46,8 @@ LCD0:
     rs_pin: PA7
   data:
     bus: VIA1
-    mode: 8bit
-    port: c       # 4- bit mode uses pins 4-7, 8-bit mode uses all pins.
+    mode: 4bit
+    port: B       # 4- bit mode uses pins 4-7, 8-bit mode uses all pins.
 
 #UART0
 #  component: uart_6551
