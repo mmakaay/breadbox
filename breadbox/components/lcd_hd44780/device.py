@@ -1,27 +1,39 @@
 from __future__ import annotations
 
-from typing import Literal
-
-from pydantic import BaseModel
+from dataclasses import dataclass
+from typing import ClassVar
 
 from breadbox.types.device import Device
 from breadbox.types.device_identifier import DeviceIdentifier
 
 
-class CmndSettings(BaseModel):
+@dataclass(kw_only=True)
+class CmndSettings:
     bus: DeviceIdentifier
     rwb_pin: str
     en_pin: str
     rs_pin: str
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.bus, DeviceIdentifier):
+            self.bus = DeviceIdentifier(self.bus)
 
-class DataSettings(BaseModel):
+
+@dataclass(kw_only=True)
+class DataSettings:
     bus: DeviceIdentifier
-    mode: Literal["4bit", "8bit"]
+    mode: str
     port: str
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.bus, DeviceIdentifier):
+            self.bus = DeviceIdentifier(self.bus)
+        if self.mode not in ("4bit", "8bit"):
+            raise ValueError(f"Invalid mode {self.mode!r} (expected '4bit' or '8bit')")
 
+
+@dataclass(kw_only=True)
 class LcdHd44780Device(Device):
-    component_type: str = "lcd_hd44780"
+    component_type: ClassVar[str] = "lcd_hd44780"
     cmnd: CmndSettings
     data: DataSettings

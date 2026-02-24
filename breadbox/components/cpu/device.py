@@ -1,14 +1,22 @@
-from typing import Literal
-
-from pydantic import PositiveFloat
+from dataclasses import dataclass
+from typing import ClassVar
 
 from breadbox.types.device import Device
 
 
+@dataclass(kw_only=True)
 class CpuDevice(Device):
-    component_type: str = "cpu"
-    type: Literal["6502", "65c02"] = "6502"
-    clock_mhz: PositiveFloat
+    component_type: ClassVar[str] = "cpu"
+    type: str = "6502"
+    clock_mhz: float
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.clock_mhz = float(self.clock_mhz)
+        if self.clock_mhz <= 0:
+            raise ValueError(f"clock_mhz must be positive, got {self.clock_mhz}")
+        if self.type not in ("6502", "65c02"):
+            raise ValueError(f"Invalid CPU type {self.type!r} (expected '6502' or '65c02')")
 
     @property
     def clock_hz(self) -> int:

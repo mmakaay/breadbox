@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+import dataclasses
 from abc import ABC
 from functools import cached_property
-from typing import TYPE_CHECKING
-
-from pydantic import BaseModel, ConfigDict, PrivateAttr
+from typing import TYPE_CHECKING, ClassVar, get_origin, get_type_hints
 
 from breadbox.types.device_identifier import DeviceIdentifier
 
@@ -12,15 +11,36 @@ if TYPE_CHECKING:
     from breadbox.visitor import DeviceVisitor
 
 
-class Device(ABC, BaseModel):
-    model_config = ConfigDict(ignored_types=(cached_property,), arbitrary_types_allowed=True)
-
+@dataclasses.dataclass(kw_only=True)
+class Device(ABC):
     id: DeviceIdentifier
-    component_type: str
-    parent: Device | None = None
+    component_type: ClassVar[str]
+    parent: Device | None = dataclasses.field(default=None, repr=False)
 
-    _internal_fields: set[str] = {"id", "component_type", "parent"}
-    _devices: list[Device] = PrivateAttr(default_factory=list)
+    _internal_fields: ClassVar[set[str]] = {"id", "parent"}
+
+    def __post_init__(self) -> None:
+        self._devices: list[Device] = []
+        self._coerce_fields()
+
+    def _coerce_fields(self) -> None:
+        """Auto-coerce scalar fields whose declared type is a custom str/int subclass.
+
+        This allows raw YAML values (plain strings/ints) to be automatically
+        validated and converted to their declared types (DeviceIdentifier,
+        Address16, PinDirection, OnOff, etc.) without manual coercion in
+        every component resolver.
+        """
+        hints = get_type_hints(type(self))
+        for f in dataclasses.fields(self):
+            hint = hints.get(f.name)
+            if hint is None or get_origin(hint) is not None:
+                continue
+            if not isinstance(hint, type) or hint in (str, int, float, bool) or not issubclass(hint, (str, int)):
+                continue
+            value = getattr(self, f.name)
+            if value is not None and not isinstance(value, hint):
+                setattr(self, f.name, hint(value))
 
     @property
     def devices(self) -> list[Device]:

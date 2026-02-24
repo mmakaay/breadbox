@@ -52,13 +52,15 @@ class BreadboxConfig:
         return data
 
     def _resolve_config(self) -> None:
-        for device_id, settings in self.config_data.items():
+        for raw_id, settings in self.config_data.items():
+            device_id = DeviceIdentifier(raw_id)
+
             # Determine the component type.
             try:
                 component_type = settings["component"]
                 del settings["component"]
             except KeyError:
-                component_type = device_id.lower()
+                component_type = raw_id.lower()
 
             # Load the python module for the current component type.
             module_name = f"breadbox.components.{component_type}.component"
@@ -68,7 +70,7 @@ class BreadboxConfig:
                 self.error(f"No implementation found for component type {component_type!r}")
 
             device: Device = module.resolve(self, device_id, settings)
-            self.devices[DeviceIdentifier(device_id)] = device
+            self.devices[device_id] = device
 
     def _print_config(self) -> None:
         printer = ConfigPrinter(console)

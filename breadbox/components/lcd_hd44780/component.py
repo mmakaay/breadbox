@@ -12,8 +12,8 @@ def resolve(
     device_id: DeviceIdentifier,
     device_settings: dict[str, Any],
 ) -> LcdHd44780Device:
-    cmnd = CmndSettings.model_validate(device_settings["cmnd"])
-    data = DataSettings.model_validate(device_settings["data"])
+    cmnd = CmndSettings(**device_settings["cmnd"])
+    data = DataSettings(**device_settings["data"])
 
     device = LcdHd44780Device(id=device_id, cmnd=cmnd, data=data)
 
