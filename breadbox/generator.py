@@ -69,6 +69,11 @@ class CodeGenerator:
         if self.output_dir.exists():
             shutil.rmtree(self.output_dir)
         self.output_dir.mkdir(parents=True)
+        # Tag the build root as a cache directory for backup tools.
+        (self.output_dir.parent / "CACHEDIR.TAG").write_text(
+            "Signature: 8a477f597d28d172789f06886806bc55\n"
+            "# This directory is managed by breadbox and can be safely regenerated.\n"
+        )
 
     def _create_template_env(self) -> Environment:
         """
