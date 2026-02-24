@@ -14,9 +14,9 @@ console = Console()
 
 
 class BreadboxConfig:
-    def __init__(self, project_dir: Path) -> None:
-        self.project_dir = project_dir
-        self.config_path = self._find_config_path()
+    def __init__(self, config_path: Path) -> None:
+        self.config_path = self._resolve_config_path(config_path)
+        self.project_dir = self.config_path.parent
         self.config_data = self._load_config_data()
         self.devices: dict[DeviceIdentifier, Device] = {}
         self._resolve_config()
@@ -28,15 +28,20 @@ class BreadboxConfig:
         except KeyError:
             raise ValueError(f"Device '{device_id}' not found") from None
 
-    def _find_config_path(self) -> Path:
-        config_paths = [
-            self.project_dir / "config.yml",
-            self.project_dir / "config.yaml",
-        ]
-        try:
-            return next(p for p in config_paths if p.exists())
-        except StopIteration:
-            raise ConfigError("No config.yaml found in project directory") from None
+    @staticmethod
+    def _resolve_config_path(config_path: Path) -> Path:
+        """
+        Resolve the configuration file path.
+
+        Falls back to the alternate YAML extension (.yaml ↔ .yml)
+        if the given path does not exist.
+        """
+        if config_path.is_file():
+            return config_path
+        alt = config_path.with_suffix(".yml" if config_path.suffix == ".yaml" else ".yaml")
+        if alt.is_file():
+            return alt
+        raise ConfigError(f"Configuration file not found: {config_path}")
 
     def _load_config_data(self) -> dict[str, Any]:
         console.print(f"[green]Load config from:[/green] {self.config_path}")
