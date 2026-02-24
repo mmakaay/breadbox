@@ -11,7 +11,7 @@ test:
 build:
     #!/bin/bash
     cd "{{invocation_directory()}}"
-    breadbox build -v
+    breadbox build
 
 dump:
     #!/bin/bash
