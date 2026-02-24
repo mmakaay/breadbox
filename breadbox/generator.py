@@ -231,6 +231,7 @@ class CodeGenerator:
         """
         context: dict = {
             "device_id": str(device.id),
+            "macro_prefix": device.device_path.replace("::", "_"),
             "component_type": device.component_type,
         }
         for f in dataclasses.fields(device):
