@@ -19,7 +19,7 @@
 ;   A = clobbered
 
 {% if exclusive_port %}
-.macro {{ device_id }}_on
+.macro {{ macro_prefix }}_on
 {% if BIDIR %}
     lda #{{ MASK | hex }}
     sta {{ DDR_REG }}
@@ -30,7 +30,7 @@
 {% endif %}
 .endmacro
 {% else %}
-.macro {{ device_id }}_on
+.macro {{ macro_prefix }}_on
 {% if BIDIR %}
     lda {{ DDR_REG }}
     ora #{{ MASK | hex }}
@@ -53,7 +53,7 @@
 ;   A = clobbered
 
 {% if exclusive_port %}
-.macro {{ device_id }}_off
+.macro {{ macro_prefix }}_off
 {% if BIDIR %}
     lda #{{ MASK | hex }}
     sta {{ DDR_REG }}
@@ -62,7 +62,7 @@
     sta {{ PORT_REG }}
 .endmacro
 {% else %}
-.macro {{ device_id }}_off
+.macro {{ macro_prefix }}_off
 {% if BIDIR %}
     lda {{ DDR_REG }}
     ora #{{ MASK | hex }}
@@ -84,7 +84,7 @@
 ; Out:
 ;   A = clobbered
 
-.macro {{ device_id }}_toggle
+.macro {{ macro_prefix }}_toggle
 {% if BIDIR %}
 {% if exclusive_port %}
     lda #{{ MASK | hex }}
@@ -112,7 +112,7 @@
 ; Out:
 ;   A = pin state (bit {{ pin[-1] }}, masked)
 
-.macro {{ device_id }}_read
+.macro {{ macro_prefix }}_read
 {% if BIDIR %}
 {% if exclusive_port %}
     lda #$00
@@ -127,3 +127,29 @@
     and #{{ MASK | hex }}
 .endmacro
 {% endif %}
+
+; =========================================================================
+; Imports and public API scope
+;
+; Provides cross-file access to GPIO pin procedures.
+; Usage: jsr {{ macro_prefix }}::turn_on, jsr {{ macro_prefix }}::read, etc.
+; =========================================================================
+.ifndef __{{ macro_prefix | upper }}_IMPL
+{% if direction in ("out", "both") %}
+.import __{{ macro_prefix }}_turn_on, __{{ macro_prefix }}_turn_off, __{{ macro_prefix }}_toggle
+{% endif %}
+{% if direction in ("in", "both") %}
+.import __{{ macro_prefix }}_read
+{% endif %}
+
+.scope {{ macro_prefix }}
+{% if direction in ("out", "both") %}
+    turn_on  = __{{ macro_prefix }}_turn_on
+    turn_off = __{{ macro_prefix }}_turn_off
+    toggle   = __{{ macro_prefix }}_toggle
+{% endif %}
+{% if direction in ("in", "both") %}
+    read     = __{{ macro_prefix }}_read
+{% endif %}
+.endscope
+.endif  ; .ifndef __{{ macro_prefix | upper }}_IMPL

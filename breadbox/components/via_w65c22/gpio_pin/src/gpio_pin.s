@@ -2,8 +2,9 @@
 ; GPIO pin: {{ device_id }} ({{ pin }} on {{ bus_device.id }}, port {{ port }})
 ;
 ; Subroutine wrappers for {{ device_id }} macros.
-; Call via JSR, e.g. `jsr {{ device_id }}::turn_on`.
+; Call via JSR, e.g. `jsr {{ macro_prefix }}::turn_on`.
 
+__{{ macro_prefix | upper }}_IMPL = 1
 .include "breadbox.inc"
 
 {% set PORT_REG = bus_device.id ~ "_PORT" ~ port %}
@@ -13,15 +14,15 @@
 .segment "KERNAL"
 {% if default is not none %}
 
-; =========================================================================
-; Initialize {{ device_id }}: set DDR to output and apply default ({{ default }}).
-;
-; Called automatically during boot via .constructor.
-;
-; Out:
-;   A = clobbered
+    ; =========================================================================
+    ; Initialize {{ device_id }}: set DDR to output and apply default ({{ default }}).
+    ;
+    ; Called automatically during boot via .constructor.
+    ;
+    ; Out:
+    ;   A = clobbered
 
-    .proc init_{{ device_id | lower }}
+    .proc init_{{ macro_prefix | lower }}
 {% if exclusive_port %}
         lda #{{ MASK | hex }}
         sta {{ DDR_REG }}
@@ -47,20 +48,18 @@
 {% endif %}
         rts
     .endproc
-    .constructor init_{{ device_id | lower }}
+    .constructor init_{{ macro_prefix | lower }}
 {% endif %}
 
-.scope {{ device_id }}
 {% if direction in ("out", "both") %}
-
     ; =====================================================================
     ; Set {{ device_id }} output high.
     ;
     ; Out:
     ;   A = clobbered
 
-    .proc turn_on
-        {{ device_id }}_on
+    .proc _{{ macro_prefix }}_turn_on
+        {{ macro_prefix }}_on
         rts
     .endproc
 
@@ -70,8 +69,8 @@
     ; Out:
     ;   A = clobbered
 
-    .proc turn_off
-        {{ device_id }}_off
+    .proc _{{ macro_prefix }}_turn_off
+        {{ macro_prefix }}_off
         rts
     .endproc
 
@@ -81,8 +80,8 @@
     ; Out:
     ;   A = clobbered
 
-    .proc toggle
-        {{ device_id }}_toggle
+    .proc _{{ macro_prefix }}_toggle
+        {{ macro_prefix }}_toggle
         rts
     .endproc
 {% endif %}
@@ -94,9 +93,21 @@
     ; Out:
     ;   A = pin state (bit {{ pin[-1] }}, masked)
 
-    .proc read
-        {{ device_id }}_read
+    .proc _{{ macro_prefix }}_read
+        {{ macro_prefix }}_read
         rts
     .endproc
 {% endif %}
-.endscope
+
+; =========================================================================
+; Exports
+; =========================================================================
+
+{% if direction in ("out", "both") %}
+.export __{{ macro_prefix }}_turn_on  = _{{ macro_prefix }}_turn_on
+.export __{{ macro_prefix }}_turn_off = _{{ macro_prefix }}_turn_off
+.export __{{ macro_prefix }}_toggle   = _{{ macro_prefix }}_toggle
+{% endif %}
+{% if direction in ("in", "both") %}
+.export __{{ macro_prefix }}_read     = _{{ macro_prefix }}_read
+{% endif %}
