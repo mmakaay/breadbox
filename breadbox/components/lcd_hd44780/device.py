@@ -35,7 +35,9 @@ class DataSettings:
 @dataclass(kw_only=True)
 class LcdHd44780Device(Device):
     def validate_pins(self) -> None:
-        """Verify that no physical pin is used by more than one sub-device."""
+        """
+        Verify that no physical pin is used by more than one sub-device.
+        """
         seen: set[tuple[str, str]] = set()
         for sub in self.devices:
             bus = getattr(sub, "bus", None)
@@ -49,7 +51,9 @@ class LcdHd44780Device(Device):
 
     @staticmethod
     def _pins_of(sub: Device) -> list[str]:
-        """Extract pin name(s) from a gpio_pin or gpio_group sub-device."""
+        """
+        Extract pin name(s) from a gpio_pin or gpio_group sub-device.
+        """
         pin = getattr(sub, "pin", None)
         if pin is not None:
             return [str(pin)]
