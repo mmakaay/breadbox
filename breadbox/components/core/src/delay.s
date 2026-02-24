@@ -18,7 +18,6 @@
     ;   iterations = 16-bit iteration counter, in zeropage
 
     .proc delay
-        pha
         phx
         phy
 
@@ -33,6 +32,5 @@
 
         ply
         plx
-        pla
         rts
     .endproc
