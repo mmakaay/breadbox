@@ -6,6 +6,8 @@
 
 {% set P = macro_prefix %}
 
+.ifndef __{{ P | upper }}_IMPL
+
 ; =========================================================================
 ; Imports
 ; =========================================================================
@@ -52,6 +54,7 @@
     home       = __{{ P }}_home
     print      = __{{ P }}_print
 .endscope
+.endif  ; .ifndef __{{ P | upper }}_IMPL
 
 ; =========================================================================
 ; Set cursor position to the beginning of a display line.

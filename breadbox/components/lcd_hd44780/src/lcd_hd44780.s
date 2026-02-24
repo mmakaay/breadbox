@@ -8,6 +8,8 @@
 ; Public API: init, write_cmnd, write, clr, home, print.
 ; Call via JSR, e.g. `jsr {{ macro_prefix }}::write`.
 
+{% set P = macro_prefix %}
+__{{ P | upper }}_IMPL = 1
 .include "breadbox.inc"
 
 {% set P = macro_prefix %}
