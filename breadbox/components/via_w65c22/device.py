@@ -60,6 +60,35 @@ class ViaW65c22Device(Device):
             return True
         return sum(1 for c in self._bus_clients if getattr(c, "port", None) == port) <= 1
 
+    def validate_bus_clients(self) -> None:
+        """
+        Check that no physical pin is claimed by multiple bus clients.
+        """
+        pin_owners: dict[str, Device] = {}
+        for client in self._bus_clients:
+            pins = self._client_pins(client)
+            for pin in pins:
+                if pin in pin_owners:
+                    other = pin_owners[pin]
+                    raise ValueError(
+                        f"Pin conflict on {self.id}: pin {pin} is used by both"
+                        f" {other.device_path!r} and {client.device_path!r}"
+                    )
+                pin_owners[pin] = client
+
+    @staticmethod
+    def _client_pins(device: Device) -> list[str]:
+        """
+        Extract the physical pin names claimed by a bus client.
+        """
+        pin = getattr(device, "pin", None)
+        if pin is not None:
+            return [str(pin)]
+        pins = getattr(device, "pins", None)
+        if pins is not None:
+            return [str(p) for p in pins]
+        return []
+
     @staticmethod
     def get_port(port: str) -> list[str]:
         try:

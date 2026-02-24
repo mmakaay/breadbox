@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
+from breadbox.errors import ConfigError
 from breadbox.visitors.bus_client_collector import BusClientCollector
 
 if TYPE_CHECKING:
@@ -53,6 +54,7 @@ class CodeGenerator:
         """
         self._prepare_output_dir()
         self._collect_bus_clients()
+        self._validate_bus_clients()
         for device in self.config.devices.values():
             if device.parent is None:
                 device.accept(self)
@@ -78,6 +80,19 @@ class CodeGenerator:
         for device in self.config.devices.values():
             if device.parent is None:
                 device.accept(self._bus_collector)
+
+    def _validate_bus_clients(self) -> None:
+        """
+        Ask each device to validate its registered bus clients.
+
+        Wraps any ValueError from device validation as ConfigError
+        so the CLI can display it cleanly without a stack trace.
+        """
+        for device in self.config.devices.values():
+            try:
+                device.validate_bus_clients()
+            except ValueError as e:
+                raise ConfigError(str(e)) from None
 
     def _prepare_output_dir(self) -> None:
         """

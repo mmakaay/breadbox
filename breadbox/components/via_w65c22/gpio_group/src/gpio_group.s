@@ -6,7 +6,49 @@
 
 .include "breadbox.inc"
 
+{% set PORT_REG = bus_device.id ~ "_PORT" ~ port %}
+{% set DDR_REG = bus_device.id ~ "_DDR" ~ port %}
+{% set MASK = bits | int %}
+{% set INV_MASK = 255 - MASK %}
 .segment "KERNAL"
+{% if default is not none %}
+
+; =========================================================================
+; Initialize {{ device_id }}: set DDR to output and apply default ({{ default }}).
+;
+; Called automatically during boot via .constructor.
+;
+; Out:
+;   A = clobbered
+
+    .proc init_{{ device_id | lower }}
+{% if exclusive_port %}
+        lda #{{ MASK | hex }}
+        sta {{ DDR_REG }}
+{% if default == "on" %}
+        sta {{ PORT_REG }}
+{% else %}
+        lda #$00
+        sta {{ PORT_REG }}
+{% endif %}
+{% else %}
+        lda {{ DDR_REG }}
+        ora #{{ MASK | hex }}
+        sta {{ DDR_REG }}
+{% if default == "on" %}
+        lda {{ PORT_REG }}
+        ora #{{ MASK | hex }}
+        sta {{ PORT_REG }}
+{% else %}
+        lda {{ PORT_REG }}
+        and #{{ INV_MASK | hex }}
+        sta {{ PORT_REG }}
+{% endif %}
+{% endif %}
+        rts
+    .endproc
+    .constructor init_{{ device_id | lower }}
+{% endif %}
 
 .scope {{ device_id }}
 {% if direction in ("out", "both") %}

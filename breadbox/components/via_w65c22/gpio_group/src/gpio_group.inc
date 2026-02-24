@@ -5,11 +5,16 @@
 {% set DDR_REG = bus_device.id ~ "_DDR" ~ port %}
 {% set MASK = bits | int %}
 {% set INV_MASK = 255 - MASK %}
+{% set BIDIR = (direction == "both") %}
 {% if direction in ("out", "both") %}
 
 ; =========================================================================
 ; Write a value to {{ device_id }}.
 ;
+{% if BIDIR %}
+; Switches DDR to output before writing.
+;
+{% endif %}
 ; The value must use only the bits within the group mask ({{ bits | hex }}).
 ; Bits outside the mask are ignored{% if not exclusive_port %} and preserved{% endif %}.
 ;
@@ -20,11 +25,20 @@
 
 {% if exclusive_port %}
 .macro {{ device_id }}_write value
+{% if BIDIR %}
+    lda #{{ MASK | hex }}
+    sta {{ DDR_REG }}
+{% endif %}
     lda #value
     sta {{ PORT_REG }}
 .endmacro
 {% else %}
 .macro {{ device_id }}_write value
+{% if BIDIR %}
+    lda {{ DDR_REG }}
+    ora #{{ MASK | hex }}
+    sta {{ DDR_REG }}
+{% endif %}
     lda {{ PORT_REG }}
     and #{{ INV_MASK | hex }}
     ora #value
@@ -35,16 +49,31 @@
 ; =========================================================================
 ; Set all {{ device_id }} outputs high.
 ;
+{% if BIDIR %}
+; Switches DDR to output before writing.
+;
+{% endif %}
 ; Out:
 ;   A = clobbered
 
 {% if exclusive_port %}
 .macro {{ device_id }}_on
+{% if BIDIR %}
+    lda #{{ MASK | hex }}
+    sta {{ DDR_REG }}
+    sta {{ PORT_REG }}
+{% else %}
     lda #{{ MASK | hex }}
     sta {{ PORT_REG }}
+{% endif %}
 .endmacro
 {% else %}
 .macro {{ device_id }}_on
+{% if BIDIR %}
+    lda {{ DDR_REG }}
+    ora #{{ MASK | hex }}
+    sta {{ DDR_REG }}
+{% endif %}
     lda {{ PORT_REG }}
     ora #{{ MASK | hex }}
     sta {{ PORT_REG }}
@@ -54,16 +83,29 @@
 ; =========================================================================
 ; Set all {{ device_id }} outputs low.
 ;
+{% if BIDIR %}
+; Switches DDR to output before writing.
+;
+{% endif %}
 ; Out:
 ;   A = clobbered
 
 {% if exclusive_port %}
 .macro {{ device_id }}_off
+{% if BIDIR %}
+    lda #{{ MASK | hex }}
+    sta {{ DDR_REG }}
+{% endif %}
     lda #$00
     sta {{ PORT_REG }}
 .endmacro
 {% else %}
 .macro {{ device_id }}_off
+{% if BIDIR %}
+    lda {{ DDR_REG }}
+    ora #{{ MASK | hex }}
+    sta {{ DDR_REG }}
+{% endif %}
     lda {{ PORT_REG }}
     and #{{ INV_MASK | hex }}
     sta {{ PORT_REG }}
@@ -73,10 +115,24 @@
 ; =========================================================================
 ; Toggle all {{ device_id }} outputs.
 ;
+{% if BIDIR %}
+; Switches DDR to output before writing.
+;
+{% endif %}
 ; Out:
 ;   A = clobbered
 
 .macro {{ device_id }}_toggle
+{% if BIDIR %}
+{% if exclusive_port %}
+    lda #{{ MASK | hex }}
+    sta {{ DDR_REG }}
+{% else %}
+    lda {{ DDR_REG }}
+    ora #{{ MASK | hex }}
+    sta {{ DDR_REG }}
+{% endif %}
+{% endif %}
     lda {{ PORT_REG }}
     eor #{{ MASK | hex }}
     sta {{ PORT_REG }}
@@ -87,10 +143,24 @@
 ; =========================================================================
 ; Read {{ device_id }} input state.
 ;
+{% if BIDIR %}
+; Switches DDR to input before reading.
+;
+{% endif %}
 ; Out:
 ;   A = group state (masked to {{ bits | hex }})
 
 .macro {{ device_id }}_read
+{% if BIDIR %}
+{% if exclusive_port %}
+    lda #$00
+    sta {{ DDR_REG }}
+{% else %}
+    lda {{ DDR_REG }}
+    and #{{ INV_MASK | hex }}
+    sta {{ DDR_REG }}
+{% endif %}
+{% endif %}
     lda {{ PORT_REG }}
     and #{{ MASK | hex }}
 .endmacro

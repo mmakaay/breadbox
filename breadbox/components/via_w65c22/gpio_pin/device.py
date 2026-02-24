@@ -13,11 +13,17 @@ class ViaW65c22GpioPinDevice(Device):
     pin: ViaW65c22PortPin
     bus: str
     direction: PinDirection = field(default=PinDirection("both"))
-    default: OnOff = field(default=OnOff("off"))
+    default: OnOff | None = None
 
     def __post_init__(self) -> None:
         super().__post_init__()
         self._internal_fields.add("bus_device")
+        if self.default is not None:
+            self.default = OnOff(self.default)
+        if self.direction == "in" and self.default is not None:
+            raise ValueError(
+                f"Device {self.id!r}: default value is not allowed for direction 'in'"
+            )
 
     @cached_property
     def port(self) -> str:

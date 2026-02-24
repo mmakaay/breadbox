@@ -99,7 +99,7 @@ class TestDefaults:
 
         assert isinstance(device, ViaW65c22GpioGroupDevice)
         assert device.direction == "both"
-        assert device.default == "off"
+        assert device.default is None
 
     def test_custom_direction_and_default(self):
         via = make_via()

@@ -90,6 +90,14 @@ class Device(ABC):
         The default implementation is a no-op.
         """
 
+    def validate_bus_clients(self) -> None:  # noqa: B027
+        """
+        Validate registered bus clients for conflicts.
+        
+        Override in bus device subclasses to check for
+        pin conflicts, etc. The default implementation is a no-op.
+        """
+
     @cached_property
     def device_path(self) -> str:
         device: Device = self

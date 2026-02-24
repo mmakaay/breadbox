@@ -13,3 +13,22 @@ LED:
   direction: out
   default: on
 
+PB0_IN:
+  component: gpio_pin
+  bus: VIA
+  pin: PB0
+  direction: in
+
+PB1_OUT:
+  component: gpio_pin
+  bus: VIA
+  pin: PB1
+  direction: out
+
+PB2_BOTH:
+  component: gpio_pin
+  bus: VIA
+  pin: PB2
+  direction: both
+
+
