@@ -53,10 +53,38 @@ class TestDataSettings:
 
 class TestLcdHd44780Device:
     def test_construction(self):
-        device = LcdHd44780Device(id=DeviceIdentifier("LCD0"))
+        device = LcdHd44780Device(id=DeviceIdentifier("LCD0"), mode="8bit")
         assert device.id == "LCD0"
+        assert device.mode == "8bit"
         assert len(device.devices) == 0
 
+    def test_mode_4bit(self):
+        device = LcdHd44780Device(id=DeviceIdentifier("LCD0"), mode="4bit")
+        assert device.mode == "4bit"
+
+    def test_invalid_mode_raises(self):
+        with pytest.raises(ValueError, match="Invalid mode"):
+            LcdHd44780Device(id=DeviceIdentifier("LCD0"), mode="16bit")
+
+    def test_sub_device_accessors(self):
+        via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))
+        config = make_config(via)
+
+        settings = {
+            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
+            "data": {"bus": "VIA0", "mode": "8bit", "port": "B"},
+        }
+        device = resolve(config, DeviceIdentifier("LCD0"), settings)
+
+        assert str(device.pin_rs.id) == "PIN_RS"
+        assert str(device.pin_rwb.id) == "PIN_RWB"
+        assert str(device.pin_en.id) == "PIN_EN"
+        assert str(device.data.id) == "DATA"
+
+    def test_sub_device_accessor_missing_raises(self):
+        device = LcdHd44780Device(id=DeviceIdentifier("LCD0"), mode="8bit")
+        with pytest.raises(ValueError, match="Sub-device.*not found"):
+            _ = device.pin_rs
 
 class TestResolve:
     def test_resolve_creates_sub_devices(self):
@@ -92,6 +120,22 @@ class TestResolve:
         data_device = next(d for d in device.devices if str(d.id) == "DATA")
         assert isinstance(data_device, ViaW65c22GpioGroupDevice)
         assert data_device.bits == 0xFF
+        assert device.mode == "8bit"
+
+    def test_resolve_4bit_mode_data_bits(self):
+        via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))
+        config = make_config(via)
+
+        settings = {
+            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
+            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
+        }
+        device = resolve(config, DeviceIdentifier("LCD0"), settings)
+
+        assert device.mode == "4bit"
+        data_device = next(d for d in device.devices if str(d.id) == "DATA")
+        assert isinstance(data_device, ViaW65c22GpioGroupDevice)
+        assert data_device.bits == 0xF0
 
     def test_sub_devices_have_parent(self):
         via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))

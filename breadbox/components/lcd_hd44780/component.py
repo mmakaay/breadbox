@@ -15,7 +15,7 @@ def resolve(
     cmnd = CmndSettings(**device_settings["cmnd"])
     data = DataSettings(**device_settings["data"])
 
-    device = LcdHd44780Device(id=device_id)
+    device = LcdHd44780Device(id=device_id, mode=data.mode)
 
     device.add(
         gpio_pin_component.resolve(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import cached_property
 
 from breadbox.types.device import Device
 from breadbox.types.device_identifier import DeviceIdentifier
@@ -34,6 +35,57 @@ class DataSettings:
 
 @dataclass(kw_only=True)
 class LcdHd44780Device(Device):
+    """
+    HD44780 LCD display controller.
+
+    Manages sub-devices for control pins (RS, RWB, EN) and data bus (DATA).
+    Supports both 4-bit and 8-bit data bus modes.
+    """
+
+    mode: str
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        if self.mode not in ("4bit", "8bit"):
+            raise ValueError(f"Invalid mode {self.mode!r} (expected '4bit' or '8bit')")
+
+    @cached_property
+    def pin_rs(self) -> Device:
+        """
+        The RS (Register Select) control pin sub-device.
+        """
+        return self._sub("PIN_RS")
+
+    @cached_property
+    def pin_rwb(self) -> Device:
+        """
+        The RWB (Read/Write) control pin sub-device.
+        """
+        return self._sub("PIN_RWB")
+
+    @cached_property
+    def pin_en(self) -> Device:
+        """
+        The EN (Enable) control pin sub-device.
+        """
+        return self._sub("PIN_EN")
+
+    @cached_property
+    def data(self) -> Device:
+        """
+        The DATA bus sub-device (gpio_group).
+        """
+        return self._sub("DATA")
+
+    def _sub(self, name: str) -> Device:
+        """
+        Look up a sub-device by its device ID.
+        """
+        for d in self.devices:
+            if str(d.id) == name:
+                return d
+        raise ValueError(f"Sub-device {name!r} not found on {self.id!r}")
+
     def validate_pins(self) -> None:
         """
         Verify that no physical pin is used by more than one sub-device.
