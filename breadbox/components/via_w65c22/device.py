@@ -22,6 +22,26 @@ class ViaW65c22Device(Device):
         except KeyError:
             raise ValueError(f"Port {port!r} does not exist")
 
+    def resolve_pins(self, pin_names: list[str]) -> tuple[str, int]:
+        """Validate that all pins belong to the same port.
+
+        Returns (port_name, bitmask) derived from the pin positions.
+        """
+        ports = set()
+        for pin in pin_names:
+            normalized = pin.upper()
+            if normalized not in PINS:
+                raise ValueError(f"{pin!r} is not a valid pin")
+            ports.add(PINS[normalized])
+        if len(ports) != 1:
+            raise ValueError(
+                f"All pins must be on the same port, got pins from ports: {', '.join(sorted(ports))}"
+            )
+        port = ports.pop()
+        port_pins = PORTS[port]
+        bitmask = sum(1 << port_pins.index(pin.upper()) for pin in pin_names)
+        return port, bitmask
+
 
 class ViaW65c22PortPin(str):
     def __new__(cls, value: object) -> "ViaW65c22PortPin":

@@ -20,13 +20,20 @@ STATUS_LED:
   pin: PA0    # Automatically derives use of Port A on the via0 bus
 
  # A group of GPIO pins that can be switched together.
-PROGRESS_LEDS:
+PROGRESS_LEDS1:
   component: gpio_group  # the VIA1 component has to handle this for codegen.
   bus: VIA1
-  direction: in
-  default: off
   port: A
   bits: "10100011"
+  direction: in
+  default: off
+
+PROGRESS_LEDS2:
+  component: gpio_group  # the VIA1 component has to handle this for codegen.
+  bus: VIA1
+  pins: [PA0, pA2, PA6, PA7]
+  direction: in
+  default: off
 
 SOME_8BIT_PORT:
   component: gpio_group

@@ -14,14 +14,32 @@ def resolve(
     bus_device: ViaW65c22Device,
     device_settings: dict[str, Any],
 ) -> Device:
-    if "port" not in device_settings or "bits" not in device_settings:
-        raise ValueError(f"Configuration for {device_id!r} invalid (requires 'port' and 'bits')")
+    has_port_bits = "port" in device_settings and "bits" in device_settings
+    has_pins = "pins" in device_settings
 
-    bits = Bits(device_settings["bits"])
-    pins_for_port = bus_device.get_port(device_settings["port"])
-    pins = [pins_for_port[i] for i in bits.positions]
+    if has_pins and not has_port_bits:
+        # pins config: derive port + bits from pin names via the bus device.
+        port, bitmask = bus_device.resolve_pins(device_settings["pins"])
+        bits = Bits(bitmask)
+        pins_for_port = bus_device.get_port(port)
+        pins = [pins_for_port[i] for i in bits.positions]
 
-    device_settings["bits"] = bits
-    device_settings["pins"] = pins
+        device_settings["pins"] = pins
+        device_settings["bits"] = bits
+        device_settings["port"] = port
+
+    elif has_port_bits and not has_pins:
+        # port + bits config: derive pins from the bitmask.
+        bits = Bits(device_settings["bits"])
+        pins_for_port = bus_device.get_port(device_settings["port"])
+        pins = [pins_for_port[i] for i in bits.positions]
+
+        device_settings["bits"] = bits
+        device_settings["pins"] = pins
+
+    else:
+        raise ValueError(
+            f"Configuration for {device_id!r} requires either 'port' + 'bits' or 'pins' (not both)"
+        )
 
     return ViaW65c22GpioGroupDevice(id=device_id, bus_device=bus_device, **device_settings)
