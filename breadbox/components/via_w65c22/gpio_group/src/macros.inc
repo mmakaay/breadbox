@@ -165,29 +165,3 @@
     and #{{ MASK | hex }}
 .endmacro
 {% endif %}
-
-; =========================================================================
-; Imports and public API scope
-;
-; Provides cross-file access to GPIO group procedures.
-; Usage: jsr {{ macro_prefix }}::turn_on, jsr {{ macro_prefix }}::read, etc.
-; =========================================================================
-.ifndef __{{ macro_prefix | upper }}_IMPL
-{% if direction in ("out", "both") %}
-.import __{{ macro_prefix }}_turn_on, __{{ macro_prefix }}_turn_off, __{{ macro_prefix }}_toggle
-{% endif %}
-{% if direction in ("in", "both") %}
-.import __{{ macro_prefix }}_read
-{% endif %}
-
-.scope {{ macro_prefix }}
-{% if direction in ("out", "both") %}
-    turn_on  = __{{ macro_prefix }}_turn_on
-    turn_off = __{{ macro_prefix }}_turn_off
-    toggle   = __{{ macro_prefix }}_toggle
-{% endif %}
-{% if direction in ("in", "both") %}
-    read     = __{{ macro_prefix }}_read
-{% endif %}
-.endscope
-.endif  ; .ifndef __{{ macro_prefix | upper }}_IMPL
