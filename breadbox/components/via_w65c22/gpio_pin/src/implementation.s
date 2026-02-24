@@ -4,18 +4,18 @@
 ; Subroutine wrappers for {{ device_id }} macros.
 ; Call via JSR, e.g. `jsr {{ macro_prefix }}::turn_on`.
 
-__{{ macro_prefix | upper }}_IMPL = 1
-.include "breadbox.inc"
+.include "hardware.inc"
+.include "{{ build_dir }}/macros.inc"
 
 {% set PORT_REG = bus_device.id ~ "_PORT" ~ port %}
 {% set DDR_REG = bus_device.id ~ "_DDR" ~ port %}
 {% set MASK = bitmask %}
 {% set INV_MASK = 255 - bitmask %}
 .segment "KERNAL"
-{% if default is not none %}
+{% if direction in ("out", "both") or default is not none %}
 
     ; =========================================================================
-    ; Initialize {{ device_id }}: set DDR to output and apply default ({{ default }}).
+    ; Initialize {{ device_id }}: set DDR to output{% if default is not none %} and apply default ({{ default }}){% endif %}.
     ;
     ; Called automatically during boot via .constructor.
     ;
@@ -28,7 +28,7 @@ __{{ macro_prefix | upper }}_IMPL = 1
         sta {{ DDR_REG }}
 {% if default == "on" %}
         sta {{ PORT_REG }}
-{% else %}
+{% elif default == "off" %}
         lda #$00
         sta {{ PORT_REG }}
 {% endif %}
@@ -40,7 +40,7 @@ __{{ macro_prefix | upper }}_IMPL = 1
         lda {{ PORT_REG }}
         ora #{{ MASK | hex }}
         sta {{ PORT_REG }}
-{% else %}
+{% elif default == "off" %}
         lda {{ PORT_REG }}
         and #{{ INV_MASK | hex }}
         sta {{ PORT_REG }}
@@ -48,7 +48,7 @@ __{{ macro_prefix | upper }}_IMPL = 1
 {% endif %}
         rts
     .endproc
-    .constructor init_{{ macro_prefix | lower }}
+    .constructor init_{{ macro_prefix | lower }}, 16
 {% endif %}
 
 {% if direction in ("out", "both") %}
