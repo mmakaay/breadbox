@@ -20,6 +20,7 @@ class BreadboxConfig:
         self.config_data = self._load_config_data()
         self.devices: dict[DeviceIdentifier, Device] = {}
         self._resolve_config()
+        self._validate()
         self._print_config()
 
     def get(self, device_id: DeviceIdentifier) -> Device:
@@ -83,3 +84,22 @@ class BreadboxConfig:
             # Only print top-level devices (sub-devices are visited recursively).
             if device.parent is None:
                 device.accept(printer)
+
+    def _validate(self) -> None:
+        """
+        Validate the resolved configuration.
+
+        Ensures exactly one CORE device is present. A breadbox project
+        requires a single CPU core to function; zero or multiple core
+        devices are invalid.
+        """
+        from breadbox.components.core.device import CoreDevice
+
+        cores = [d for d in self.devices.values() if isinstance(d, CoreDevice)]
+        if len(cores) == 0:
+            raise ConfigError("Configuration must include a CORE device")
+        if len(cores) > 1:
+            ids = ", ".join(str(d.id) for d in cores)
+            raise ConfigError(
+                f"Configuration must have exactly one CORE device, found {len(cores)}: {ids}"
+            )

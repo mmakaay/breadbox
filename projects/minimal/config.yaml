@@ -6,7 +6,7 @@ VIA:
   component: via_w65c22
   address: $6000
 
-led:
+LED:
   component: gpio_pin
   bus: VIA
   pin: PA0
