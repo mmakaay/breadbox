@@ -23,7 +23,8 @@ _RESERVED_WORDS = frozenset({
 
 
 class DeviceIdentifier(str):
-    """Device identifier: starts with a letter, letters/digits/underscores only.
+    """
+    Device identifier: starts with a letter, letters/digits/underscores only.
 
     Reserved words (6502/65C02 mnemonics and register names) are forbidden.
     """

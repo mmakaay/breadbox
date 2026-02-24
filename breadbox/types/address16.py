@@ -2,7 +2,9 @@ from typing import Self
 
 
 class Address16(int):
-    """16-bit memory address, accepting $xxxx or 0xxxxx hex notation."""
+    """
+    16-bit memory address, accepting $xxxx or 0xxxxx hex notation.
+    """
 
     def __new__(cls, value: object) -> Self:
         if isinstance(value, cls):

@@ -21,7 +21,9 @@ class Device(ABC):
 
     @property
     def component_type(self) -> str:
-        """Derived from the module path: breadbox.components.{type}[.sub].device"""
+        """
+        Derived from the module path: breadbox.components.{type}[.sub].device
+        """
         return type(self).__module__.removeprefix(self._COMPONENTS_PREFIX).split(".")[0]
 
     def __post_init__(self) -> None:

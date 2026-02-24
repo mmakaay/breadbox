@@ -2,7 +2,8 @@ from typing import Self
 
 
 class Bits(int):
-    """8-bit bitmask (0-255).
+    """
+    8-bit bitmask (0-255).
 
     Accepts multiple input formats:
         int:    255         → 0b11111111
@@ -44,7 +45,9 @@ class Bits(int):
 
     @property
     def positions(self) -> list[int]:
-        """Sorted list of set bit positions (0-indexed)."""
+        """
+        Sorted list of set bit positions (0-indexed).
+        """
         return [i for i in range(8) if self & (1 << i)]
 
     def __str__(self) -> str:

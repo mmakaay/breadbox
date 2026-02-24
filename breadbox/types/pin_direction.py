@@ -2,7 +2,9 @@ from typing import Self
 
 
 class PinDirection(str):
-    """Pin data direction: in, out, or both."""
+    """
+    Pin data direction: in, out, or both.
+    """
 
     def __new__(cls, value: object) -> Self:
         if isinstance(value, cls):
