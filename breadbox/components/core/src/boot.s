@@ -4,12 +4,9 @@
 .export   __core_trampoline = trampoline
 
 .import   main                       ; The subroutine to start after initialization
-.import   __INIT_TABLE__             ; Start of the constructor pointer table
-.import   __INIT_COUNT__             ; Number of entries (word)
-    
+
 .segment "ZEROPAGE"        
         
-    ptr:            .res 2           ; Scratch space for indirect calls
     trampoline_to:  .res 2           ; Target address for trampoline construction
 
 .segment "KERNAL"
@@ -26,59 +23,7 @@
         ldx #$ff                     ; Initialize stack pointer.
         txs
         cld                          ; Make sure decimal mode is disabled.
-        jsr call_all_constructors    ; Call all `.constructor` subroutines.
         jmp main                     ; Call main (must be exported by project).
-
-    ; =========================================================================
-    ; Run all constructors.
-    ;
-    ; Constructors are subroutines that are exported with `.constructor` in
-    ; module code. When linked with this code, these subroutines are all
-    ; executed automatically from here.
-    ;
-    ; Out:
-    ;  A, X, Y = clobbered
-
-    .proc call_all_constructors
-        ; Only the low byte is read here, assuming that 255 constructors
-        ; ought to be enough for anyone. If we exceed 255 at some point,
-        ; then we'll have to modify this code to use a word instead.
-        ldx __INIT_COUNT__           ; Number of table entries
-        ldy #0                       ; Index into table
-
-        ; Set up a pointer to the start of the constructor table.
-        lda #<__INIT_TABLE__
-        sta ptr
-        lda #>__INIT_TABLE__
-        sta ptr+1
-    
-    @loop:
-        ; Read the next subroutine address from the table.
-        lda (ptr), y
-        sta trampoline_to
-        iny
-        lda (ptr), y
-        sta trampoline_to + 1
-
-        ; Trampoline into the routine, protecting against clobbering.
-        txa                          ; Store X and Y on the stack.
-        pha
-        tya
-        pha
-        jsr trampoline
-        pla                          ; Restore X and Y from the stack.
-        tay
-        pla
-        txa
-
-        ; Move to the next table entry, if any.
-        dex                          ; Decrement table size counter.  
-        beq @done                    ; Reached zero? Then we're done.
-        iny                          ; Move to the next constructor.
-
-    @done:
-        rts
-    .endproc
 
     ; =========================================================================
     ; Halt program execution.
@@ -107,5 +52,3 @@
     .proc trampoline
         jmp (trampoline_to)
     .endproc
-
-.segment "ZEROPAGE"

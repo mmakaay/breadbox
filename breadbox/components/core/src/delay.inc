@@ -1,6 +1,3 @@
-.ifndef CORE_DELAY_INC
-CORE_DELAY_INC = 1
-
 .import   __core_delay
 .importzp __core_delay_iterations
 
@@ -60,4 +57,4 @@ MHZ = 1000000  ; Can be used to define the clock speed (e.g. 4 * MHZ)
     DELAY_US ms * 1000
 .endmacro
 
-.endif
+

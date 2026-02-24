@@ -1,6 +1,3 @@
-.ifndef CORE_CPU_SHIMS_INC
-CORE_CPU_SHIMS_INC = 1
-
 ; Macros that make `phx`, `plx`, `phy` and `ply` available for 6502 CPUs.
 ; These only exist on 65C02.
 
@@ -37,4 +34,4 @@ CORE_CPU_SHIMS_INC = 1
 
 .endif
 
-.endif
+

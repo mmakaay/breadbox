@@ -20,7 +20,9 @@ class TestViaW65c22Device:
         assert via.address == 0x6000
 
     def test_address_auto_coerced(self):
-        """Raw string address is auto-coerced to Address16 by Device base."""
+        """
+        Raw string address is auto-coerced to Address16 by Device base.
+        """
         via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address="$6000")  # type: ignore
         assert isinstance(via.address, Address16)
         assert via.address == 0x6000

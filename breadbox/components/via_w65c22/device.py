@@ -11,19 +11,45 @@ PORTS = {
 
 PINS = {pin: port for port, pins in PORTS.items() for pin in pins}
 
+REGISTERS = [
+    ("PORTB", 0x00),
+    ("PORTA", 0x01),
+    ("DDRB", 0x02),
+    ("DDRA", 0x03),
+    ("T1CL", 0x04),
+    ("T1CH", 0x05),
+    ("T1LL", 0x06),
+    ("T1LH", 0x07),
+    ("T2CL", 0x08),
+    ("T2CH", 0x09),
+    ("SR", 0x0A),
+    ("ACR", 0x0B),
+    ("PCR", 0x0C),
+    ("IFR", 0x0D),
+    ("IER", 0x0E),
+    ("PORTA_NH", 0x0F),
+]
+
 
 @dataclass(kw_only=True)
 class ViaW65c22Device(Device):
     address: Address16
 
-    def get_port(self, port: str) -> list[str]:
+    @property
+    def registers(self) -> list[tuple[str, int]]:
+        return REGISTERS
+
+    @staticmethod
+    def get_port(port: str) -> list[str]:
         try:
             return PORTS[port.upper()]
         except KeyError:
             raise ValueError(f"Port {port!r} does not exist") from None
 
-    def resolve_pins(self, pin_names: list[str]) -> tuple[str, int]:
-        """Validate that all pins belong to the same port.
+    @staticmethod
+    def resolve_pins(pin_names: list[str]) -> tuple[str, int]:
+        """
+        Validate that all pins belong to the same port.
 
         Returns (port_name, bitmask) derived from the pin positions.
         """

@@ -1,6 +1,3 @@
-.ifndef CORE_VECTORS_INC
-CORE_VECTORS_INC = 1
-
 ; =========================================================================
 ; Set the address of the NMI (Non-Maskable Interrupt) handler.
 ;
@@ -35,4 +32,4 @@ CORE_VECTORS_INC = 1
     sta irq_vector + 1
 .endmacro
 
-.endif
+
