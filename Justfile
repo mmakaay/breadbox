@@ -5,6 +5,9 @@ check:
     pyright
     ruff check --fix
 
+test:
+    pytest tests/
+
 # Build ROM from invocation directory
 build: clean
     #!/bin/bash
