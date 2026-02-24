@@ -26,7 +26,7 @@ class BreadboxConfig:
         try:
             return self.devices[device_id]
         except KeyError:
-            raise ConfigError(f"Device '{device_id}' not found") from None
+            raise ValueError(f"Device '{device_id}' not found") from None
 
     def _find_config_path(self) -> Path:
         config_paths = [
@@ -46,28 +46,31 @@ class BreadboxConfig:
 
     def _resolve_config(self) -> None:
         for raw_id, settings in self.config_data.items():
-            device_id = DeviceIdentifier(raw_id)
-
-            # Determine the component type.
             try:
-                component_type = settings["component"]
-                del settings["component"]
-            except KeyError:
-                component_type = raw_id.lower()
+                device_id = DeviceIdentifier(raw_id)
 
-            # Load the python module for the current component type.
-            module_name = f"breadbox.components.{component_type}.component"
-            try:
-                module = importlib.import_module(module_name)
-            except ModuleNotFoundError:
-                raise ConfigError(f"No implementation found for component type '{component_type}'") from None
+                # Determine the component type.
+                try:
+                    component_type = settings["component"]
+                    del settings["component"]
+                except KeyError:
+                    component_type = raw_id.lower()
 
-            try:
+                # Load the python module for the current component type.
+                module_name = f"breadbox.components.{component_type}.component"
+                try:
+                    module = importlib.import_module(module_name)
+                except ModuleNotFoundError:
+                    raise ConfigError(
+                        f"No implementation found for component type '{component_type}'"
+                    ) from None
+
                 device: Device = module.resolve(self, device_id, settings)
+                self.devices[device_id] = device
+            except ConfigError:
+                raise
             except (ValueError, TypeError, KeyError) as e:
-                raise ConfigError(f"Error in '{device_id}' ({component_type}): {e}") from None
-
-            self.devices[device_id] = device
+                raise ConfigError(f"Error in '{raw_id}': {e}") from None
 
     def _print_config(self) -> None:
         printer = ConfigPrinter(console)

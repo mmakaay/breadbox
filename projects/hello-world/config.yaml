@@ -23,8 +23,8 @@ STATUS_LED:
 PROGRESS_LEDS:
   component: gpio_group  # the VIA1 component has to handle this for codegen.
   bus: VIA1
-  direction: out
-  default: OFF
+  direction: in
+  default: off
   port: A
   bits: "10100011"
 
@@ -35,7 +35,6 @@ SOME_8BIT_PORT:
   bits: 0xff
   default: off
   direction: out
-
 
 LCD0:
   component: lcd_hd44780
@@ -49,11 +48,11 @@ LCD0:
     mode: 4bit
     port: B       # 4- bit mode uses pins 4-7, 8-bit mode uses all pins.
 
-#UART0
-#  component: uart_6551
-#  address: $5000
-#  type: w65c51    #  w65c51, um6551, r6551, generic?
-#  rts_pin:
-#    bus: VIA0
-#    pin: PA0
-#
+UART0:
+  component: uart_6551
+  type: w65c51    # Options: w65c51, um6551, m6551, generic, default "generic"
+  address: $5000  # Standard Address16
+  irq: on         # OnOff feature, default is on
+  rts:            # Either None (RTS disabled) or a GPIO pin used for RTS signalling
+    bus: VIA0
+    pin: PA0
