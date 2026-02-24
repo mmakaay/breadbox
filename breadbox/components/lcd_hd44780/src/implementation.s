@@ -9,16 +9,19 @@
 ; Call via JSR, e.g. `jsr {{ macro_prefix }}::write`.
 
 {% set P = macro_prefix %}
-__{{ P | upper }}_IMPL = 1
-.include "breadbox.inc"
-
-{% set P = macro_prefix %}
 {% set DATA_PORT = data.bus_device.id ~ "_PORT" ~ data.port %}
 {% set DATA_DDR = data.bus_device.id ~ "_DDR" ~ data.port %}
 {% set DATA_MASK = data.bits | int %}
 {% set DATA_INV_MASK = 255 - DATA_MASK %}
 {% set EXCLUSIVE = data.exclusive_port %}
 {% set IS_4BIT = (mode == "4bit") %}
+
+.include "hardware.inc"
+.include "core/delay.inc"
+.include "{{ build_dir }}/macros.inc"
+.include "{{ pin_rs.build_dir }}/macros.inc"
+.include "{{ pin_rwb.build_dir }}/macros.inc"
+.include "{{ pin_en.build_dir }}/macros.inc"
 
 .segment "ZEROPAGE"
 
@@ -136,6 +139,9 @@ __{{ P | upper }}_IMPL = 1
     ;   A = clobbered
 
     .proc _{{ P }}_power_up
+        ; Wait >15 ms after Vcc rises before sending any commands.
+        DELAY_MS 20
+
 {% if IS_4BIT %}
         ; In 4-bit mode, the data pins are PB4-PB7.
         ; $30 (Function Set DL=1) needs $30 on D4-D7 = $30 in upper nibble.
