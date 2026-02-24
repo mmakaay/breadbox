@@ -1,4 +1,5 @@
 import re
+from typing import Self
 
 _DEVICE_ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
 
@@ -27,7 +28,7 @@ class DeviceIdentifier(str):
     Reserved words (6502/65C02 mnemonics and register names) are forbidden.
     """
 
-    def __new__(cls, value: object) -> "DeviceIdentifier":
+    def __new__(cls, value: object) -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, str):

@@ -1,5 +1,8 @@
+from typing import Self
+
+
 class Bits(int):
-    """8-bit bitmask (0–255).
+    """8-bit bitmask (0-255).
 
     Accepts multiple input formats:
         int:    255         → 0b11111111
@@ -8,7 +11,7 @@ class Bits(int):
         list:   [1,0,1,0,0,0,1,1]  → 0b11000101  (index 0 = bit 0)
     """
 
-    def __new__(cls, value: object) -> "Bits":
+    def __new__(cls, value: object) -> Self:
         if isinstance(value, cls):
             return value
 
@@ -23,9 +26,7 @@ class Bits(int):
                 result = int(stripped[1:], 16)
             elif stripped.lower().startswith("0x"):
                 result = int(stripped, 16)
-            elif stripped.lower().startswith("0b"):
-                result = int(stripped, 2)
-            elif len(stripped) <= 8 and all(c in "01" for c in stripped):
+            elif stripped.lower().startswith("0b") or (len(stripped) <= 8 and all(c in "01" for c in stripped)):
                 result = int(stripped, 2)
             else:
                 raise ValueError(f"Cannot parse bits from {value!r}")
@@ -37,7 +38,7 @@ class Bits(int):
             raise ValueError(f"Cannot convert {type(value).__name__} to Bits")
 
         if not 0 <= result <= 255:
-            raise ValueError(f"Bits value must be 0–255, got {result}")
+            raise ValueError(f"Bits value must be 0-255, got {result}")
 
         return super().__new__(cls, result)
 

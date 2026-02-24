@@ -11,6 +11,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "pyright",
+  "pytest",
   "ruff",
 ]
 
@@ -60,6 +61,9 @@ quote-style = "double"
 indent-style = "space"
 skip-magic-trailing-comma = false
 line-ending = "auto"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [tool.pyright]
 include = ["breadbox/"]

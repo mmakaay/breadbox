@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from breadbox.types.address16 import Address16
 from breadbox.types.device import Device
@@ -11,7 +11,7 @@ UART_TYPES = ("w65c51", "um6551", "m6551", "generic")
 class Uart6551Device(Device):
     type: str = "generic"
     address: Address16
-    irq: OnOff = OnOff("on")
+    irq: OnOff = field(default=OnOff("on"))
 
     def __post_init__(self) -> None:
         super().__post_init__()

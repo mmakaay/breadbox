@@ -1,7 +1,10 @@
+from typing import Self
+
+
 class OnOff(str):
     """On/off value, accepting various truthy/falsy inputs."""
 
-    def __new__(cls, value: object) -> "OnOff":
+    def __new__(cls, value: object) -> Self:
         if isinstance(value, cls):
             return value
         if isinstance(value, str):

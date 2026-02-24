@@ -1,8 +1,8 @@
 from dataclasses import dataclass
+from typing import Self
 
 from breadbox.types.address16 import Address16
 from breadbox.types.device import Device
-
 
 PORTS = {
     "A": ["PA0", "PA1", "PA2", "PA3", "PA4", "PA5", "PA6", "PA7"],
@@ -20,7 +20,7 @@ class ViaW65c22Device(Device):
         try:
             return PORTS[port.upper()]
         except KeyError:
-            raise ValueError(f"Port {port!r} does not exist")
+            raise ValueError(f"Port {port!r} does not exist") from None
 
     def resolve_pins(self, pin_names: list[str]) -> tuple[str, int]:
         """Validate that all pins belong to the same port.
@@ -44,7 +44,7 @@ class ViaW65c22Device(Device):
 
 
 class ViaW65c22PortPin(str):
-    def __new__(cls, value: object) -> "ViaW65c22PortPin":
+    def __new__(cls, value: object) -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, str):
@@ -59,7 +59,7 @@ class ViaW65c22PortPin(str):
 
 
 class ViaW65c22Port(str):
-    def __new__(cls, value: object) -> "ViaW65c22Port":
+    def __new__(cls, value: object) -> Self:
         if isinstance(value, cls):
             return value
         if not isinstance(value, str):
