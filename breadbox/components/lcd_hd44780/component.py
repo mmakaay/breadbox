@@ -57,4 +57,6 @@ def resolve(
         )
     )
 
+    device.validate_pins()
+
     return device

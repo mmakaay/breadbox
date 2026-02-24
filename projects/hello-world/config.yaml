@@ -31,7 +31,7 @@ PROGRESS_LEDS1:
 PROGRESS_LEDS2:
   component: gpio_group  # the VIA1 component has to handle this for codegen.
   bus: VIA1
-  pins: [PA0, pA2, PA6, PA7]
+  pins: [PA0, PA2, PA6, PA7]
   direction: in
   default: off
 
@@ -46,14 +46,14 @@ SOME_8BIT_PORT:
 LCD0:
   component: lcd_hd44780
   cmnd:
-    bus: VIA0
-    rwb_pin: PA5
-    en_pin: PA6
-    rs_pin: PA7
+    bus: VIA1
+    rwb_pin: PA0
+    en_pin: PA1
+    rs_pin: PA2
   data:
     bus: VIA1
     mode: 4bit
-    port: B       # 4- bit mode uses pins 4-7, 8-bit mode uses all pins.
+    port: A       # 4- bit mode uses pins 4-7, 8-bit mode uses all pins.
 
 UART0:
   component: uart_6551

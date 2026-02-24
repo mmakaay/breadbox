@@ -89,7 +89,6 @@ class TestResolve:
         }
         device = resolve(config, DeviceIdentifier("LCD0"), settings)
 
-        # Find the DATA sub-device and check it has all 8 pins
         data_device = next(d for d in device.devices if str(d.id) == "DATA")
         assert isinstance(data_device, ViaW65c22GpioGroupDevice)
         assert data_device.bits == 0xFF
@@ -106,3 +105,53 @@ class TestResolve:
 
         for sub in device.devices:
             assert sub.parent is device
+
+
+class TestDuplicatePinValidation:
+    def test_valid_config_no_duplicates(self):
+        via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))
+        config = make_config(via)
+
+        settings = {
+            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
+            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
+        }
+        # Should not raise -- cmnd pins on port A, data pins on port B
+        device = resolve(config, DeviceIdentifier("LCD0"), settings)
+        assert len(device.devices) == 4
+
+    def test_duplicate_cmnd_pin_raises(self):
+        via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))
+        config = make_config(via)
+
+        settings = {
+            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA0"},
+            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
+        }
+        with pytest.raises(ValueError, match="Duplicate pin assignment"):
+            resolve(config, DeviceIdentifier("LCD0"), settings)
+
+    def test_cmnd_pin_overlaps_data_raises(self):
+        via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))
+        config = make_config(via)
+
+        # rs_pin PB4 overlaps with 4bit data on port B (PB4-PB7)
+        settings = {
+            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PB4"},
+            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
+        }
+        with pytest.raises(ValueError, match="Duplicate pin assignment"):
+            resolve(config, DeviceIdentifier("LCD0"), settings)
+
+    def test_different_buses_no_conflict(self):
+        via0 = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))
+        via1 = ViaW65c22Device(id=DeviceIdentifier("VIA1"), address=Address16("$7000"))
+        config = make_config(via0, via1)
+
+        # Same pin names but different buses -- should not raise
+        settings = {
+            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
+            "data": {"bus": "VIA1", "mode": "4bit", "port": "A"},
+        }
+        device = resolve(config, DeviceIdentifier("LCD0"), settings)
+        assert len(device.devices) == 4

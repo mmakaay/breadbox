@@ -48,7 +48,7 @@ class TestUart6551Device:
         assert device.irq == "off"
 
     def test_address_auto_coerced(self):
-        device = Uart6551Device(id=DeviceIdentifier("UART0"), address="$5000")
+        device = Uart6551Device(id=DeviceIdentifier("UART0"), address="$5000")  # type: ignore
         assert isinstance(device.address, Address16)
 
 

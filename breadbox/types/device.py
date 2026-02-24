@@ -29,7 +29,8 @@ class Device(ABC):
         self._coerce_fields()
 
     def _coerce_fields(self) -> None:
-        """Auto-coerce scalar fields whose declared type is a custom str/int subclass.
+        """
+        Auto-coerce scalar fields whose declared type is a custom str/int subclass.
 
         This allows raw YAML values (plain strings/ints) to be automatically
         validated and converted to their declared types (DeviceIdentifier,

@@ -38,6 +38,7 @@ class TestPortBitsPath:
         settings = {"bus": "VIA0", "port": "B", "bits": 0b11110000}
         device = resolve(config, DeviceIdentifier("DATA"), via, settings)
 
+        assert isinstance(device, ViaW65c22GpioGroupDevice)
         assert device.port == "B"
         assert [str(p) for p in device.pins] == ["PB4", "PB5", "PB6", "PB7"]
 
@@ -66,6 +67,8 @@ class TestPathEquivalence:
         d1 = resolve(config, DeviceIdentifier("G1"), via, port_bits_settings)
         d2 = resolve(config, DeviceIdentifier("G2"), via, pins_settings)
 
+        assert isinstance(d1, ViaW65c22GpioGroupDevice)
+        assert isinstance(d2, ViaW65c22GpioGroupDevice)
         assert d1.port == d2.port
         assert d1.bits == d2.bits
         assert [str(p) for p in d1.pins] == [str(p) for p in d2.pins]
@@ -94,6 +97,7 @@ class TestDefaults:
         settings = {"bus": "VIA0", "port": "A", "bits": 0b00000001}
         device = resolve(config, DeviceIdentifier("LEDS"), via, settings)
 
+        assert isinstance(device, ViaW65c22GpioGroupDevice)
         assert device.direction == "both"
         assert device.default == "off"
 
@@ -103,5 +107,6 @@ class TestDefaults:
         settings = {"bus": "VIA0", "port": "A", "bits": 0b00000001, "direction": "out", "default": "on"}
         device = resolve(config, DeviceIdentifier("LEDS"), via, settings)
 
+        assert isinstance(device, ViaW65c22GpioGroupDevice)
         assert device.direction == "out"
         assert device.default == "on"
