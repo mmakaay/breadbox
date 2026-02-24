@@ -10,10 +10,10 @@ the_display:
   component: lcd_hd44780
   cmnd:
     bus: the_bus
-    rs_pin: PB0
-    rwb_pin: PB1
-    en_pin: PB2
+    rs_pin: PA5
+    rwb_pin: PA6
+    en_pin: PA7
   data:
     bus: the_bus
-    mode: 4bit
+    mode: 8bit
     port: B

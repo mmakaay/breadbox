@@ -2,18 +2,14 @@
 
 .export main
 
-greeting:
-    .asciiz "Hello, world!"
+greeting: .asciiz "Hello, world!"
 
 .proc main
-    TRAMPOLINE_TO jumped_upon
-    HALT
-.endproc
+    lda #<greeting
+    sta the_display::ptr
+    lda #>greeting
+    sta the_display::ptr + 1
+    jsr the_display::print
 
-.proc jumped_upon
-    STATUS_LED_ON
-    DELAY_MS 500
-    STATUS_LED_OFF
-    DELAY_MS 500
-    rts
+    HALT
 .endproc
