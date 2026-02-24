@@ -1,12 +1,10 @@
 from dataclasses import dataclass
-from typing import ClassVar
 
 from breadbox.types.device import Device
 
 
 @dataclass(kw_only=True)
 class CpuDevice(Device):
-    component_type: ClassVar[str] = "cpu"
     type: str = "6502"
     clock_mhz: float
 

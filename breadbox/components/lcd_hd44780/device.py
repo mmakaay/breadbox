@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import ClassVar
 
 from breadbox.types.device import Device
@@ -28,12 +28,16 @@ class DataSettings:
     def __post_init__(self) -> None:
         if not isinstance(self.bus, DeviceIdentifier):
             self.bus = DeviceIdentifier(self.bus)
+        self.mode = self.mode.lower()
         if self.mode not in ("4bit", "8bit"):
             raise ValueError(f"Invalid mode {self.mode!r} (expected '4bit' or '8bit')")
 
 
 @dataclass(kw_only=True)
 class LcdHd44780Device(Device):
-    component_type: ClassVar[str] = "lcd_hd44780"
     cmnd: CmndSettings
     data: DataSettings
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self._internal_fields.update({"cmnd", "data"})

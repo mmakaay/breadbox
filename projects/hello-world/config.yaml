@@ -26,13 +26,13 @@ PROGRESS_LEDS:
   direction: out
   default: OFF
   port: A
-  bits: [0, 2, 6, 7]
+  bits: "10100011"
 
 SOME_8BIT_PORT:
   component: gpio_group
   bus: VIA0
   port: A
-  bits: [0, 1, 2, 3, 4, 5, 6, 7]   #  maybe other formats too. $ff, "11111111", 255, "all" ...
+  bits: 0xff
   default: off
   direction: out
 
@@ -47,4 +47,13 @@ LCD0:
   data:
     bus: VIA1
     mode: 8bit
-    port: B       # 4- bit mode uses pins 4-7, 8-bit mode uses all pins.
+    port: c       # 4- bit mode uses pins 4-7, 8-bit mode uses all pins.
+
+#UART0
+#  component: uart_6551
+#  address: $5000
+#  type: w65c51    #  w65c51, um6551, r6551, generic?
+#  rts_pin:
+#    bus: VIA0
+#    pin: PA0
+#

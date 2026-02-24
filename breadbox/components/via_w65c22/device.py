@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from typing import ClassVar
 
 from breadbox.types.address16 import Address16
 from breadbox.types.device import Device
@@ -15,7 +14,6 @@ PINS = {pin: port for port, pins in PORTS.items() for pin in pins}
 
 @dataclass(kw_only=True)
 class ViaW65c22Device(Device):
-    component_type: ClassVar[str] = "via_w65c22"
     address: Address16
 
     def get_port(self, port: str) -> list[str]:

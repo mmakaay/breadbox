@@ -43,9 +43,9 @@ def resolve(
 
     mode = data.mode.upper()
     if mode == "4BIT":
-        bits = [4, 5, 6, 7]
+        bits = 0b00001111
     elif mode == "8BIT":
-        bits = [0, 1, 2, 3, 4, 5, 6, 7]
+        bits = 0b11111111
     else:
         raise ValueError(f"Invalid data.mode {mode!r} for device {device_id!r} (expected: 4BIT or 8BIT)")
 
