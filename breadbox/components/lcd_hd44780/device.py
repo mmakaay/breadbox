@@ -1,23 +1,27 @@
-from typing import Any
+from __future__ import annotations
 
-from breadbox.components.lcd_hd44780.settings import LcdHd44780Settings
+from typing import Literal
+
+from pydantic import BaseModel
+
 from breadbox.types.device import Device
+from breadbox.types.device_identifier import DeviceIdentifier
+
+
+class CmndSettings(BaseModel):
+    bus: DeviceIdentifier
+    rwb_pin: str
+    en_pin: str
+    rs_pin: str
+
+
+class DataSettings(BaseModel):
+    bus: DeviceIdentifier
+    mode: Literal["4bit", "8bit"]
+    port: str
 
 
 class LcdHd44780Device(Device):
-    component_type: str = "lcd_hd4470"
-    settings: LcdHd44780Settings
-
-    rs_pin: Device
-    rwb_pin: Device
-    en_pin: Device
-    data_port: Device
-
-    def model_post_init(self, context: Any, /) -> None:
-        self.en_pin.parent = self
-        self.rs_pin.parent = self
-        self.rwb_pin.parent = self
-        self.data_port.parent = self
-
-    def get_sub_devices(self) -> list[Device[Any]]:
-        return [self.rs_pin, self.rwb_pin, self.en_pin, self.data_port]
+    component_type: str = "lcd_hd44780"
+    cmnd: CmndSettings
+    data: DataSettings

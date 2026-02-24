@@ -1,9 +1,8 @@
 from typing import Any
 
-import pydantic
 from pydantic_core import core_schema
 
-from breadbox.components.via_w65c22.settings import ViaW65c22Settings
+from breadbox.types.address16 import Address16
 from breadbox.types.device import Device
 
 
@@ -12,21 +11,12 @@ PORTS = {
     "B": ["PB0", "PB1", "PB2", "PB3", "PB4", "PB5", "PB6", "PB7"],
 }
 
-PINS = {
-    pin: port
-    for port, pins in PORTS.items()
-    for pin in pins
-}
+PINS = {pin: port for port, pins in PORTS.items() for pin in pins}
 
 
 class ViaW65c22Device(Device):
     component_type: str = "via_w65c22"
-    settings: ViaW65c22Settings
-
-    def get_info(self) -> dict[str, str]:
-        return {
-            "address": str(self.settings.address),
-        }
+    address: Address16
 
     def get_port(self, port: str) -> list[str]:
         try:
@@ -36,8 +26,6 @@ class ViaW65c22Device(Device):
 
 
 class ViaW65c22PortPin(str):
-    """Port pin identifier: PA0-PA7 or PB0-PB7 (case-insensitive, stored uppercase)."""
-
     @classmethod
     def __get_pydantic_core_schema__(cls, source_type: Any, handler):
         return core_schema.no_info_plain_validator_function(cls._validate)
@@ -47,10 +35,8 @@ class ViaW65c22PortPin(str):
         if not isinstance(value, str):
             raise ValueError(f"Expected a string, got {type(value).__name__!r}")
         value = value.upper()
-        if not value in PINS:
-            raise ValueError(
-                f"{value!r} is not a valid W65C22 port pin (expected one of: "
-                f"{', '.join(sorted(PINS))})")
+        if value not in PINS:
+            raise ValueError(f"{value!r} is not a valid W65C22 port pin (expected one of: {', '.join(sorted(PINS))})")
         return cls(value)
 
     def __repr__(self) -> str:
@@ -58,7 +44,6 @@ class ViaW65c22PortPin(str):
 
 
 class ViaW65c22Port(str):
-
     @classmethod
     def __get_pydantic_core_schema__(cls, source_type: Any, handler):
         return core_schema.no_info_plain_validator_function(cls._validate)
@@ -68,10 +53,8 @@ class ViaW65c22Port(str):
         if not isinstance(value, str):
             raise ValueError(f"Expected a string, got {type(value).__name__!r}")
         value = value.upper()
-        if not value in PORTS:
-            raise ValueError(
-                f"{value!r} is not a valid W65C22 port (expected one of: "
-                f"{', '.join(sorted(PORTS))})")
+        if value not in PORTS:
+            raise ValueError(f"{value!r} is not a valid W65C22 port (expected one of: {', '.join(sorted(PORTS))})")
         return cls(value)
 
     def __repr__(self) -> str:

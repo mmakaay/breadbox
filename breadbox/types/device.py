@@ -1,40 +1,43 @@
+from __future__ import annotations
+
 from abc import ABC
 from functools import cached_property
-from typing import Any, Generic, TypeVar
+from typing import TYPE_CHECKING
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, PrivateAttr
 
 from breadbox.types.device_identifier import DeviceIdentifier
 
-TSettings = TypeVar("TSettings", bound=BaseModel)
+if TYPE_CHECKING:
+    from breadbox.visitor import DeviceVisitor
 
 
-class Device(ABC, BaseModel, Generic[TSettings]):
+class Device(ABC, BaseModel):
+    model_config = ConfigDict(ignored_types=(cached_property,), arbitrary_types_allowed=True)
+
     id: DeviceIdentifier
     component_type: str
-    settings: TSettings
+    parent: Device | None = None
 
-    parent: "Device | None" = None
-    """
-    The parent Device that contains this Device.
-    """
+    _internal_fields: set[str] = {"id", "component_type", "parent"}
+    _devices: list[Device] = PrivateAttr(default_factory=list)
 
-    def get_sub_devices(self) -> list["Device"]:
-        """
-        Returns the sub-devices, contained by this Device.
+    @property
+    def devices(self) -> list[Device]:
+        return self._devices
 
-        This must be overridden in Device classes that make use of sub-devices.
-        """
-        return []
+    def add(self, device: Device) -> None:
+        device.parent = self
+        self._devices.append(device)
 
     @cached_property
     def device_path(self) -> str:
-        device = self
+        device: Device = self
         path = [self.id]
         while device.parent:
             device = device.parent
             path.insert(0, device.id)
         return "::".join(path)
 
-    def get_info(self) -> dict[str, str]:
-        return {k: str(v) for k, v in self.settings.model_dump().items()}
+    def accept(self, visitor: DeviceVisitor) -> None:
+        visitor.visit(self)

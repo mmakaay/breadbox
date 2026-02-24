@@ -4,11 +4,11 @@ from pathlib import Path
 from typing import Any, NoReturn
 
 import yaml
-from pydantic import validate_call
 from rich.console import Console
 
 from breadbox.types.device import Device
 from breadbox.types.device_identifier import DeviceIdentifier
+from breadbox.visitor import ConfigPrinter
 
 console = Console()
 
@@ -20,24 +20,20 @@ class BreadboxConfig:
         self.config_data = self._load_config_data()
         self.devices: dict[DeviceIdentifier, Device] = {}
         self._resolve_config()
+        self._print_config()
 
     @staticmethod
     def error(msg) -> NoReturn:
         console.print(f"[red]{msg}[/red]")
         sys.exit(1)
 
-    @validate_call
     def get(self, device_id: DeviceIdentifier) -> Device:
         try:
             return self.devices[device_id]
         except KeyError:
             raise ValueError(f"Device ID {device_id!r} not found") from None
 
-
     def _find_config_path(self) -> Path:
-        """
-        Check a couple of configuration file name options, to see which one to use.
-        """
         config_paths = [
             self.project_dir / "config.yml",
             self.project_dir / "config.yaml",
@@ -57,8 +53,6 @@ class BreadboxConfig:
 
     def _resolve_config(self) -> None:
         for device_id, settings in self.config_data.items():
-            console.print(f"  [blue]{device_id}[/blue]")
-
             # Determine the component type.
             try:
                 component_type = settings["component"]
@@ -76,6 +70,9 @@ class BreadboxConfig:
             device: Device = module.resolve(self, device_id, settings)
             self.devices[DeviceIdentifier(device_id)] = device
 
-            # Show information about the resolved device.
-            for name, value in device.get_info().items():
-                console.print(f"    [bold]{name}[/bold]: {value}")
+    def _print_config(self) -> None:
+        printer = ConfigPrinter(console)
+        for device in self.devices.values():
+            # Only print top-level devices (sub-devices are visited recursively).
+            if device.parent is None:
+                device.accept(printer)
