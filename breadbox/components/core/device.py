@@ -4,8 +4,8 @@ from breadbox.types.device import Device
 
 
 @dataclass(kw_only=True)
-class CpuDevice(Device):
-    type: str = "6502"
+class CoreDevice(Device):
+    cpu: str = "6502"
     clock_mhz: float
 
     def __post_init__(self) -> None:
@@ -13,8 +13,8 @@ class CpuDevice(Device):
         self.clock_mhz = float(self.clock_mhz)
         if self.clock_mhz <= 0:
             raise ValueError(f"clock_mhz must be positive, got {self.clock_mhz}")
-        if self.type not in ("6502", "65c02"):
-            raise ValueError(f"Invalid CPU type {self.type!r} (expected '6502' or '65c02')")
+        if self.cpu not in ("6502", "65c02"):
+            raise ValueError(f"Invalid CPU type {self.cpu!r} (expected '6502' or '65c02')")
 
     @property
     def clock_hz(self) -> int:
