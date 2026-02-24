@@ -10,9 +10,9 @@ import pytest
 from pathlib import Path
 
 from breadbox.builder import Builder, find_tool
-from breadbox.config import BreadboxConfig
 from breadbox.errors import BuildError
 from breadbox.generator import CodeGenerator
+from breadbox.project import BreadboxProject
 
 
 def _ca65_available() -> bool:
@@ -55,23 +55,19 @@ VIA:
 """
 
 
-def _setup_project(project_dir: Path, config_yaml: str) -> tuple[Path, Path]:
+def _setup_project(project_dir: Path, config_yaml: str) -> BreadboxProject:
     """
     Create a project with config and stub main.s, then generate.
     """
     config_path = project_dir / "config.yaml"
     config_path.write_text(config_yaml)
+    (project_dir / "main.s").write_text(MINIMAL_MAIN)
 
-    main_s = project_dir / "main.s"
-    main_s.write_text(MINIMAL_MAIN)
-
-    config = BreadboxConfig(config_path)
-    build_dir = project_dir / "build"
-    output_dir = build_dir / "breadbox"
-    generator = CodeGenerator(config, output_dir)
+    project = BreadboxProject(config_path)
+    generator = CodeGenerator(project.config, project.generated_dir)
     generator.generate()
 
-    return build_dir, main_s
+    return project
 
 
 @requires_ca65
@@ -81,9 +77,9 @@ class TestBuildMinimal:
     """
 
     def test_produces_rom(self, tmp_path):
-        build_dir, main_s = _setup_project(tmp_path, MINIMAL_CONFIG)
-        builder = Builder(build_dir)
-        rom_path = builder.build(user_sources=[main_s])
+        project = _setup_project(tmp_path, MINIMAL_CONFIG)
+        builder = Builder(project)
+        rom_path = builder.build()
 
         assert rom_path.exists()
         assert rom_path.stat().st_size > 0
@@ -92,9 +88,9 @@ class TestBuildMinimal:
         """
         ROM binary should be 32KB (address space $8000-$FFFF).
         """
-        build_dir, main_s = _setup_project(tmp_path, MINIMAL_CONFIG)
-        builder = Builder(build_dir)
-        rom_path = builder.build(user_sources=[main_s])
+        project = _setup_project(tmp_path, MINIMAL_CONFIG)
+        builder = Builder(project)
+        rom_path = builder.build()
 
         assert rom_path.stat().st_size == 32768
 
@@ -102,36 +98,35 @@ class TestBuildMinimal:
         """
         ROM binary should be output to build/rom.bin.
         """
-        build_dir, main_s = _setup_project(tmp_path, MINIMAL_CONFIG)
-        builder = Builder(build_dir)
-        rom_path = builder.build(user_sources=[main_s])
+        project = _setup_project(tmp_path, MINIMAL_CONFIG)
+        builder = Builder(project)
+        rom_path = builder.build()
 
-        assert rom_path == build_dir / "rom.bin"
+        assert rom_path == project.build_dir / "rom.bin"
 
     def test_object_files_created(self, tmp_path):
         """
         Each .s file should produce a corresponding .o file.
         """
-        build_dir, main_s = _setup_project(tmp_path, MINIMAL_CONFIG)
-        builder = Builder(build_dir)
-        builder.build(user_sources=[main_s])
+        project = _setup_project(tmp_path, MINIMAL_CONFIG)
+        builder = Builder(project)
+        builder.build()
 
-        generated_dir = build_dir / "breadbox"
-        assert (generated_dir / "core" / "boot.o").exists()
-        assert (generated_dir / "core" / "vectors.o").exists()
-        assert (generated_dir / "core" / "delay.o").exists()
-        assert (generated_dir / "core" / "cpu_shims.o").exists()
-        assert (build_dir / "project" / "main.o").exists()
+        assert (project.generated_dir / "core" / "boot.o").exists()
+        assert (project.generated_dir / "core" / "vectors.o").exists()
+        assert (project.generated_dir / "core" / "delay.o").exists()
+        assert (project.generated_dir / "core" / "cpu_shims.o").exists()
+        assert (project.build_dir / "project" / "main.o").exists()
 
     def test_user_sources_copied_to_project(self, tmp_path):
         """
         User source files should be copied into build/project/.
         """
-        build_dir, main_s = _setup_project(tmp_path, MINIMAL_CONFIG)
-        builder = Builder(build_dir)
-        builder.build(user_sources=[main_s])
+        project = _setup_project(tmp_path, MINIMAL_CONFIG)
+        builder = Builder(project)
+        builder.build()
 
-        assert (build_dir / "project" / "main.s").exists()
+        assert (project.build_dir / "project" / "main.s").exists()
 
 
 @requires_ca65
@@ -141,9 +136,9 @@ class TestBuildWithVia:
     """
 
     def test_via_config_builds(self, tmp_path):
-        build_dir, main_s = _setup_project(tmp_path, VIA_CONFIG)
-        builder = Builder(build_dir)
-        rom_path = builder.build(user_sources=[main_s])
+        project = _setup_project(tmp_path, VIA_CONFIG)
+        builder = Builder(project)
+        rom_path = builder.build()
 
         assert rom_path.exists()
         assert rom_path.stat().st_size == 32768
@@ -161,9 +156,9 @@ CORE:
   cpu: "6502"
   clock_mhz: 1.0
 """
-        build_dir, main_s = _setup_project(tmp_path, config)
-        builder = Builder(build_dir)
-        rom_path = builder.build(user_sources=[main_s])
+        project = _setup_project(tmp_path, config)
+        builder = Builder(project)
+        rom_path = builder.build()
 
         assert rom_path.exists()
         assert rom_path.stat().st_size == 32768
@@ -176,10 +171,10 @@ class TestAssemblyOnly:
     """
 
     def test_all_generated_s_files_assemble(self, tmp_path):
-        build_dir, _ = _setup_project(tmp_path, MINIMAL_CONFIG)
-        builder = Builder(build_dir)
+        project = _setup_project(tmp_path, MINIMAL_CONFIG)
+        builder = Builder(project)
 
-        for s_file in sorted(builder.generated_dir.rglob("*.s")):
+        for s_file in sorted(project.generated_dir.rglob("*.s")):
             o_file = builder._assemble(s_file)
             assert o_file.exists(), f"Failed to assemble {s_file.name}"
 
