@@ -43,13 +43,13 @@ def make_core_via_config(cpu="65c02", clock_mhz=1.0, via_address="$6000"):
 
 class TestOutputDirectory:
     def test_creates_output_directory(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_config(), output_dir)
         generator.generate()
         assert output_dir.is_dir()
 
     def test_cleans_stale_files(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         output_dir.mkdir(parents=True)
         stale = output_dir / "stale.txt"
         stale.write_text("old content")
@@ -59,7 +59,7 @@ class TestOutputDirectory:
         assert not stale.exists()
 
     def test_cleans_stale_subdirectories(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         stale_dir = output_dir / "old_component"
         stale_dir.mkdir(parents=True)
         (stale_dir / "old.s").write_text("stale")
@@ -69,7 +69,7 @@ class TestOutputDirectory:
         assert not stale_dir.exists()
 
     def test_empty_config_produces_base_files_only(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_config(), output_dir)
         generator.generate()
         files = {f.name for f in output_dir.iterdir() if f.is_file()}
@@ -80,13 +80,13 @@ class TestOutputDirectory:
 
 class TestCoreGeneration:
     def test_creates_core_directory(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
         assert (output_dir / "core").is_dir()
 
     def test_generates_all_assembly_files(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -94,7 +94,7 @@ class TestCoreGeneration:
         assert actual_files == CORE_ASSEMBLY_FILES
 
     def test_only_assembly_files_in_output(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -102,8 +102,10 @@ class TestCoreGeneration:
             assert f.suffix in (".s", ".inc"), f"Unexpected file: {f.name}"
 
     def test_s_files_match_source(self, tmp_path):
-        """Assembly source files (.s) pass through unchanged."""
-        output_dir = tmp_path / "generated" / "breadbox"
+        """
+        Assembly source files (.s) pass through unchanged.
+        """
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -114,8 +116,10 @@ class TestCoreGeneration:
                 assert generated.read_text() == src_file.read_text(), f"Content mismatch for {src_file.name}"
 
     def test_inc_files_contain_source_content(self, tmp_path):
-        """Include files have source content wrapped in auto-generated guards."""
-        output_dir = tmp_path / "generated" / "breadbox"
+        """
+        Include files have source content wrapped in auto-generated guards.
+        """
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -130,8 +134,10 @@ class TestCoreGeneration:
 
 class TestIncludeGuards:
     def test_inc_files_have_auto_guards(self, tmp_path):
-        """All generated .inc files have auto-generated include guards."""
-        output_dir = tmp_path / "generated" / "breadbox"
+        """
+        All generated .inc files have auto-generated include guards.
+        """
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -143,8 +149,10 @@ class TestIncludeGuards:
             assert content.rstrip().endswith(".endif"), f"Missing .endif in {inc_file.name}"
 
     def test_s_files_have_no_guards(self, tmp_path):
-        """Assembly source files (.s) are not wrapped with include guards."""
-        output_dir = tmp_path / "generated" / "breadbox"
+        """
+        Assembly source files (.s) are not wrapped with include guards.
+        """
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -153,17 +161,23 @@ class TestIncludeGuards:
             assert not content.startswith(".ifndef"), f"Unexpected guard in {s_file.name}"
 
     def test_guard_symbol_from_path(self):
-        """Guard symbol is derived from relative output path with __ prefix."""
+        """
+        Guard symbol is derived from relative output path with __ prefix.
+        """
         result = CodeGenerator._wrap_include_guard("content", Path("core/boot.inc"))
         assert result.startswith(".ifndef __CORE_BOOT_INC\n__CORE_BOOT_INC = 1\n")
 
     def test_guard_symbol_for_top_level(self):
-        """Top-level .inc files get guard from filename only."""
+        """
+        Top-level .inc files get guard from filename only.
+        """
         result = CodeGenerator._wrap_include_guard("content", Path("hardware.inc"))
         assert result.startswith(".ifndef __HARDWARE_INC\n__HARDWARE_INC = 1\n")
 
     def test_guard_wraps_content(self):
-        """Guard wraps content between header and .endif."""
+        """
+        Guard wraps content between header and .endif.
+        """
         result = CodeGenerator._wrap_include_guard("hello\nworld\n", Path("test.inc"))
         lines = result.split("\n")
         assert lines[0] == ".ifndef __TEST_INC"
@@ -174,14 +188,18 @@ class TestIncludeGuards:
         assert lines[-2] == ".endif"
 
     def test_guard_strips_trailing_whitespace(self):
-        """Trailing whitespace in content is cleaned before wrapping."""
+        """
+        Trailing whitespace in content is cleaned before wrapping.
+        """
         result = CodeGenerator._wrap_include_guard("content\n\n\n", Path("test.inc"))
         # Should have exactly: guard header, blank, content, blank, .endif
         assert "\n\ncontent\n\n.endif\n" in result
 
     def test_breadbox_inc_has_guard(self, tmp_path):
-        """The master include file gets its own guard."""
-        output_dir = tmp_path / "generated" / "breadbox"
+        """
+        The master include file gets its own guard.
+        """
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -189,8 +207,10 @@ class TestIncludeGuards:
         assert content.startswith(".ifndef __BREADBOX_INC\n__BREADBOX_INC = 1\n")
 
     def test_hardware_inc_has_guard(self, tmp_path):
-        """The hardware definitions file gets its own guard."""
-        output_dir = tmp_path / "generated" / "breadbox"
+        """
+        The hardware definitions file gets its own guard.
+        """
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -200,14 +220,14 @@ class TestIncludeGuards:
 
 class TestBreadboxInc:
     def test_generates_breadbox_inc(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
         assert (output_dir / "breadbox.inc").exists()
 
     def test_includes_hardware(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -215,7 +235,7 @@ class TestBreadboxInc:
         assert '.include "hardware.inc"' in content
 
     def test_includes_core_files(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -226,8 +246,10 @@ class TestBreadboxInc:
         assert '.include "core/vectors.inc"' in content
 
     def test_hardware_included_before_core(self, tmp_path):
-        """hardware.inc must be included before core files (defines CPU_CLOCK etc.)."""
-        output_dir = tmp_path / "generated" / "breadbox"
+        """
+        hardware.inc must be included before core files (defines CPU_CLOCK etc.).
+        """
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -239,14 +261,14 @@ class TestBreadboxInc:
 
 class TestHardwareInc:
     def test_generates_hardware_inc(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_via_config(), output_dir)
         generator.generate()
 
         assert (output_dir / "hardware.inc").exists()
 
     def test_core_setcpu(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_via_config(), output_dir)
         generator.generate()
 
@@ -254,7 +276,7 @@ class TestHardwareInc:
         assert '.setcpu "65c02"' in content
 
     def test_core_setcpu_6502(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_via_config(cpu="6502"), output_dir)
         generator.generate()
 
@@ -262,7 +284,7 @@ class TestHardwareInc:
         assert '.setcpu "6502"' in content
 
     def test_core_clock(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_via_config(), output_dir)
         generator.generate()
 
@@ -270,7 +292,7 @@ class TestHardwareInc:
         assert "CPU_CLOCK = 1000000" in content
 
     def test_core_clock_4mhz(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_via_config(clock_mhz=4.0), output_dir)
         generator.generate()
 
@@ -278,7 +300,7 @@ class TestHardwareInc:
         assert "CPU_CLOCK = 4000000" in content
 
     def test_via_base_address(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_via_config(), output_dir)
         generator.generate()
 
@@ -286,7 +308,7 @@ class TestHardwareInc:
         assert "VIA_BASE = $6000" in content
 
     def test_via_base_address_custom(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_via_config(via_address="$7000"), output_dir)
         generator.generate()
 
@@ -294,7 +316,7 @@ class TestHardwareInc:
         assert "VIA_BASE = $7000" in content
 
     def test_via_registers(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_via_config(), output_dir)
         generator.generate()
 
@@ -307,7 +329,7 @@ class TestHardwareInc:
         assert "VIA_PORTA_NH = VIA_BASE + $0F" in content
 
     def test_via_all_sixteen_registers(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_via_config(), output_dir)
         generator.generate()
 
@@ -317,8 +339,10 @@ class TestHardwareInc:
             assert expected in content, f"Missing register: {expected}"
 
     def test_empty_config_hardware_inc(self, tmp_path):
-        """Empty config produces hardware.inc with header only."""
-        output_dir = tmp_path / "generated" / "breadbox"
+        """
+        Empty config produces hardware.inc with header only.
+        """
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_config(), output_dir)
         generator.generate()
 
@@ -328,7 +352,7 @@ class TestHardwareInc:
         assert "BASE" not in content
 
     def test_has_auto_generated_header(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_via_config(), output_dir)
         generator.generate()
 
@@ -338,14 +362,14 @@ class TestHardwareInc:
 
 class TestBreadboxCfg:
     def test_generates_breadbox_cfg(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
         assert (output_dir / "breadbox.cfg").exists()
 
     def test_has_memory_section(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -353,7 +377,7 @@ class TestBreadboxCfg:
         assert "MEMORY {" in content
 
     def test_has_segments_section(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -361,7 +385,7 @@ class TestBreadboxCfg:
         assert "SEGMENTS {" in content
 
     def test_has_required_memory_regions(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -371,7 +395,7 @@ class TestBreadboxCfg:
         assert "VECTORS:" in content
 
     def test_has_required_segments(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -381,8 +405,10 @@ class TestBreadboxCfg:
         assert "VECTORS:" in content
 
     def test_no_include_guard(self, tmp_path):
-        """Linker config files (.cfg) should not have include guards."""
-        output_dir = tmp_path / "generated" / "breadbox"
+        """
+        Linker config files (.cfg) should not have include guards.
+        """
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
@@ -390,7 +416,7 @@ class TestBreadboxCfg:
         assert ".ifndef" not in content
 
     def test_has_auto_generated_header(self, tmp_path):
-        output_dir = tmp_path / "generated" / "breadbox"
+        output_dir = tmp_path / "build" / "breadbox"
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
