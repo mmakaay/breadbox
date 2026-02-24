@@ -23,10 +23,12 @@ dis:
     cd "{{invocation_directory()}}"
     da65 --cpu 6502 "./build/rom.bin" | less
 
-write: build
+write:
     #!/bin/bash
     cd "{{invocation_directory()}}"
     minipro -p AT28C256 -w ./"build/rom.bin"
+
+go: test build write
 
 write-u:
     #!/bin/bash
