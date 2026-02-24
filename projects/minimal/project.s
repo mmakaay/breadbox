@@ -2,42 +2,10 @@
 
 .export main
 
-hello: .asciiz "Hello, world!"
-
 .proc main
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    HALT
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
+    LED_on
+    DELAY_MS 500
+    LED_off
+    DELAY_MS 500
+    jmp main
 .endproc

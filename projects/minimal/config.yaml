@@ -1,6 +1,6 @@
 CORE:
   cpu: 65c02
-  clock_mhz: 1.5
+  clock_mhz: 1.000
 
 VIA:
   component: via_w65c22
@@ -11,5 +11,5 @@ LED:
   bus: VIA
   pin: PA0
   direction: out
-  default: off
+  default: on
 

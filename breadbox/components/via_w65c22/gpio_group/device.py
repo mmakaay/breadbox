@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from functools import cached_property
 
 from breadbox.components.via_w65c22.device import ViaW65c22Device, ViaW65c22Port, ViaW65c22PortPin
 from breadbox.types.bits import Bits
@@ -21,3 +22,10 @@ class ViaW65c22GpioGroupDevice(Device):
         super().__post_init__()
         self._internal_fields.add("bus_device")
         self.pins = [ViaW65c22PortPin(p) for p in self.pins]
+
+    @cached_property
+    def exclusive_port(self) -> bool:
+        """
+        True when this group is the sole device on its VIA port.
+        """
+        return self.bus_device.is_port_exclusive(self)

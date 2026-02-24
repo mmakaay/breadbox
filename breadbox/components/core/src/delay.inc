@@ -1,14 +1,6 @@
 .import   __core_delay
 .importzp __core_delay_iterations
 
-MHZ = 1000000  ; Can be used to define the clock speed (e.g. 4 * MHZ)
-
-; Fallback to 1Mhz CPU clock if none is defined by the project.
-.ifndef CPU_CLOCK
-    CPU_CLOCK = 1 * MHZ
-    .warning "No CPU_CLOCK speed set, defaulting to 1Mhz"
-.endif
-
 ; =========================================================================
 ; Delay for approximately a number of iterations * 5 CPU cycles.
 ;
@@ -38,7 +30,7 @@ MHZ = 1000000  ; Can be used to define the clock speed (e.g. 4 * MHZ)
 
 .macro DELAY_US us
     .local ITERATIONS
-    ITERATIONS = (us * (::CPU_CLOCK / 1000000)) / 5
+    ITERATIONS = (us * (CPU_CLOCK / 1000000)) / 5
     DELAY ITERATIONS
  .endmacro
 
@@ -56,5 +48,3 @@ MHZ = 1000000  ; Can be used to define the clock speed (e.g. 4 * MHZ)
 .macro DELAY_MS ms
     DELAY_US ms * 1000
 .endmacro
-
-

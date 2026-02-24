@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import dataclasses
+import inspect
 from abc import ABC
 from functools import cached_property
+from pathlib import Path
 from typing import TYPE_CHECKING, ClassVar, get_origin, get_type_hints
 
 from breadbox.types.device_identifier import DeviceIdentifier
 
 if TYPE_CHECKING:
-    from breadbox.visitor import DeviceVisitor
+    from breadbox.types.visitor import DeviceVisitor
 
 
 @dataclasses.dataclass(kw_only=True)
@@ -25,6 +27,28 @@ class Device(ABC):
         Derived from the module path: breadbox.components.{type}[.sub].device
         """
         return type(self).__module__.removeprefix(self._COMPONENTS_PREFIX).split(".")[0]
+
+    @cached_property
+    def component_dir(self) -> Path:
+        """
+        Absolute path to the component package that defines this device.
+
+        Derived via inspect from the module where the device class lives.
+        For example, ViaW65c22GpioPinDevice -> .../components/via_w65c22/gpio_pin/
+        """
+        return Path(inspect.getfile(type(self))).parent
+
+    @cached_property
+    def source_path(self) -> Path:
+        """
+        Component path relative to the components root.
+
+        Used by the code generator to locate src/ templates and
+        determine the output subdirectory.
+        For example, ViaW65c22GpioPinDevice -> Path("via_w65c22/gpio_pin")
+        """
+        components_root = Path(__file__).parent.parent / "components"
+        return self.component_dir.relative_to(components_root)
 
     def __post_init__(self) -> None:
         self._devices: list[Device] = []
@@ -57,6 +81,14 @@ class Device(ABC):
     def add(self, device: Device) -> None:
         device.parent = self
         self._devices.append(device)
+
+    def register_bus_client(self, device: Device) -> None:  # noqa: B027
+        """
+        Called when a device declares this device as its bus.
+        
+        Override in bus device subclasses to track clients.
+        The default implementation is a no-op.
+        """
 
     @cached_property
     def device_path(self) -> str:

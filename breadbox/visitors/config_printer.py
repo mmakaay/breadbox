@@ -1,16 +1,12 @@
 from __future__ import annotations
 
 import dataclasses
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING
 
 from rich.console import Console
 
 if TYPE_CHECKING:
     from breadbox.types.device import Device
-
-
-class DeviceVisitor(Protocol):
-    def visit(self, device: Device) -> None: ...
 
 
 class ConfigPrinter:

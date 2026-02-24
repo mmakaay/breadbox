@@ -8,7 +8,7 @@ from rich.console import Console
 from breadbox.errors import ConfigError
 from breadbox.types.device import Device
 from breadbox.types.device_identifier import DeviceIdentifier
-from breadbox.visitor import ConfigPrinter
+from breadbox.visitors.config_printer import ConfigPrinter
 
 console = Console()
 

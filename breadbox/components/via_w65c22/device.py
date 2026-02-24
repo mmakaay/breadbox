@@ -1,3 +1,4 @@
+import dataclasses
 from dataclasses import dataclass
 from typing import Self
 
@@ -34,10 +35,30 @@ REGISTERS = [
 @dataclass(kw_only=True)
 class ViaW65c22Device(Device):
     address: Address16
+    _bus_clients: list[Device] = dataclasses.field(default_factory=list, init=False, repr=False)
 
     @property
     def registers(self) -> list[tuple[str, int]]:
         return REGISTERS
+
+    def register_bus_client(self, device: Device) -> None:
+        """
+        Track a device that uses this VIA as its bus.
+        """
+        self._bus_clients.append(device)
+
+    def is_port_exclusive(self, device: Device) -> bool:
+        """
+        Check whether a device is the sole client on its VIA port.
+
+        Returns True if no other registered bus client shares the
+        same port. Devices without a port attribute are always
+        considered exclusive.
+        """
+        port = getattr(device, "port", None)
+        if port is None:
+            return True
+        return sum(1 for c in self._bus_clients if getattr(c, "port", None) == port) <= 1
 
     @staticmethod
     def get_port(port: str) -> list[str]:

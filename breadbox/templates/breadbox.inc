@@ -2,8 +2,7 @@
 
 .include "hardware.inc"
 
-; Core includes.
-.include "core/cpu_shims.inc"
-.include "core/delay.inc"
-.include "core/boot.inc"
-.include "core/vectors.inc"
+; Device includes.
+{% for inc_path in device_includes %}
+.include "{{ inc_path }}"
+{% endfor %}

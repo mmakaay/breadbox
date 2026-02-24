@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import dataclasses
 import shutil
+from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
+
+from breadbox.visitors.bus_client_collector import BusClientCollector
 
 if TYPE_CHECKING:
     from breadbox.config import BreadboxConfig
@@ -41,12 +44,15 @@ class CodeGenerator:
         self.config = config
         self.output_dir = output_dir
         self._template_env = self._create_template_env()
+        self._bus_collector = BusClientCollector()
+        self._device_includes: list[Path] = []
 
     def generate(self) -> None:
         """
         Generate all assembly output from the resolved config.
         """
         self._prepare_output_dir()
+        self._collect_bus_clients()
         for device in self.config.devices.values():
             if device.parent is None:
                 device.accept(self)
@@ -61,6 +67,17 @@ class CodeGenerator:
         self._process_component_sources(device)
         for sub in device.devices:
             sub.accept(self)
+
+    def _collect_bus_clients(self) -> None:
+        """
+        Walk the full device tree and register bus clients.
+
+        Must run before code generation so that bus devices
+        can answer queries about their clients (e.g. port exclusivity).
+        """
+        for device in self.config.devices.values():
+            if device.parent is None:
+                device.accept(self._bus_collector)
 
     def _prepare_output_dir(self) -> None:
         """
@@ -93,10 +110,11 @@ class CodeGenerator:
         """
         Generate the master include file (breadbox.inc).
 
-        This is the router that pulls in all generated includes.
+        Pulls in hardware definitions, core assembly, and all
+        device-generated include files.
         """
         template = self._template_env.get_template("breadbox.inc")
-        rendered = template.render()
+        rendered = template.render(device_includes=self._device_includes)
         self._write_output(Path("breadbox.inc"), rendered)
 
     def _generate_hardware_inc(self) -> None:
@@ -119,11 +137,15 @@ class CodeGenerator:
         """
         Process a component's assembly source files into the output directory.
 
-        Components that ship assembly source files in a src/ directory get those
-        files rendered through Jinja2 and written to a matching subdirectory in
-        the output (e.g. core/src/*.s -> generated/breadbox/core/*.s).
+        Uses the device's component_dir (via inspect) to locate the src/
+        directory. Output files are placed under the device's source_path.
+
+        When a component has a single .s/.inc template pair, the output
+        filenames are derived from the device path (e.g. led.s) to support
+        multiple instances. When multiple templates exist, the original
+        filenames are kept (e.g. boot.s, vectors.s).
         """
-        src_dir = _COMPONENTS_DIR / device.component_type / "src"
+        src_dir = device.component_dir / "src"
         if not src_dir.is_dir():
             return
 
@@ -134,15 +156,28 @@ class CodeGenerator:
             lstrip_blocks=True,
             trim_blocks=True,
         )
+        env.filters["hex"] = _hex_filter
 
         context = self._build_context(device)
 
-        for src_file in sorted(src_dir.iterdir()):
-            if src_file.suffix in (".s", ".inc"):
-                template = env.get_template(src_file.name)
-                rendered = template.render(context)
-                relative_path = Path(device.component_type) / src_file.name
-                self._write_output(relative_path, rendered)
+        src_files = sorted(f for f in src_dir.iterdir() if f.suffix in (".s", ".inc"))
+        use_device_names = (
+            sum(1 for f in src_files if f.suffix == ".s") <= 1
+            and sum(1 for f in src_files if f.suffix == ".inc") <= 1
+        )
+
+        for src_file in src_files:
+            template = env.get_template(src_file.name)
+            rendered = template.render(context)
+            if use_device_names:
+                safe_name = device.device_path.replace("::", "_").lower()
+                filename = f"{safe_name}{src_file.suffix}"
+            else:
+                filename = src_file.name
+            relative_path = device.source_path / filename
+            self._write_output(relative_path, rendered)
+            if relative_path.suffix == ".inc":
+                self._device_includes.append(relative_path)
 
     def _write_output(self, relative_path: Path, content: str) -> None:
         """
@@ -176,7 +211,8 @@ class CodeGenerator:
         """
         Build the Jinja2 template context for a device.
 
-        Includes device metadata and all public (non-internal) dataclass fields.
+        Includes device metadata, all public (non-internal) dataclass
+        fields, cached properties, and the bus device reference.
         """
         context: dict = {
             "device_id": str(device.id),
@@ -185,4 +221,15 @@ class CodeGenerator:
         for f in dataclasses.fields(device):
             if f.name not in device._internal_fields:
                 context[f.name] = getattr(device, f.name)
+
+        # Expose cached properties (e.g. port, bitmask, exclusive_port).
+        for name in dir(type(device)):
+            if isinstance(getattr(type(device), name, None), cached_property) and name not in device._internal_fields:
+                context[name] = getattr(device, name)
+
+        # Expose the bus device reference for register name generation.
+        bus_device = getattr(device, "bus_device", None)
+        if bus_device is not None:
+            context["bus_device"] = bus_device
+
         return context
