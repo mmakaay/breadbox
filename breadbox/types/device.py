@@ -107,5 +107,14 @@ class Device(ABC):
             path.insert(0, device.id)
         return "::".join(path)
 
+    @cached_property
+    def build_dir(self) -> str:
+        """
+        Output directory for this device's generated files.
+
+        Mirrors the device tree path: the_display::PIN_RS -> the_display/pin_rs.
+        """
+        return self.device_path.replace("::", "/").lower()
+
     def accept(self, visitor: DeviceVisitor) -> None:
         visitor.visit(self)
