@@ -153,12 +153,8 @@ class CodeGenerator:
         Process a component's assembly source files into the output directory.
 
         Uses the device's component_dir (via inspect) to locate the src/
-        directory. Output files are placed under the device's source_path.
-
-        When a component has a single .s/.inc template pair, the output
-        filenames are derived from the device path (e.g. led.s) to support
-        multiple instances. When multiple templates exist, the original
-        filenames are kept (e.g. boot.s, vectors.s).
+        directory. Output files are placed under the device's build_dir,
+        which mirrors the device tree (e.g. the_display/pin_rs/).
         """
         src_dir = device.component_dir / "src"
         if not src_dir.is_dir():
@@ -176,20 +172,10 @@ class CodeGenerator:
         context = self._build_context(device)
 
         src_files = sorted(f for f in src_dir.iterdir() if f.suffix in (".s", ".inc"))
-        use_device_names = (
-            sum(1 for f in src_files if f.suffix == ".s") <= 1
-            and sum(1 for f in src_files if f.suffix == ".inc") <= 1
-        )
-
         for src_file in src_files:
             template = env.get_template(src_file.name)
             rendered = template.render(context)
-            if use_device_names:
-                safe_name = device.device_path.replace("::", "_").lower()
-                filename = f"{safe_name}{src_file.suffix}"
-            else:
-                filename = src_file.name
-            relative_path = device.source_path / filename
+            relative_path = Path(device.build_dir) / src_file.name
             self._write_output(relative_path, rendered)
             if relative_path.suffix == ".inc":
                 self._device_includes.append(relative_path)
