@@ -58,7 +58,7 @@
         sta {{ symbol("rx_w_ptr") }}
         sta {{ symbol("rx_pending") }}
         sta {{ symbol("rx_off") }}
-        lda {{ symbol("STATUS") }}
+        lda {{ P }}_STATUS
         sta {{ symbol("status") }}
 {% if pin_rts %}
 
@@ -94,10 +94,10 @@
 
     .proc {{ symbol("irq_handler") }}
         lda {{ P }}_STATUS
-        sta {{ P }}_status
+        sta {{ symbol("status") }}
         and #{{ P }}_SR_IRQ
         beq @done
-        lda {{ P }}_status
+        lda {{ symbol("status") }}
         jsr {{ symbol("irq_handler_rx") }}
     @done:
         rts
@@ -120,7 +120,7 @@
 
         lda {{ P }}_DATA
         ldx {{ symbol("rx_w_ptr") }}
-        sta {{ symbol("rx_buffer,X") }}
+        sta {{ symbol("rx_buffer") }},X
         inc {{ symbol("rx_w_ptr") }}
         inc {{ symbol("rx_pending") }}
 {% if pin_rts %}
@@ -199,7 +199,7 @@
         beq @done
 
         ldx {{ symbol("rx_r_ptr") }}
-        lda {{ symbol("rx_buffer,X") }}
+        lda {{ symbol("rx_buffer") }},X
         sta {{ symbol("byte") }}
         inc {{ symbol("rx_r_ptr") }}
         dec {{ symbol("rx_pending") }}
@@ -311,7 +311,7 @@
         beq @done
 
         lda {{ P }}_DATA
-        sta {{ P }}_byte
+        sta {{ symbol("byte") }}
         sec
     @done:
         rts

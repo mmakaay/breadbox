@@ -28,7 +28,7 @@ class TestUart6551Device:
         assert device.type == uart_type
 
     def test_type_lowercased(self):
-        device = Uart6551Device(id=DeviceIdentifier("UART0"), type="W65C51", address=Address16("$5000"))
+        device = Uart6551Device(id=DeviceIdentifier("UART0"), type="W65C51N", address=Address16("$5000"))
         assert device.type == "w65c51n"
 
     def test_invalid_type(self):

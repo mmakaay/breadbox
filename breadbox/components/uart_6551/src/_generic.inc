@@ -17,21 +17,21 @@
 
 .segment "RAM"
 
-    {{ P }}_rx_buffer: .res $100          ; 256-byte RX ring buffer
-    {{ P }}_tx_buffer: .res $100          ; 256-byte TX ring buffer
+    {{ symbol("rx_buffer") }}: .res $100          ; 256-byte RX ring buffer
+    {{ symbol("tx_buffer") }}: .res $100          ; 256-byte TX ring buffer
 
 .segment "ZEROPAGE"
 
-    {{ P }}_rx_w_ptr:   .res 1          ; RX ring buffer write pointer (IRQ side)
-    {{ P }}_rx_r_ptr:   .res 1          ; RX ring buffer read pointer (main side)
-    {{ P }}_rx_pending: .res 1          ; Number of bytes waiting in RX buffer
-    {{ P }}_rx_off:     .res 1          ; RTS deasserted flag (1 = flow stopped)
+    {{ symbol("rx_w_ptr") }}:   .res 1          ; RX ring buffer write pointer (IRQ side)
+    {{ symbol("rx_r_ptr") }}:   .res 1          ; RX ring buffer read pointer (main side)
+    {{ symbol("rx_pending") }}: .res 1          ; Number of bytes waiting in RX buffer
+    {{ symbol("rx_off") }}:     .res 1          ; RTS deasserted flag (1 = flow stopped)
 
-    {{ P }}_tx_w_ptr:   .res 1          ; TX ring buffer write pointer (main side)
-    {{ P }}_tx_r_ptr:   .res 1          ; TX ring buffer read pointer (IRQ side)
-    {{ P }}_tx_pending: .res 1          ; Number of bytes waiting in TX buffer
+    {{ symbol("tx_w_ptr") }}:   .res 1          ; TX ring buffer write pointer (main side)
+    {{ symbol("tx_r_ptr") }}:   .res 1          ; TX ring buffer read pointer (IRQ side)
+    {{ symbol("tx_pending") }}: .res 1          ; Number of bytes waiting in TX buffer
 
-    {{ P }}_status:     .res 1          ; Cached status register from last IRQ
+    {{ symbol("status") }}:     .res 1          ; Cached status register from last IRQ
 
 .segment "KERNAL"
 
@@ -46,20 +46,20 @@
     ; Out:
     ;   A = clobbered
 
-    .proc __{{ P }}_init
-        jsr __{{ P }}_soft_reset
+    .proc {{ symbol("init") }}
+        jsr {{ symbol("soft_reset") }}
 
         ; Clear ring buffer state.
         lda #0
-        sta {{ P }}_rx_r_ptr
-        sta {{ P }}_rx_w_ptr
-        sta {{ P }}_rx_pending
-        sta {{ P }}_rx_off
-        sta {{ P }}_tx_r_ptr
-        sta {{ P }}_tx_w_ptr
-        sta {{ P }}_tx_pending
+        sta {{ symbol("rx_r_ptr") }}
+        sta {{ symbol("rx_w_ptr") }}
+        sta {{ symbol("rx_pending") }}
+        sta {{ symbol("rx_off") }}
+        sta {{ symbol("tx_r_ptr") }}
+        sta {{ symbol("tx_w_ptr") }}
+        sta {{ symbol("tx_pending") }}
         lda {{ P }}_STATUS
-        sta {{ P }}_status
+        sta {{ symbol("status") }}
 {% if pin_rts %}
 
         ; Assert RTS: active low = ready to receive.
@@ -80,7 +80,7 @@
 
         rts
     .endproc
-    .constructor __{{ P }}_init
+    .constructor {{ symbol("init") }}
 
     ; =====================================================================
     ; IRQ handler.
@@ -91,22 +91,22 @@
     ;
     ; Register saving and RTI are handled by the core dispatcher.
 
-    .proc __{{ P }}_irq_handler
+    .proc {{ symbol("irq_handler") }}
         lda {{ P }}_STATUS
-        sta {{ P }}_status
+        sta {{ symbol("status") }}
         and #{{ P }}_SR_IRQ
         beq @done
 
-        lda {{ P }}_status
-        jsr __{{ P }}_irq_handler_rx
+        lda {{ symbol("status") }}
+        jsr {{ symbol("irq_handler_rx") }}
 
-        lda {{ P }}_status
-        jsr __{{ P }}_irq_handler_tx
+        lda {{ symbol("status") }}
+        jsr {{ symbol("irq_handler_tx") }}
 
     @done:
         rts
     .endproc
-    .interruptor _{{ P }}_irq_handler
+    .interruptor {{ symbol("irq_handler") }}
 
     ; =====================================================================
     ; IRQ RX handler.
@@ -118,18 +118,18 @@
     ; In:
     ;   A = status register value (from irq_handler)
 
-    .proc __{{ P }}_irq_handler_rx
+    .proc {{ symbol("irq_handler_rx") }}
         and #{{ P }}_SR_RDRF
         beq @done
 
         lda {{ P }}_DATA
-        ldx {{ P }}_rx_w_ptr
-        sta {{ P }}_rx_buffer,X
-        inc {{ P }}_rx_w_ptr
-        inc {{ P }}_rx_pending
+        ldx {{ symbol("rx_w_ptr") }}
+        sta {{ symbol("rx_buffer") }},X
+        inc {{ symbol("rx_w_ptr") }}
+        inc {{ symbol("rx_pending") }}
 {% if pin_rts %}
 
-        jsr __{{ P }}_turn_rx_off_if_buffer_almost_full
+        jsr {{ symbol("turn_rx_off_if_buffer_almost_full") }}
 {% endif %}
 
     @done:
@@ -146,20 +146,20 @@
     ; In:
     ;   A = status register value (from irq_handler)
 
-    .proc __{{ P }}_irq_handler_tx
+    .proc {{ symbol("irq_handler_tx") }}
         and #{{ P }}_SR_TDRE
         beq @done
 
-        lda {{ P }}_tx_pending
+        lda {{ symbol("tx_pending") }}
         beq @tx_stop
 
-        ldx {{ P }}_tx_r_ptr
-        lda {{ P }}_tx_buffer,X
+        ldx {{ symbol("tx_r_ptr") }}
+        lda {{ symbol("tx_buffer") }},X
         sta {{ P }}_DATA
-        inc {{ P }}_tx_r_ptr
-        dec {{ P }}_tx_pending
+        inc {{ symbol("tx_r_ptr") }}
+        dec {{ symbol("tx_pending") }}
 
-        lda {{ P }}_tx_pending
+        lda {{ symbol("tx_pending") }}
         bne @done
 
     @tx_stop:
@@ -177,16 +177,16 @@
     ; Called from the IRQ handler. When rx_pending reaches $D0 (208 of 256),
     ; sets the RTS pin high (deasserted = stop sending) to prevent overflow.
 
-    .proc __{{ P }}_turn_rx_off_if_buffer_almost_full
-        lda {{ P }}_rx_off
+    .proc {{ symbol("turn_rx_off_if_buffer_almost_full") }}
+        lda {{ symbol("rx_off") }}
         bne @done
 
-        lda {{ P }}_rx_pending
+        lda {{ symbol("rx_pending") }}
         cmp #$d0
         bcc @done
 
         lda #1
-        sta {{ P }}_rx_off
+        sta {{ symbol("rx_off") }}
         {{ P }}_PIN_RTS_on
 
     @done:
@@ -200,17 +200,17 @@
     ; $50 (80 of 256) and RTS was deasserted, reasserts RTS (pin low = ready)
     ; under sei/cli to avoid races with the IRQ handler.
 
-    .proc __{{ P }}_turn_rx_on_if_buffer_emptying
-        lda {{ P }}_rx_off
+    .proc {{ symbol("turn_rx_on_if_buffer_emptying") }}
+        lda {{ symbol("rx_off") }}
         beq @done
 
-        lda {{ P }}_rx_pending
+        lda {{ symbol("rx_pending") }}
         cmp #$50
         bcs @done
 
         sei
         lda #0
-        sta {{ P }}_rx_off
+        sta {{ symbol("rx_off") }}
         {{ P }}_PIN_RTS_off
         cli
 
@@ -231,19 +231,19 @@
     ;   byte = received data (valid only when C=1)
     ;   A, X = clobbered
 
-    .proc __{{ P }}_read
+    .proc {{ symbol("read") }}
         clc
-        lda {{ P }}_rx_pending
+        lda {{ symbol("rx_pending") }}
         beq @done
 
-        ldx {{ P }}_rx_r_ptr
-        lda {{ P }}_rx_buffer,X
-        sta {{ P }}_byte
-        inc {{ P }}_rx_r_ptr
-        dec {{ P }}_rx_pending
+        ldx {{ symbol("rx_r_ptr") }}
+        lda {{ symbol("rx_buffer") }},X
+        sta {{ symbol("byte") }}
+        inc {{ symbol("rx_r_ptr") }}
+        dec {{ symbol("rx_pending") }}
 {% if pin_rts %}
 
-        jsr __{{ P }}_turn_rx_on_if_buffer_emptying
+        jsr {{ symbol("turn_rx_on_if_buffer_emptying") }}
 {% endif %}
         sec
 
@@ -263,21 +263,21 @@
     ; Out:
     ;   A, X = clobbered
 
-    .proc __{{ P }}_write
+    .proc {{ symbol("write") }}
         sei
 
-        lda {{ P }}_tx_pending
+        lda {{ symbol("tx_pending") }}
         cmp #$FF
         beq @full
 
-        lda {{ P }}_byte
-        ldx {{ P }}_tx_w_ptr
-        sta {{ P }}_tx_buffer,X
-        inc {{ P }}_tx_w_ptr
-        inc {{ P }}_tx_pending
+        lda {{ symbol("byte") }}
+        ldx {{ symbol("tx_w_ptr") }}
+        sta {{ symbol("tx_buffer") }},X
+        inc {{ symbol("tx_w_ptr") }}
+        inc {{ symbol("tx_pending") }}
 
         ; If this is the first byte in the buffer, enable TX IRQ.
-        lda {{ P }}_tx_pending
+        lda {{ symbol("tx_pending") }}
         cmp #1
         bne @done
         lda #{{ P }}_CMD_TX_ACTIVE
@@ -291,7 +291,7 @@
         ; Buffer full — re-enable interrupts, let TX IRQ drain, retry.
         cli
         nop
-        jmp _{{ P }}_write
+        jmp {{ symbol("write") }}
     .endproc
 
     ; =====================================================================
@@ -301,9 +301,9 @@
     ;   byte = number of bytes waiting
     ;   A = clobbered
 
-    .proc __{{ P }}_check_rx
-        lda {{ P }}_rx_pending
-        sta {{ P }}_byte
+    .proc {{ symbol("check_rx") }}
+        lda {{ symbol("rx_pending") }}
+        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -317,10 +317,10 @@
     ;   byte = inverted tx_pending (non-zero = space available)
     ;   A = clobbered
 
-    .proc __{{ P }}_check_tx
-        lda {{ P }}_tx_pending
+    .proc {{ symbol("check_tx") }}
+        lda {{ symbol("tx_pending") }}
         eor #$FF
-        sta {{ P }}_byte
+        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -334,9 +334,9 @@
     ;   byte = cached status register contents
     ;   A = clobbered
 
-    .proc __{{ P }}_load_status
-        lda {{ P }}_status
-        sta {{ P }}_byte
+    .proc {{ symbol("load_status") }}
+        lda {{ symbol("status") }}
+        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -353,8 +353,8 @@
     ; Out:
     ;   A = clobbered
 
-    .proc __{{ P }}_init
-        jsr __{{ P }}_soft_reset
+    .proc {{ symbol("init") }}
+        jsr {{ symbol("soft_reset") }}
 {% if pin_rts %}
 
         ; Assert RTS: active low = ready to receive.
@@ -372,7 +372,7 @@
 
         rts
     .endproc
-    .constructor _{{ P }}_init
+    .constructor {{ symbol("init") }}
 
     ; =====================================================================
     ; Read a byte from the receiver (non-blocking).
@@ -386,14 +386,14 @@
     ;   byte = received data (valid only when C=1)
     ;   A = clobbered
 
-    .proc __{{ P }}_read
+    .proc {{ symbol("read") }}
         clc
         lda {{ P }}_STATUS
         and #{{ P }}_SR_RDRF
         beq @done
 
         lda {{ P }}_DATA
-        sta {{ P }}_byte
+        sta {{ symbol("byte") }}
         sec
     @done:
         rts
@@ -410,13 +410,13 @@
     ; Out:
     ;   A = clobbered
 
-    .proc __{{ P }}_write
+    .proc {{ symbol("write") }}
     @wait:
         lda {{ P }}_STATUS
         and #{{ P }}_SR_TDRE
         beq @wait
 
-        lda {{ P }}_byte
+        lda {{ symbol("byte") }}
         sta {{ P }}_DATA
         rts
     .endproc
@@ -428,10 +428,10 @@
     ;   byte = non-zero if data available, zero if not
     ;   A = clobbered
 
-    .proc __{{ P }}_check_rx
+    .proc {{ symbol("check_rx") }}
         lda {{ P }}_STATUS
         and #{{ P }}_SR_RDRF
-        sta {{ P }}_byte
+        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -445,10 +445,10 @@
     ;   byte = non-zero if ready, zero if busy
     ;   A = clobbered
 
-    .proc __{{ P }}_check_tx
+    .proc {{ symbol("check_tx") }}
         lda {{ P }}_STATUS
         and #{{ P }}_SR_TDRE
-        sta {{ P }}_byte
+        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -459,9 +459,9 @@
     ;   byte = status register contents
     ;   A = clobbered
 
-    .proc __{{ P }}_load_status
+    .proc {{ symbol("load_status") }}
         lda {{ P }}_STATUS
-        sta {{ P }}_byte
+        sta {{ symbol("byte") }}
         rts
     .endproc
 
