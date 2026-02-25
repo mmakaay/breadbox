@@ -9,8 +9,8 @@
 {% if direction in ("out", "both") %}
 
 ; Import tmp variable when included by external files.
-.ifndef {{ macro_prefix }}_tmp
-.importzp {{ macro_prefix }}_tmp
+.ifndef {{ symbol("tmp") }}
+.importzp {{ symbol("tmp") }}
 .endif
 
 {% endif %}
@@ -167,10 +167,10 @@
 {% else %}
 .macro {{ macro_prefix }}_write_a
     and #{{ MASK | hex }}
-    sta {{ macro_prefix }}_tmp
+    sta {{ symbol("tmp") }}
     lda {{ PORT_REG }}
     and #{{ INV_MASK | hex }}
-    ora {{ macro_prefix }}_tmp
+    ora {{ symbol("tmp") }}
     sta {{ PORT_REG }}
 .endmacro
 {% endif %}

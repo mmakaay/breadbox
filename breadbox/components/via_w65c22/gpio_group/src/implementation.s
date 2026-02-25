@@ -8,7 +8,7 @@
 
 .segment "ZEROPAGE"
 
-{{ P }}_tmp: .res 1                   ; Internal temporary for read-modify-write
+{{ symbol("tmp") }}: .res 1                   ; Internal temporary for read-modify-write
 
 .include "hardware.inc"
 .include "{{ device_path }}/macros.inc"
@@ -24,7 +24,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc init_{{ P | lower }}
+    .proc {{ symbol("init") }}
 {% if exclusive_port %}
         lda #{{ bits | hex }}
         sta {{ bus_device.id }}_DDR{{ port }}
@@ -50,7 +50,7 @@
 {% endif %}
         rts
     .endproc
-    .constructor init_{{ P | lower }}, 16
+    .constructor {{ symbol("init") }}, 16
 {% endif %}
 {% if direction in ("out", "both") %}
 
@@ -60,7 +60,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_turn_on
+    .proc {{ symbol("turn_on") }}
         {{ P }}_on
         rts
     .endproc
@@ -71,7 +71,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_turn_off
+    .proc {{ symbol("turn_off") }}
         {{ P }}_off
         rts
     .endproc
@@ -82,7 +82,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_toggle
+    .proc {{ symbol("toggle") }}
         {{ P }}_toggle
         rts
     .endproc
@@ -95,7 +95,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_write_a
+    .proc {{ symbol("write_a") }}
         {{ P }}_write_a
         rts
     .endproc
@@ -108,7 +108,7 @@
     ; Out:
     ;   A = group state (masked to {{ bits | hex }})
 
-    .proc _{{ P }}_read
+    .proc {{ symbol("read") }}
         {{ P }}_read
         rts
     .endproc
@@ -119,7 +119,7 @@
     ; Out:
     ;   A = group state (masked to {{ bits | hex }})
 
-    .proc _{{ P }}_read_port
+    .proc {{ symbol("read_port") }}
         {{ P }}_read_port
         rts
     .endproc
@@ -132,7 +132,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_set_output
+    .proc {{ symbol("set_output") }}
         {{ P }}_set_output
         rts
     .endproc
@@ -143,7 +143,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_set_input
+    .proc {{ symbol("set_input") }}
         {{ P }}_set_input
         rts
     .endproc
@@ -153,18 +153,18 @@
 ; Exports
 ; =========================================================================
 
-.exportzp {{ P }}_tmp
+{{ exportzp("tmp") }}
 {% if direction in ("out", "both") %}
-{{ export("_turn_on") }}
-{{ export("_turn_off") }}
-{{ export("_toggle") }}
-{{ export("_write_a") }}
+{{ export("turn_on") }}
+{{ export("turn_off") }}
+{{ export("toggle") }}
+{{ export("write_a") }}
 {% endif %}
 {% if direction in ("in", "both") %}
-{{ export("_read") }}
-{{ export("_read_port") }}
+{{ export("read") }}
+{{ export("read_port") }}
 {% endif %}
 {% if direction == "both" %}
-{{ export("_set_output") }}
-{{ export("_set_input") }}
+{{ export("set_output") }}
+{{ export("set_input") }}
 {% endif %}
