@@ -64,7 +64,7 @@ def _setup_project(project_dir: Path, config_yaml: str) -> BreadboxProject:
     (project_dir / "main.s").write_text(MINIMAL_MAIN)
 
     project = BreadboxProject(config_path)
-    generator = CodeGenerator(project.config, project.generated_dir)
+    generator = CodeGenerator(project)
     generator.generate()
 
     return project
@@ -112,10 +112,10 @@ class TestBuildMinimal:
         builder = Builder(project)
         builder.build()
 
-        assert (project.generated_dir / "core" / "boot.o").exists()
-        assert (project.generated_dir / "core" / "vectors.o").exists()
-        assert (project.generated_dir / "core" / "delay.o").exists()
-        assert (project.generated_dir / "core" / "cpu_shims.o").exists()
+        assert (project.generated_dir / "CORE" / "boot.o").exists()
+        assert (project.generated_dir / "CORE" / "vectors.o").exists()
+        assert (project.generated_dir / "CORE" / "delay.o").exists()
+        assert (project.generated_dir / "CORE" / "cpu_shims.o").exists()
         assert (project.build_dir / "project" / "main.o").exists()
 
     def test_user_sources_copied_to_project(self, tmp_path):

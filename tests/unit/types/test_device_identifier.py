@@ -4,19 +4,18 @@ from breadbox.types.device_identifier import DeviceIdentifier
 
 
 class TestValidIdentifiers:
-    @pytest.mark.parametrize("value", ["CPU", "VIA0", "LED", "PROGRESS_LEDS1", "e", "Z9_test", "PIN_RTS"])
+    @pytest.mark.parametrize("value", ["CPU", "VIA0", "LED", "PROGRESS_LEDS1", "PIN_RTS"])
     def test_valid_identifiers(self, value):
         result = DeviceIdentifier(value)
         assert result == value
         assert isinstance(result, DeviceIdentifier)
         assert isinstance(result, str)
 
-    def test_preserves_case(self):
-        assert DeviceIdentifier("MyDevice") == "MyDevice"
-
+    def test_preserves_value(self):
+        assert DeviceIdentifier("MY_DEVICE") == "MY_DEVICE"
 
 class TestInvalidFormat:
-    @pytest.mark.parametrize("value", ["", "0BAD", "_bad", "has space", "has-dash", "hello!"])
+    @pytest.mark.parametrize("value", ["", "0BAD", "_bad", "has space", "has-dash", "hello!", "lower", "mixedCase"])
     def test_invalid_format_raises(self, value):
         with pytest.raises(ValueError):
             DeviceIdentifier(value)
@@ -51,11 +50,6 @@ class TestReservedWords:
         ],
     )
     def test_reserved_words_rejected(self, value):
-        with pytest.raises(ValueError, match="reserved word"):
-            DeviceIdentifier(value)
-
-    @pytest.mark.parametrize("value", ["rts", "lda", "brk", "Rts", "nop", "sp"])
-    def test_reserved_words_case_insensitive(self, value):
         with pytest.raises(ValueError, match="reserved word"):
             DeviceIdentifier(value)
 

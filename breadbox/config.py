@@ -3,7 +3,6 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from rich.console import Console
 
 from breadbox.errors import ConfigError
 from breadbox.types.device import Device

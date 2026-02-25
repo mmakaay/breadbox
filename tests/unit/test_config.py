@@ -34,33 +34,6 @@ class TestValidateCoreDevice:
         with pytest.raises(ConfigError, match="must include a CORE device"):
             config._validate()
 
-    def test_multiple_cores_raises(self):
-        """
-        Two devices that are both CoreDevice instances should be rejected.
-        """
-        config = make_config(
-            CORE=make_core("CORE"),
-            CORE2=make_core("CORE2"),
-        )
-        with pytest.raises(ConfigError, match="exactly one CORE device, found 2"):
-            config._validate()
-
-    def test_no_core_error_message(self):
-        config = make_config()
-        with pytest.raises(ConfigError) as exc_info:
-            config._validate()
-        assert "CORE" in str(exc_info.value)
-
-    def test_multiple_cores_lists_ids(self):
-        config = make_config(
-            CORE=make_core("CORE"),
-            CPU2=make_core("CPU2"),
-        )
-        with pytest.raises(ConfigError) as exc_info:
-            config._validate()
-        message = str(exc_info.value)
-        assert "CORE" in message
-        assert "CPU2" in message
 
 
 class TestValidateFromYaml:

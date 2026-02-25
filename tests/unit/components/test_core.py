@@ -66,3 +66,13 @@ class TestResolve:
         assert device.id == "CORE"
         assert device.cpu == "65c02"
         assert device.clock_mhz == 1.0
+
+
+class TestCoreIdEnforcement:
+    def test_id_must_be_core(self):
+        with pytest.raises(ValueError, match="must always have id 'CORE'"):
+            CoreDevice(id=DeviceIdentifier("CPU"), cpu="65c02", clock_mhz=1.0)
+
+    def test_id_core_accepted(self):
+        core = CoreDevice(id=DeviceIdentifier("CORE"), cpu="65c02", clock_mhz=1.0)
+        assert core.id == "CORE"
