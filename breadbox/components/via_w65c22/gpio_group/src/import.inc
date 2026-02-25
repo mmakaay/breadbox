@@ -3,17 +3,17 @@
 
 .scope {{ macro_prefix }}
 {% if direction in ("out", "both") %}
-{{ include("_turn_on") }}
-{{ include("_turn_off") }}
-{{ include("_toggle") }}
-{{ include("_write_a") }}
+{{ importfn("_turn_on") }}
+{{ importfn("_turn_off") }}
+{{ importfn("_toggle") }}
+{{ importfn("_write_a") }}
 {% endif %}
 {% if direction in ("in", "both") %}
-{{ include("_read") }}
-{{ include("_read_port") }}
+{{ importfn("_read") }}
+{{ importfn("_read_port") }}
 {% endif %}
 {% if direction == "both" %}
-{{ include("_set_output") }}
-{{ include("_set_input") }}
+{{ importfn("_set_output") }}
+{{ importfn("_set_input") }}
 {% endif %}
 .endscope

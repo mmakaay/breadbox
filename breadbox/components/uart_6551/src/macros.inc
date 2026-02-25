@@ -7,10 +7,10 @@
 ; 6551 ACIA register addresses
 ; =========================================================================
 
-{{ P }}_DATA   = {{ address | hex }}              ; +$0 Transmit / Receive data
-{{ P }}_STATUS = {{ (address + 1) | hex }}        ; +$1 Status (write = soft reset)
-{{ P }}_CMD    = {{ (address + 2) | hex }}        ; +$2 Command register
-{{ P }}_CTRL   = {{ (address + 3) | hex }}        ; +$3 Control register
+{{ P }}_DATA   = {{ address | hex }}       ; +$0 Transmit / Receive data
+{{ P }}_STATUS = {{ (address + 1) | hex }} ; +$1 Status (write = soft reset)
+{{ P }}_CMD    = {{ (address + 2) | hex }} ; +$2 Command register
+{{ P }}_CTRL   = {{ (address + 3) | hex }} ; +$3 Control register
 
 ; =========================================================================
 ; Status register bits (active high, active-low pins inverted)

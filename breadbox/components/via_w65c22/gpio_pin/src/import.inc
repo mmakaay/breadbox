@@ -3,11 +3,11 @@
 
 .scope {{ macro_prefix }}
 {% if direction in ("out", "both") %}
-{{ include("_turn_on") }}
-{{ include("_turn_off") }}
-{{ include("_toggle") }}
+{{ importfn("_turn_on") }}
+{{ importfn("_turn_off") }}
+{{ importfn("_toggle") }}
 {% endif %}
 {% if direction in ("in", "both") %}
-{{ include("_read") }}
+{{ importfn("_read") }}
 {% endif %}
 .endscope

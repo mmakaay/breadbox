@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
+from typing import cast
 
 from breadbox.components.via_w65c22.gpio_group.device import ViaW65c22GpioGroupDevice
 from breadbox.types.device import Device
@@ -59,7 +60,7 @@ class LcdHd44780Device(Device):
         """
         The CTRL (RS + RWB) control pin group sub-device.
         """
-        return self._sub("CTRL")
+        return cast(ViaW65c22GpioGroupDevice, self._sub("CTRL"))
 
     @cached_property
     def pin_en(self) -> Device:

@@ -2,10 +2,14 @@
 ; UART 6551: {{ device_id }} ({{ type }})
 
 .scope {{ macro_prefix }}
-{{ includezp("_byte") }}
-{{ include("_init") }}
-{{ include("_read") }}
-{{ include("_write") }}
-{{ include("_write_terminal") }}
-{{ include("_load_status") }}
+{{ importzp("_byte") }}
+{{ importfn("_init") }}
+{{ importfn("_read") }}
+{{ importfn("_write") }}
+{{ importfn("_write_terminal") }}
+{{ importfn("_load_status") }}
+{% if irq == "on" %}
+{{ importfn("_check_rx") }}
+{{ importfn("_check_tx") }}
+{% endif %}
 .endscope

@@ -229,11 +229,11 @@ class CodeGenerator:
             """
             return f".exportzp __{P}{name} = {P}{name}"
 
-        def include(name: str) -> str:
+        def importfn(name: str) -> str:
             """
             Generate a .import directive with scope alias.
 
-            Usage: {{ include("_init") }}
+            Usage: {{ importfn("_init") }}
             Output:
                 .import   __the_display_init
                 init       = __the_display_init
@@ -242,7 +242,7 @@ class CodeGenerator:
             symbol = f"__{P}{name}"
             return f"    .import   {symbol}\n    {alias:<10s} = {symbol}"
 
-        def includezp(name: str) -> str:
+        def importzp(name: str) -> str:
             """
             Generate a .importzp directive with scope alias.
             """
@@ -256,8 +256,8 @@ class CodeGenerator:
             "component_type": device.component_type,
             "export": export,
             "exportzp": exportzp,
-            "include": include,
-            "includezp": includezp,
+            "importfn": importfn,
+            "importzp": importzp,
         }
         for f in dataclasses.fields(device):
             if f.name not in device._internal_fields:

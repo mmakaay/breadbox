@@ -1,3 +1,10 @@
+.ifndef __CORE_VECTORS_S
+.importzp __core_nmi_vector
+.importzp __core_irq_vector
+nmi_vector = __core_nmi_vector
+irq_vector = __core_irq_vector
+.endif
+
 ; =========================================================================
 ; Set the address of the NMI (Non-Maskable Interrupt) handler.
 ;
