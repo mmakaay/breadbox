@@ -211,14 +211,53 @@ class CodeGenerator:
     def _build_context(self, device: Device) -> dict:
         """
         Build the Jinja2 template context for a device.
-
-        Includes device metadata, all public (non-internal) dataclass
-        fields, cached properties, and the bus device reference.
         """
+        P = device.device_path.replace("::", "_")
+
+        def export(name: str) -> str:
+            """
+            Generate a .export directive for a proc symbol.
+
+            Usage: {{ export("_init") }}
+            Output: .export __the_display_init = _the_display_init
+            """
+            return f".export __{P}{name} = _{P}{name}"
+
+        def exportzp(name: str) -> str:
+            """
+            Generate a .exportzp directive for a zero-page symbol.
+            """
+            return f".exportzp __{P}{name} = {P}{name}"
+
+        def include(name: str) -> str:
+            """
+            Generate a .import directive with scope alias.
+
+            Usage: {{ include("_init") }}
+            Output:
+                .import   __the_display_init
+                init       = __the_display_init
+            """
+            alias = name.lstrip("_")
+            symbol = f"__{P}{name}"
+            return f"    .import   {symbol}\n    {alias:<10s} = {symbol}"
+
+        def includezp(name: str) -> str:
+            """
+            Generate a .importzp directive with scope alias.
+            """
+            alias = name.lstrip("_")
+            symbol = f"__{P}{name}"
+            return f"    .importzp {symbol}\n    {alias:<10s} = {symbol}"
+
         context: dict = {
             "device_id": str(device.id),
-            "macro_prefix": device.device_path.replace("::", "_"),
+            "macro_prefix": P,
             "component_type": device.component_type,
+            "export": export,
+            "exportzp": exportzp,
+            "include": include,
+            "includezp": includezp,
         }
         for f in dataclasses.fields(device):
             if f.name not in device._internal_fields:
