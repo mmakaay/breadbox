@@ -6,10 +6,10 @@ greeting: .asciiz "Hello, world!"
 
 .proc main
     lda #<greeting
-    sta the_display::ptr
+    sta THE_DISPLAY::ptr
     lda #>greeting
-    sta the_display::ptr + 1
-    jsr the_display::print
+    sta THE_DISPLAY::ptr + 1
+    jsr THE_DISPLAY::print
 
     HALT
 .endproc

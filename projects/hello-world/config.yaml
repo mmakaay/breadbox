@@ -1,19 +1,19 @@
-core: 
+CORE: 
   cpu: 65c02
   clock_mhz: 1.000
 
-the_bus:
+VIA:
   component: via_w65c22
   address: $6000
 
-the_display:
+THE_DISPLAY:
   component: lcd_hd44780
   cmnd:
-    bus: the_bus
+    bus: VIA
     rs_pin: PB0
     rwb_pin: PB1
     en_pin: PB2
   data:
-    bus: the_bus
+    bus: VIA
     mode: 4bit
     port: B
