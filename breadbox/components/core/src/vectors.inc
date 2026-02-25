@@ -5,19 +5,18 @@ nmi_vector = __core_nmi_vector
 irq_vector = __core_irq_vector
 .endif
 
+.include "macros.inc"
+
 ; =========================================================================
 ; Set the address of the NMI (Non-Maskable Interrupt) handler.
 ;
-; In: 
+; In:
 ;   _handler: subroutine that must handle NMI
 ; Out:
 ;   A clobbered
 
 .macro SET_NMI _handler
-    lda #<_handler
-    sta nmi_vector
-    lda #>_handler
-    sta nmi_vector + 1
+    CP_ADDRESS nmi_vector, _handler
 .endmacro
 
 ; =========================================================================
@@ -33,10 +32,5 @@ irq_vector = __core_irq_vector
 ;   A = clobbered
 
 .macro SET_IRQ _handler
-    lda #<_handler
-    sta irq_vector
-    lda #>_handler
-    sta irq_vector + 1
+    CP_ADDRESS irq_vector, _handler
 .endmacro
-
-

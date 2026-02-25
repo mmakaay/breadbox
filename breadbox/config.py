@@ -10,8 +10,6 @@ from breadbox.types.device import Device
 from breadbox.types.device_identifier import DeviceIdentifier
 from breadbox.visitors.config_printer import ConfigPrinter
 
-console = Console()
-
 
 class BreadboxConfig:
     def __init__(self, config_path: Path) -> None:
@@ -21,7 +19,6 @@ class BreadboxConfig:
         self.devices: dict[DeviceIdentifier, Device] = {}
         self._resolve_config()
         self._validate()
-        self._print_config()
 
     def get(self, device_id: DeviceIdentifier) -> Device:
         try:
@@ -45,7 +42,6 @@ class BreadboxConfig:
         raise ConfigError(f"Configuration file not found: {config_path}")
 
     def _load_config_data(self) -> dict[str, Any]:
-        console.print(f"[green]Load config from:[/green] {self.config_path}")
         with self.config_path.open("r") as f:
             data = yaml.safe_load(f)
         return data
@@ -78,7 +74,7 @@ class BreadboxConfig:
             except (ValueError, TypeError, KeyError) as e:
                 raise ConfigError(f"Error in '{raw_id}': {e}") from None
 
-    def _print_config(self) -> None:
+    def print_config(self, console: Any) -> None:
         printer = ConfigPrinter(console)
         for device in self.devices.values():
             # Only print top-level devices (sub-devices are visited recursively).

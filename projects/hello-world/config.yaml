@@ -1,5 +1,5 @@
 CORE: 
-  cpu: 65c02
+  cpu: "65c02"
   clock_mhz: 1.000
 
 VIA:

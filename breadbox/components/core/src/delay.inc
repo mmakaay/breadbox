@@ -1,5 +1,6 @@
 .import   __core_delay
 .importzp __core_delay_iterations
+.include "CORE/macros.inc"
 
 ; =========================================================================
 ; Delay for approximately a number of iterations * 5 CPU cycles.
@@ -9,11 +10,8 @@
 ; Out:
 ;   A = clobbered
 
-.macro DELAY iterations
-    lda #<iterations
-    sta __core_delay_iterations
-    lda #>iterations
-    sta __core_delay_iterations + 1
+.macro DELAY _iterations
+    SET_WORD __core_delay_iterations, _iterations
     jsr __core_delay
 .endmacro
 

@@ -11,7 +11,7 @@
 {{ P }}_tmp: .res 1                   ; Internal temporary for read-modify-write
 
 .include "hardware.inc"
-.include "{{ build_dir }}/macros.inc"
+.include "{{ device_path }}/macros.inc"
 
 .segment "KERNAL"
 {% if direction in ("out", "both") or default is not none %}

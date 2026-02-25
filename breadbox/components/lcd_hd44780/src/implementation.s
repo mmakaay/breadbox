@@ -2,23 +2,23 @@
 ; HD44780 LCD: {{ device_id }} ({{ mode }} mode)
 ;
 ; Control: CTRL group (RS+RWB) on {{ ctrl.port }}, EN={{ pin_en.pin }}
-; Data bus: {{ data.device_path }} (port {{ data.port }} on {{ data.bus_device.id }}, mask {{ data.bits | hex }})
+; Data bus: {{ data.asm_scope }} (port {{ data.port }} on {{ data.bus_device.id }}, mask {{ data.bits | hex }})
 ;
 ; All public procedures use {{ macro_prefix }}::byte (zero page) for parameter passing.
 ; Public API: init, write_cmnd, write, clr, home, print.
 ; Call via JSR, e.g. `jsr {{ macro_prefix }}::write`.
 
 {% set P = macro_prefix %}
-{% set CTRL_P = ctrl.device_path | replace("::", "_") %}
-{% set DATA_P = data.device_path | replace("::", "_") %}
+{% set CTRL_P = ctrl.macro_prefix %}
+{% set DATA_P = data.macro_prefix %}
 {% set IS_4BIT = (mode == "4bit") %}
 
 .include "hardware.inc"
-.include "core/delay.inc"
-.include "{{ build_dir }}/macros.inc"
-.include "{{ data.build_dir }}/macros.inc"
-.include "{{ ctrl.build_dir }}/macros.inc"
-.include "{{ pin_en.build_dir }}/macros.inc"
+.include "CORE/delay.inc"
+.include "{{ device_path }}/macros.inc"
+.include "{{ data.device_path }}/macros.inc"
+.include "{{ ctrl.device_path }}/macros.inc"
+.include "{{ pin_en.device_path }}/macros.inc"
 
 .segment "ZEROPAGE"
 

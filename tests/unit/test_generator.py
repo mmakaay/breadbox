@@ -4,7 +4,7 @@ from pathlib import Path
 from breadbox.components.core.device import CoreDevice
 from breadbox.components.via_w65c22.device import ViaW65c22Device, REGISTERS
 from breadbox.config import BreadboxConfig
-from breadbox.generator import CodeGenerator, _COMPONENTS_DIR, _hex_filter
+from breadbox.generator import CodeGenerator, COMPONENTS_DIR, _hex_filter
 from breadbox.types.address16 import Address16
 from breadbox.types.device_identifier import DeviceIdentifier
 
@@ -110,7 +110,7 @@ class TestCoreGeneration:
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
-        src_dir = _COMPONENTS_DIR / "core" / "src"
+        src_dir = COMPONENTS_DIR / "core" / "src"
         for src_file in src_dir.iterdir():
             if src_file.suffix == ".s":
                 generated = output_dir / "core" / src_file.name
@@ -124,7 +124,7 @@ class TestCoreGeneration:
         generator = CodeGenerator(make_core_config(), output_dir)
         generator.generate()
 
-        src_dir = _COMPONENTS_DIR / "core" / "src"
+        src_dir = COMPONENTS_DIR / "core" / "src"
         for src_file in src_dir.iterdir():
             if src_file.suffix == ".inc":
                 generated = output_dir / "core" / src_file.name
@@ -241,10 +241,10 @@ class TestBreadboxInc:
         generator.generate()
 
         content = (output_dir / "breadbox.inc").read_text()
-        assert '.include "core/cpu_shims.inc"' in content
-        assert '.include "core/delay.inc"' in content
-        assert '.include "core/boot.inc"' in content
-        assert '.include "core/vectors.inc"' in content
+        assert '.include "CORE/cpu_shims.inc"' in content
+        assert '.include "CORE/delay.inc"' in content
+        assert '.include "CORE/boot.inc"' in content
+        assert '.include "CORE/vectors.inc"' in content
 
     def test_hardware_included_before_core(self, tmp_path):
         """
@@ -256,7 +256,7 @@ class TestBreadboxInc:
 
         content = (output_dir / "breadbox.inc").read_text()
         hw_pos = content.index('.include "hardware.inc"')
-        core_pos = content.index('.include "core/boot.inc"')
+        core_pos = content.index('.include "CORE/boot.inc"')
         assert hw_pos < core_pos
 
 

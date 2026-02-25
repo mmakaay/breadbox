@@ -85,7 +85,7 @@ class Device(ABC):
     def register_bus_client(self, device: Device) -> None:  # noqa: B027
         """
         Called when a device declares this device as its bus.
-        
+
         Override in bus device subclasses to track clients.
         The default implementation is a no-op.
         """
@@ -93,28 +93,31 @@ class Device(ABC):
     def validate_bus_clients(self) -> None:  # noqa: B027
         """
         Validate registered bus clients for conflicts.
-        
+
         Override in bus device subclasses to check for
         pin conflicts, etc. The default implementation is a no-op.
         """
 
-    @cached_property
-    def device_path(self) -> str:
+    def make_path(self, separator: str) -> str:
         device: Device = self
         path = [self.id]
         while device.parent:
             device = device.parent
             path.insert(0, device.id)
-        return "::".join(path)
+        return separator.join(path)
 
     @cached_property
-    def build_dir(self) -> str:
-        """
-        Output directory for this device's generated files.
+    def device_path(self) -> Path:
+        return Path(self.make_path("/"))
 
-        Mirrors the device tree path: the_display::PIN_RS -> the_display/pin_rs.
-        """
-        return self.device_path.replace("::", "/").lower()
+    @cached_property
+    def asm_scope(self) -> str:
+        return self.make_path("::")
+
+    @cached_property
+    def macro_prefix(self) -> str:
+        return self.make_path("_")
+
 
     def accept(self, visitor: DeviceVisitor) -> None:
         visitor.visit(self)

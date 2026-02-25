@@ -1,6 +1,6 @@
 .export   __core_delay = delay
 .exportzp __core_delay_iterations = iterations
-.include "core/cpu_shims.inc"
+.include "cpu_shims.inc"
 
 .segment "ZEROPAGE"
 

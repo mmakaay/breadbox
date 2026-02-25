@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from typing import Optional
 
 from breadbox.types.address16 import Address16
 from breadbox.types.device import Device
@@ -52,7 +51,7 @@ class Uart6551Device(Device):
         return BAUD_RATES[self.baudrate]
 
     @cached_property
-    def pin_rts(self) -> Optional[Device]:
+    def pin_rts(self) -> Device | None:
         """
         The RTS flow control GPIO pin sub-device, or None.
         """

@@ -1,7 +1,7 @@
 import re
 from typing import Self
 
-_DEVICE_ID_RE = re.compile(r"^[A-Za-z][A-Za-z0-9_]*$")
+_DEVICE_ID_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
 
 # 6502/65C02 mnemonics and register names.
 _RESERVED_WORDS = frozenset({
@@ -37,9 +37,9 @@ class DeviceIdentifier(str):
         if not _DEVICE_ID_RE.match(value):
             raise ValueError(
                 f"{value!r} is not a valid DeviceIdentifier "
-                f"(must start with a letter, letters/digits/underscores only)"
+                f"(must start with an upper-case letter, upper-case letters/digits/underscores only)"
             )
-        if value.upper() in _RESERVED_WORDS:
+        if value in _RESERVED_WORDS:
             raise ValueError(
                 f"{value!r} is a reserved word (6502 mnemonic or register name) "
                 f"and cannot be used as a device identifier"

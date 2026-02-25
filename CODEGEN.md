@@ -355,10 +355,10 @@ BREADBOX_INC = 1
 .include "hardware.inc"
 
 ; Core includes.
-.include "core/cpu_shims.inc"
-.include "core/delay.inc"
-.include "core/boot.inc"
-.include "core/vectors.inc"
+.include "CORE/cpu_shims.inc"
+.include "CORE/delay.inc"
+.include "CORE/boot.inc"
+.include "CORE/vectors.inc"
 
 .endif
 ```

@@ -4,6 +4,8 @@
 ; Convenience wrappers for common 6502 byte and word operations.
 ; =========================================================================
 
+.include "cpu_shims.inc"
+
 ; =========================================================================
 ; Store an 8-bit value in a memory location.
 ;
@@ -31,30 +33,17 @@
 .endmacro
 
 ; =========================================================================
-; Store a 16-bit value in two consecutive memory locations.
+; Store a 16-bit word value in two consecutive memory locations.
 ;
 ; In:
 ;   _target = address of the low byte
-;   _lo     = low byte value
-;   _hi     = high byte value
+;   _value  = direct word value to sture (not contents at address)
 ; Out:
 ;   A = clobbered
 
-.macro SET_WORD _target, _lo, _hi
-    SET_BYTE _target, _lo
-    SET_BYTE _target + 1, _hi
-.endmacro
-
-; =========================================================================
-; Store zero into a 16-bit word.
-;
-; In:
-;   _target = address of the low byte
-; Out:
-;   A = clobbered
-
-.macro CLR_WORD _target
-    SET_WORD _target, #0, #0
+.macro SET_WORD _target, _value
+    SET_BYTE _target, #<(_value)
+    SET_BYTE _target + 1, #>(_value)
 .endmacro
 
 ; =========================================================================
@@ -70,7 +59,19 @@
 ;   A = clobbered
 
 .macro CP_ADDRESS _target, _source
-    SET_WORD _target, #<_source, #>_source
+    SET_WORD _target, _source
+.endmacro
+
+; =========================================================================
+; Store zero into a 16-bit word.
+;
+; In:
+;   _target = address of the low byte
+; Out:
+;   A = clobbered
+
+.macro CLR_WORD _target
+    SET_WORD _target, $0000
 .endmacro
 
 ; =========================================================================
@@ -83,10 +84,8 @@
 ;   A = clobbered
 
 .macro CP_WORD _target, _source
-    lda _source
-    sta _target
-    lda _source + 1
-    sta _target + 1
+    SET_BYTE _target, _source
+    SET_BYTE _target + 1, _source + 1
 .endmacro
 
 ; =========================================================================
@@ -132,20 +131,16 @@
 
 .macro PUSH_AXY
     pha
-    txa
-    pha
-    tya
-    pha
+    phx
+    phy
 .endmacro
 
 ; =========================================================================
 ; Pull A, X and Y from the stack (reverse order of PUSH_AXY).
 
 .macro PULL_AXY
-    pla
-    tay
-    pla
-    tax
+    ply
+    plx
     pla
 .endmacro
 

@@ -7,16 +7,19 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
+from rich.console import Console
 
 from breadbox.errors import ConfigError
+from breadbox.project import BreadboxProject
 from breadbox.visitors.bus_client_collector import BusClientCollector
 
 if TYPE_CHECKING:
-    from breadbox.config import BreadboxConfig
     from breadbox.types.device import Device
 
-_COMPONENTS_DIR = Path(__file__).parent / "components"
-_TEMPLATES_DIR = Path(__file__).parent / "templates"
+COMPONENTS_DIR = Path(__file__).parent / "components"
+TEMPLATES_DIR = Path(__file__).parent / "templates"
+
+console = Console()
 
 
 def _hex_filter(value: int) -> str:
@@ -41,9 +44,8 @@ class CodeGenerator:
     guards derived from their output path (e.g. core/boot.inc -> __CORE_BOOT_INC).
     """
 
-    def __init__(self, config: BreadboxConfig, output_dir: Path) -> None:
-        self.config = config
-        self.output_dir = output_dir
+    def __init__(self, breadbox: BreadboxProject) -> None:
+        self.breadbox = breadbox
         self._template_env = self._create_template_env()
         self._bus_collector = BusClientCollector()
         self._device_includes: list[Path] = []
@@ -52,23 +54,17 @@ class CodeGenerator:
         """
         Generate all assembly output from the resolved config.
         """
-        self._prepare_output_dir()
         self._collect_bus_clients()
         self._validate_bus_clients()
-        for device in self.config.devices.values():
+
+        self._prepare_build_dir()
+        self._process_project_sources()
+        for device in self.breadbox.config.devices.values():
             if device.parent is None:
                 device.accept(self)
         self._generate_hardware_inc()
         self._generate_breadbox_inc()
         self._generate_breadbox_cfg()
-
-    def visit(self, device: Device) -> None:
-        """
-        Process a device and recurse into its sub-devices.
-        """
-        self._process_component_sources(device)
-        for sub in device.devices:
-            sub.accept(self)
 
     def _collect_bus_clients(self) -> None:
         """
@@ -77,7 +73,7 @@ class CodeGenerator:
         Must run before code generation so that bus devices
         can answer queries about their clients (e.g. port exclusivity).
         """
-        for device in self.config.devices.values():
+        for device in self.breadbox.config.devices.values():
             if device.parent is None:
                 device.accept(self._bus_collector)
 
@@ -88,31 +84,56 @@ class CodeGenerator:
         Wraps any ValueError from device validation as ConfigError
         so the CLI can display it cleanly without a stack trace.
         """
-        for device in self.config.devices.values():
+        for device in self.breadbox.config.devices.values():
             try:
                 device.validate_bus_clients()
             except ValueError as e:
                 raise ConfigError(str(e)) from None
 
-    def _prepare_output_dir(self) -> None:
+    def _prepare_build_dir(self) -> None:
         """
         Clean and recreate the output directory.
         """
-        if self.output_dir.exists():
-            shutil.rmtree(self.output_dir)
-        self.output_dir.mkdir(parents=True)
+        if self.breadbox.build_dir.exists():
+            shutil.rmtree(self.breadbox.build_dir)
+        self.breadbox.build_dir.mkdir(parents=True)
         # Tag the build root as a cache directory for backup tools.
-        (self.output_dir.parent / "CACHEDIR.TAG").write_text(
+        (self.breadbox.build_dir / "CACHEDIR.TAG").write_text(
             "Signature: 8a477f597d28d172789f06886806bc55\n"
             "# This directory is managed by breadbox and can be safely regenerated.\n"
         )
 
-    def _create_template_env(self) -> Environment:
+    def _process_project_sources(self) -> None:
+        """
+        Discover and copy project source files to the build directory.
+        """
+        project_output_dir = self.breadbox.build_dir / "project"
+        if project_output_dir.exists():
+            shutil.rmtree(project_output_dir)
+        project_output_dir.mkdir(parents=True)
+
+        src_files = sorted(f for f in self.breadbox.project_dir.iterdir() if f.suffix in (".s", ".inc"))
+        for src in  src_files:
+            if src.suffix in {".s", ".inc"}:
+                dest = project_output_dir / src.name
+                console.print(f"  Create: {dest}")
+                shutil.copy2(src, dest)
+
+    def visit(self, device: Device) -> None:
+        """
+        Process a device and recurse into its sub-devices.
+        """
+        self._process_component_sources(device)
+        for sub in device.devices:
+            sub.accept(self)
+
+    @staticmethod
+    def _create_template_env() -> Environment:
         """
         Create Jinja2 environment for top-level templates.
         """
         env = Environment(
-            loader=FileSystemLoader(str(_TEMPLATES_DIR)),
+            loader=FileSystemLoader(str(TEMPLATES_DIR)),
             undefined=StrictUndefined,
             keep_trailing_newline=True,
             lstrip_blocks=True,
@@ -130,15 +151,15 @@ class CodeGenerator:
         """
         template = self._template_env.get_template("breadbox.inc")
         rendered = template.render(device_includes=self._device_includes)
-        self._write_output(Path("breadbox.inc"), rendered)
+        self._write_generated_output(Path("breadbox.inc"), rendered)
 
     def _generate_hardware_inc(self) -> None:
         """
         Generate hardware definitions (constants, macros) from device tree.
         """
         template = self._template_env.get_template("hardware.inc")
-        rendered = template.render(devices=self.config.devices)
-        self._write_output(Path("hardware.inc"), rendered)
+        rendered = template.render(devices=self.breadbox.config.devices)
+        self._write_generated_output(Path("hardware.inc"), rendered)
 
     def _generate_breadbox_cfg(self) -> None:
         """
@@ -146,7 +167,7 @@ class CodeGenerator:
         """
         template = self._template_env.get_template("breadbox.cfg")
         rendered = template.render()
-        self._write_output(Path("breadbox.cfg"), rendered)
+        self._write_generated_output(Path("breadbox.cfg"), rendered)
 
     def _process_component_sources(self, device: Device) -> None:
         """
@@ -175,12 +196,13 @@ class CodeGenerator:
         for src_file in src_files:
             template = env.get_template(src_file.name)
             rendered = template.render(context)
-            relative_path = Path(device.build_dir) / src_file.name
-            self._write_output(relative_path, rendered)
-            if relative_path.suffix == ".inc":
+            relative_path = device.device_path / src_file.name
+            console.print(f"  Create: {relative_path}")
+            self._write_generated_output(relative_path, rendered)
+            if relative_path.suffix == ".inc" and not src_file.name.startswith("_"):
                 self._device_includes.append(relative_path)
 
-    def _write_output(self, relative_path: Path, content: str) -> None:
+    def _write_generated_output(self, relative_path: Path, content: str) -> None:
         """
         Write generated content to the output directory.
 
@@ -189,7 +211,7 @@ class CodeGenerator:
         """
         if relative_path.suffix == ".inc":
             content = self._wrap_include_guard(content, relative_path)
-        dest = self.output_dir / relative_path
+        dest = self.breadbox.generated_dir / relative_path
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(content)
 
@@ -208,11 +230,12 @@ class CodeGenerator:
         content = content.rstrip()
         return f".ifndef {guard}\n{guard} = 1\n\n{content}\n\n.endif\n"
 
-    def _build_context(self, device: Device) -> dict:
+    @staticmethod
+    def _build_context(device: Device) -> dict:
         """
         Build the Jinja2 template context for a device.
         """
-        P = device.device_path.replace("::", "_")
+        P = device.macro_prefix
 
         def export(name: str) -> str:
             """

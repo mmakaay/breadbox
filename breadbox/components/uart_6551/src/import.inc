@@ -8,8 +8,6 @@
 {{ importfn("_write") }}
 {{ importfn("_write_terminal") }}
 {{ importfn("_load_status") }}
-{% if irq == "on" %}
 {{ importfn("_check_rx") }}
 {{ importfn("_check_tx") }}
-{% endif %}
 .endscope

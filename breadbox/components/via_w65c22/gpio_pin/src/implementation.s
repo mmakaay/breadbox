@@ -5,7 +5,7 @@
 ; Call via JSR, e.g. `jsr {{ macro_prefix }}::turn_on`.
 
 .include "hardware.inc"
-.include "{{ build_dir }}/macros.inc"
+.include "{{ device_path }}/macros.inc"
 
 {% set PORT_REG = bus_device.id ~ "_PORT" ~ port %}
 {% set DDR_REG = bus_device.id ~ "_DDR" ~ port %}

@@ -10,6 +10,8 @@ class CoreDevice(Device):
 
     def __post_init__(self) -> None:
         super().__post_init__()
+        if self.id != "CORE":
+            raise ValueError(f"The core device must always have id 'CORE', not {str(self.id)!r}")
         self.clock_mhz = float(self.clock_mhz)
         if self.clock_mhz <= 0:
             raise ValueError(f"clock_mhz must be positive, got {self.clock_mhz}")

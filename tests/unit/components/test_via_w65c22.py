@@ -212,7 +212,7 @@ class TestValidateBusClients:
         with pytest.raises(ValueError, match="Pin conflict.*PB1"):
             via.validate_bus_clients()
 
-    def test_error_includes_device_paths(self):
+    def test_error_includes_asm_scopes(self):
         via = make_via()
         _make_pin(via, "FIRST", "PA5")
         _make_pin(via, "SECOND", "PA5")
