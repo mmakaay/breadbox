@@ -1,5 +1,7 @@
 ; Macros that make `phx`, `plx`, `phy` and `ply` available for 6502 CPUs.
-; These only exist on 65C02.
+; These only exist on 65C02. These are mainly convenience shims, so we can
+; use txa, tya, plx and ply in our code, and still compile for for 6502
+; and 65C02 CPUs (saving some cycles on 65C02, losing some on 6502).
 
 .if .not .ismnemonic(phx)
     .importzp __core_cpu_shim_scratch_byte
@@ -33,5 +35,3 @@
     .endmacro
 
 .endif
-
-

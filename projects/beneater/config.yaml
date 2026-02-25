@@ -1,0 +1,29 @@
+CORE:
+  cpu: 65c02
+  clock_mhz: 1.0
+
+VIA:
+  component: via_w65c22
+  address: $6000
+
+SCHERMPJE:
+  component: lcd_hd44780
+  cmnd:
+    bus: VIA
+    rs_pin: PB0
+    rwb_pin: PB1
+    en_pin: PB2
+  data:
+    bus: VIA 
+    mode: 4bit
+    port: B
+
+UART:
+  component: uart_6551
+  type: um6551
+  address: $5000
+  baudrate: 19200
+  irq: on
+  rts:
+    bus: VIA
+    pin: PA0
