@@ -1,0 +1,49 @@
+*aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa*aaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+b*bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb*b*bbbbbbbbbbbbbbbbbbbbbbbbbbbb
+cc*ccccccccccccccccccccccccccccccccccccccccccccc*ccc*ccccccccccccccccccccccccccc
+ddd*ddddddddddddddddddddddddddddddddddddddddddd*ddddd*dddddddddddddddddddddddddd
+eeee*eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee*eeeeeee*eeeeeeeeeeeeeeeeeeeeeeeee
+fffff*fffffffffffffffffffffffffffffffffffffff*fffffffff*ffffffffffffffffffffffff
+gggggg*ggggggggggggggggggggggggggggggggggggg*ggggggggggg*ggggggggggggggggggggggg
+hhhhhhh*hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh*hhhhhhhhhhhhh*hhhhhhhhhhhhhhhhhhhhhh
+iiiiiiii*iiiiiiiiiiiiiiiiiiiiiiiiiiiiiiiii*iiiiiiiiiiiiiii*iiiiiiiiiiiiiiiiiiiii
+jjjjjjjjj*jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj*jjjjjjjjjjjjjjjjj*jjjjjjjjjjjjjjjjjjjj
+kkkkkkkkkk*kkkkkkkkkkkkkkkkkkkkkkkkkkkkk*kkkkkkkkkkkkkkkkkkk*kkkkkkkkkkkkkkkkkkk
+lllllllllll*lllllllllllllllllllllllllll*lllllllllllllllllllll*llllllllllllllllll
+mmmmmmmmmmmm*mmmmmmmmmmmmmmmmmmmmmmmmm*mmmmmmmmmmmmmmmmmmmmmmm*mmmmmmmmmmmmmmmmm
+nnnnnnnnnnnnn*nnnnnnnnnnnnnnnnnnnnnnn*nnnnnnnnnnnnnnnnnnnnnnnnn*nnnnnnnnnnnnnnnn
+oooooooooooooo*ooooooooooooooooooooo*ooooooooooooooooooooooooooo*ooooooooooooooo
+ppppppppppppppp*ppppppppppppppppppp*ppppppppppppppppppppppppppppp*pppppppppppppp
+qqqqqqqqqqqqqqqq*qqqqqqqqqqqqqqqqq*qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq*qqqqqqqqqqqqq
+rrrrrrrrrrrrrrrrr*rrrrrrrrrrrrrrr*rrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr*rrrrrrrrrrrr
+ssssssssssssssssss*sssssssssssss*sssssssssssssssssssssssssssssssssss*sssssssssss
+ttttttttttttttttttt*ttttttttttt*ttttttttttttttttttttttttttttttttttttt*tttttttttt
+uuuuuuuuuuuuuuuuuuuu*uuuuuuuuu*uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu*uuuuuuuuu
+vvvvvvvvvvvvvvvvvvvvv*vvvvvvv*vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv*vvvvvvv*
+wwwwwwwwwwwwwwwwwwwwww*wwwww*wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww*wwwww*w
+xxxxxxxxxxxxxxxxxxxxxxx*xxx*xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx*xxx*xx
+yyyyyyyyyyyyyyyyyyyyyyyy*y*yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy*y*yyy
+zzzzzzzzzzzzzzzzzzzzzzzzz*zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz*zzzz
+
+                      (
+                        )     (
+                 ___...(-------)-....___
+             .-""       )    (          ""-.
+       .-'``'|-._             )         _.-|
+      /  .--.|   `""---...........---""`   |
+     /  /    |                             |
+     |  |    |                             |
+      \  \   |                             |
+       `\ `\ |                             |
+         `\ `|                             |
+         _/ /\                             /
+        (__/  \                           /
+     _..---""` \                         /`""---.._
+  .-'           \                       /          '-.
+ :               `-.__             __.-'              :
+ :                  ) ""---...---"" (                 :
+  '._               `"--...___...--"`              _.'
+    \""--..__                              __..--""/
+     '._     """----.....______.....----"""     _.'
+        `""--..,,_____            _____,,..--""`
+                      `"""----"""`
