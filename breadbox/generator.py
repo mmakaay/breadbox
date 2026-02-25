@@ -199,7 +199,7 @@ class CodeGenerator:
             relative_path = device.device_path / src_file.name
             console.print(f"  Create: {relative_path}")
             self._write_generated_output(relative_path, rendered)
-            if relative_path.suffix == ".inc" and not src_file.name.startswith("_"):
+            if src_file.name == "api.inc":
                 self._device_includes.append(relative_path)
 
     def _write_generated_output(self, relative_path: Path, content: str) -> None:

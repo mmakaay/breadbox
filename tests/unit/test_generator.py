@@ -20,6 +20,7 @@ CORE_ASSEMBLY_FILES = {
     "cpu_shims.s",
     "cpu_shims.inc",
     "macros.inc",
+    "api.inc",
 }
 
 
@@ -145,7 +146,7 @@ class TestCoreGeneration:
 
         src_dir = COMPONENTS_DIR / "core" / "src"
         for src_file in src_dir.iterdir():
-            if src_file.suffix == ".inc":
+            if src_file.suffix == ".inc" and "{{" not in src_file.read_text():
                 generated = output_dir / "CORE" / src_file.name
                 generated_content = generated.read_text()
                 source_content = src_file.read_text().strip()
@@ -267,10 +268,7 @@ class TestBreadboxInc:
         generator.generate()
 
         content = (output_dir / "breadbox.inc").read_text()
-        assert '.include "CORE/cpu_shims.inc"' in content
-        assert '.include "CORE/delay.inc"' in content
-        assert '.include "CORE/boot.inc"' in content
-        assert '.include "CORE/vectors.inc"' in content
+        assert '.include "CORE/api.inc"' in content
 
     def test_hardware_included_before_core(self, tmp_path):
         """
@@ -283,7 +281,7 @@ class TestBreadboxInc:
 
         content = (output_dir / "breadbox.inc").read_text()
         hw_pos = content.index('.include "hardware.inc"')
-        core_pos = content.index('.include "CORE/boot.inc"')
+        core_pos = content.index('.include "CORE/api.inc"')
         assert hw_pos < core_pos
 
 
