@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from functools import cached_property
 
+from breadbox.components.via_w65c22.gpio_group.device import ViaW65c22GpioGroupDevice
 from breadbox.types.device import Device
 from breadbox.types.device_identifier import DeviceIdentifier
 
@@ -10,9 +11,9 @@ from breadbox.types.device_identifier import DeviceIdentifier
 @dataclass(kw_only=True)
 class CmndSettings:
     bus: DeviceIdentifier
+    rs_pin: str
     rwb_pin: str
     en_pin: str
-    rs_pin: str
 
     def __post_init__(self) -> None:
         if not isinstance(self.bus, DeviceIdentifier):
@@ -38,30 +39,27 @@ class LcdHd44780Device(Device):
     """
     HD44780 LCD display controller.
 
-    Manages sub-devices for control pins (RS, RWB, EN) and data bus (DATA).
-    Supports both 4-bit and 8-bit data bus modes.
+    Manages sub-devices for control pins (CTRL group for RS+RWB, EN pin)
+    and data bus (DATA). Supports both 4-bit and 8-bit data bus modes.
     """
 
     mode: str
+    rs_pin: str
+    rwb_pin: str
 
     def __post_init__(self) -> None:
         super().__post_init__()
         if self.mode not in ("4bit", "8bit"):
             raise ValueError(f"Invalid mode {self.mode!r} (expected '4bit' or '8bit')")
+        self.rs_pin = self.rs_pin.upper()
+        self.rwb_pin = self.rwb_pin.upper()
 
     @cached_property
-    def pin_rs(self) -> Device:
+    def ctrl(self) -> ViaW65c22GpioGroupDevice:
         """
-        The RS (Register Select) control pin sub-device.
+        The CTRL (RS + RWB) control pin group sub-device.
         """
-        return self._sub("PIN_RS")
-
-    @cached_property
-    def pin_rwb(self) -> Device:
-        """
-        The RWB (Read/Write) control pin sub-device.
-        """
-        return self._sub("PIN_RWB")
+        return self._sub("CTRL")
 
     @cached_property
     def pin_en(self) -> Device:
@@ -77,6 +75,27 @@ class LcdHd44780Device(Device):
         """
         return self._sub("DATA")
 
+    @cached_property
+    def rs_bit(self) -> int:
+        """
+        Bitmask for the RS pin within the CTRL group.
+        """
+        return self._ctrl_pin_bit(self.rs_pin)
+
+    @cached_property
+    def rwb_bit(self) -> int:
+        """
+        Bitmask for the RWB pin within the CTRL group.
+        """
+        return self._ctrl_pin_bit(self.rwb_pin)
+
+    def _ctrl_pin_bit(self, pin_name: str) -> int:
+        """
+        Compute the bitmask for a named pin within the CTRL group.
+        """
+        ctrl = self.ctrl
+        port_pins = ctrl.bus_device.get_port(str(ctrl.port))
+        return 1 << port_pins.index(pin_name)
     def _sub(self, name: str) -> Device:
         """
         Look up a sub-device by its device ID.

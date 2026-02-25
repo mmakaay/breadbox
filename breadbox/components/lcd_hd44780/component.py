@@ -15,21 +15,13 @@ def resolve(
     cmnd = CmndSettings(**device_settings["cmnd"])
     data = DataSettings(**device_settings["data"])
 
-    device = LcdHd44780Device(id=device_id, mode=data.mode)
+    device = LcdHd44780Device(id=device_id, mode=data.mode, rs_pin=cmnd.rs_pin, rwb_pin=cmnd.rwb_pin)
 
     device.add(
-        gpio_pin_component.resolve(
+        gpio_group_component.resolve(
             breadbox,
-            DeviceIdentifier("PIN_RS"),
-            {"bus": cmnd.bus, "pin": cmnd.rs_pin, "direction": "out"},
-        )
-    )
-
-    device.add(
-        gpio_pin_component.resolve(
-            breadbox,
-            DeviceIdentifier("PIN_RWB"),
-            {"bus": cmnd.bus, "pin": cmnd.rwb_pin, "direction": "out"},
+            DeviceIdentifier("CTRL"),
+            {"bus": cmnd.bus, "pins": [cmnd.rs_pin, cmnd.rwb_pin], "direction": "out"},
         )
     )
 

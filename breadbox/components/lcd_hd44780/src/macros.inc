@@ -25,6 +25,15 @@
 {{ P }}_LINE2          = $40  ; DDRAM address for line 2
 
 ; =========================================================================
+; Control pin states (RS + RWB combined in CTRL group)
+; =========================================================================
+;                                                      RS RWB
+{{ P }}_CTRL_CMD_WR  = $00                            ; 0  0  write command
+{{ P }}_CTRL_CMD_RD  = {{ rwb_bit | hex }}            ; 0  1  read status
+{{ P }}_CTRL_DATA_WR = {{ rs_bit | hex }}             ; 1  0  write data
+{{ P }}_CTRL_DATA_RD = {{ (rs_bit + rwb_bit) | hex }} ; 1  1  read data
+
+; =========================================================================
 ; Set cursor position to the beginning of a display line.
 ;
 ; In:

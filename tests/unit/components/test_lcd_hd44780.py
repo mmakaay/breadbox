@@ -53,18 +53,18 @@ class TestDataSettings:
 
 class TestLcdHd44780Device:
     def test_construction(self):
-        device = LcdHd44780Device(id=DeviceIdentifier("LCD0"), mode="8bit")
+        device = LcdHd44780Device(id=DeviceIdentifier("LCD0"), mode="8bit", rs_pin="PA0", rwb_pin="PA1")
         assert device.id == "LCD0"
         assert device.mode == "8bit"
         assert len(device.devices) == 0
 
     def test_mode_4bit(self):
-        device = LcdHd44780Device(id=DeviceIdentifier("LCD0"), mode="4bit")
+        device = LcdHd44780Device(id=DeviceIdentifier("LCD0"), mode="4bit", rs_pin="PA0", rwb_pin="PA1")
         assert device.mode == "4bit"
 
     def test_invalid_mode_raises(self):
         with pytest.raises(ValueError, match="Invalid mode"):
-            LcdHd44780Device(id=DeviceIdentifier("LCD0"), mode="16bit")
+            LcdHd44780Device(id=DeviceIdentifier("LCD0"), mode="16bit", rs_pin="PA0", rwb_pin="PA1")
 
     def test_sub_device_accessors(self):
         via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))
@@ -76,16 +76,44 @@ class TestLcdHd44780Device:
         }
         device = resolve(config, DeviceIdentifier("LCD0"), settings)
 
-        assert str(device.pin_rs.id) == "PIN_RS"
-        assert str(device.pin_rwb.id) == "PIN_RWB"
+        assert str(device.ctrl.id) == "CTRL"
+        assert isinstance(device.ctrl, ViaW65c22GpioGroupDevice)
         assert str(device.pin_en.id) == "PIN_EN"
         assert str(device.data.id) == "DATA"
 
     def test_sub_device_accessor_missing_raises(self):
-        device = LcdHd44780Device(id=DeviceIdentifier("LCD0"), mode="8bit")
+        device = LcdHd44780Device(id=DeviceIdentifier("LCD0"), mode="8bit", rs_pin="PA0", rwb_pin="PA1")
         with pytest.raises(ValueError, match="Sub-device.*not found"):
-            _ = device.pin_rs
+            _ = device.ctrl
 
+    def test_rs_bit_and_rwb_bit(self):
+        via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))
+        config = make_config(via)
+
+        settings = {
+            "cmnd": {"bus": "VIA0", "rs_pin": "PB0", "rwb_pin": "PB1", "en_pin": "PB2"},
+            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
+        }
+        device = resolve(config, DeviceIdentifier("LCD0"), settings)
+
+        # PB0 = bit 0, PB1 = bit 1
+        assert device.rs_bit == 0x01
+        assert device.rwb_bit == 0x02
+
+    def test_rs_bit_and_rwb_bit_reversed(self):
+        via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))
+        config = make_config(via)
+
+        # Swap RS and RWB pin assignments
+        settings = {
+            "cmnd": {"bus": "VIA0", "rs_pin": "PA5", "rwb_pin": "PA3", "en_pin": "PA1"},
+            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
+        }
+        device = resolve(config, DeviceIdentifier("LCD0"), settings)
+
+        # PA5 = bit 5, PA3 = bit 3
+        assert device.rs_bit == 0x20
+        assert device.rwb_bit == 0x08
 class TestResolve:
     def test_resolve_creates_sub_devices(self):
         via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))
@@ -99,11 +127,10 @@ class TestResolve:
 
         assert isinstance(device, LcdHd44780Device)
         assert device.id == "LCD0"
-        assert len(device.devices) == 4
+        assert len(device.devices) == 3
 
         sub_ids = [str(d.id) for d in device.devices]
-        assert "PIN_RS" in sub_ids
-        assert "PIN_RWB" in sub_ids
+        assert "CTRL" in sub_ids
         assert "PIN_EN" in sub_ids
         assert "DATA" in sub_ids
 
@@ -162,7 +189,7 @@ class TestDuplicatePinValidation:
         }
         # Should not raise -- cmnd pins on port A, data pins on port B
         device = resolve(config, DeviceIdentifier("LCD0"), settings)
-        assert len(device.devices) == 4
+        assert len(device.devices) == 3
 
     def test_duplicate_cmnd_pin_raises(self):
         via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))
@@ -179,9 +206,9 @@ class TestDuplicatePinValidation:
         via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))
         config = make_config(via)
 
-        # rs_pin PB4 overlaps with 4bit data on port B (PB4-PB7)
+        # CTRL pins PB4+PB5 overlap with 4bit data on port B (PB4-PB7)
         settings = {
-            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PB4"},
+            "cmnd": {"bus": "VIA0", "rs_pin": "PB4", "rwb_pin": "PB5", "en_pin": "PA1"},
             "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
         }
         with pytest.raises(ValueError, match="Duplicate pin assignment"):
@@ -198,4 +225,4 @@ class TestDuplicatePinValidation:
             "data": {"bus": "VIA1", "mode": "4bit", "port": "A"},
         }
         device = resolve(config, DeviceIdentifier("LCD0"), settings)
-        assert len(device.devices) == 4
+        assert len(device.devices) == 3
