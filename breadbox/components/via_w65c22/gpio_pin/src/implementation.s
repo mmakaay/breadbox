@@ -22,7 +22,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc init_{{ macro_prefix | lower }}
+    .proc {{ symbol("init") }}
 {% if exclusive_port %}
         lda #{{ MASK | hex }}
         sta {{ DDR_REG }}
@@ -48,7 +48,7 @@
 {% endif %}
         rts
     .endproc
-    .constructor init_{{ macro_prefix | lower }}, 16
+    .constructor {{ symbol("init") }}, 16
 {% endif %}
 
 {% if direction in ("out", "both") %}
@@ -58,7 +58,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ macro_prefix }}_turn_on
+    .proc {{ symbol("turn_on") }}
         {{ macro_prefix }}_on
         rts
     .endproc
@@ -69,7 +69,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ macro_prefix }}_turn_off
+    .proc {{ symbol("turn_off") }}
         {{ macro_prefix }}_off
         rts
     .endproc
@@ -80,7 +80,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ macro_prefix }}_toggle
+    .proc {{ symbol("toggle") }}
         {{ macro_prefix }}_toggle
         rts
     .endproc
@@ -93,7 +93,7 @@
     ; Out:
     ;   A = pin state (bit {{ pin[-1] }}, masked)
 
-    .proc _{{ macro_prefix }}_read
+    .proc {{ symbol("read") }}
         {{ macro_prefix }}_read
         rts
     .endproc
@@ -104,10 +104,10 @@
 ; =========================================================================
 
 {% if direction in ("out", "both") %}
-{{ export("_turn_on") }}
-{{ export("_turn_off") }}
-{{ export("_toggle") }}
+{{ export("turn_on") }}
+{{ export("turn_off") }}
+{{ export("toggle") }}
 {% endif %}
 {% if direction in ("in", "both") %}
-{{ export("_read") }}
+{{ export("read") }}
 {% endif %}
