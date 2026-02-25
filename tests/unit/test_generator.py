@@ -18,6 +18,7 @@ CORE_ASSEMBLY_FILES = {
     "delay.inc",
     "cpu_shims.s",
     "cpu_shims.inc",
+    "macros.inc",
 }
 
 
