@@ -4,13 +4,15 @@
 ; Subroutine wrappers for {{ device_id }} macros.
 ; Call via JSR, e.g. `jsr {{ macro_prefix }}::turn_on`.
 
+{% set P = macro_prefix %}
+
+.segment "ZEROPAGE"
+
+{{ P }}_tmp: .res 1                   ; Internal temporary for read-modify-write
+
 .include "hardware.inc"
 .include "{{ build_dir }}/macros.inc"
 
-{% set PORT_REG = bus_device.id ~ "_PORT" ~ port %}
-{% set DDR_REG = bus_device.id ~ "_DDR" ~ port %}
-{% set MASK = bits | int %}
-{% set INV_MASK = 255 - MASK %}
 .segment "KERNAL"
 {% if direction in ("out", "both") or default is not none %}
 
@@ -22,44 +24,44 @@
     ; Out:
     ;   A = clobbered
 
-    .proc init_{{ macro_prefix | lower }}
+    .proc init_{{ P | lower }}
 {% if exclusive_port %}
-        lda #{{ MASK | hex }}
-        sta {{ DDR_REG }}
+        lda #{{ bits | hex }}
+        sta {{ bus_device.id }}_DDR{{ port }}
 {% if default == "on" %}
-        sta {{ PORT_REG }}
+        sta {{ bus_device.id }}_PORT{{ port }}
 {% elif default == "off" %}
         lda #$00
-        sta {{ PORT_REG }}
+        sta {{ bus_device.id }}_PORT{{ port }}
 {% endif %}
 {% else %}
-        lda {{ DDR_REG }}
-        ora #{{ MASK | hex }}
-        sta {{ DDR_REG }}
+        lda {{ bus_device.id }}_DDR{{ port }}
+        ora #{{ bits | hex }}
+        sta {{ bus_device.id }}_DDR{{ port }}
 {% if default == "on" %}
-        lda {{ PORT_REG }}
-        ora #{{ MASK | hex }}
-        sta {{ PORT_REG }}
+        lda {{ bus_device.id }}_PORT{{ port }}
+        ora #{{ bits | hex }}
+        sta {{ bus_device.id }}_PORT{{ port }}
 {% elif default == "off" %}
-        lda {{ PORT_REG }}
-        and #{{ INV_MASK | hex }}
-        sta {{ PORT_REG }}
+        lda {{ bus_device.id }}_PORT{{ port }}
+        and #{{ (255 - (bits | int)) | hex }}
+        sta {{ bus_device.id }}_PORT{{ port }}
 {% endif %}
 {% endif %}
         rts
     .endproc
-    .constructor init_{{ macro_prefix | lower }}, 16
+    .constructor init_{{ P | lower }}, 16
 {% endif %}
-
 {% if direction in ("out", "both") %}
+
     ; =====================================================================
     ; Set all {{ device_id }} outputs high.
     ;
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ macro_prefix }}_turn_on
-        {{ macro_prefix }}_on
+    .proc _{{ P }}_turn_on
+        {{ P }}_on
         rts
     .endproc
 
@@ -69,8 +71,8 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ macro_prefix }}_turn_off
-        {{ macro_prefix }}_off
+    .proc _{{ P }}_turn_off
+        {{ P }}_off
         rts
     .endproc
 
@@ -80,21 +82,69 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ macro_prefix }}_toggle
-        {{ macro_prefix }}_toggle
+    .proc _{{ P }}_toggle
+        {{ P }}_toggle
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Write the accumulator to {{ device_id }}.
+    ;
+    ; In:
+    ;   A = byte value to write (pre-positioned in {{ bits | hex }})
+    ; Out:
+    ;   A = clobbered
+
+    .proc _{{ P }}_write_a
+        {{ P }}_write_a
         rts
     .endproc
 {% endif %}
 {% if direction in ("in", "both") %}
 
     ; =====================================================================
-    ; Read {{ device_id }} input state.
+    ; Read {{ device_id }} input state (with DDR handling).
     ;
     ; Out:
     ;   A = group state (masked to {{ bits | hex }})
 
-    .proc _{{ macro_prefix }}_read
-        {{ macro_prefix }}_read
+    .proc _{{ P }}_read
+        {{ P }}_read
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Read {{ device_id }} port value without changing DDR.
+    ;
+    ; Out:
+    ;   A = group state (masked to {{ bits | hex }})
+
+    .proc _{{ P }}_read_port
+        {{ P }}_read_port
+        rts
+    .endproc
+{% endif %}
+{% if direction == "both" %}
+
+    ; =====================================================================
+    ; Switch {{ device_id }} DDR to output mode.
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc _{{ P }}_set_output
+        {{ P }}_set_output
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Switch {{ device_id }} DDR to input mode.
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc _{{ P }}_set_input
+        {{ P }}_set_input
         rts
     .endproc
 {% endif %}
@@ -103,11 +153,18 @@
 ; Exports
 ; =========================================================================
 
+.exportzp {{ P }}_tmp
 {% if direction in ("out", "both") %}
-.export __{{ macro_prefix }}_turn_on  = _{{ macro_prefix }}_turn_on
-.export __{{ macro_prefix }}_turn_off = _{{ macro_prefix }}_turn_off
-.export __{{ macro_prefix }}_toggle   = _{{ macro_prefix }}_toggle
+{{ export("_turn_on") }}
+{{ export("_turn_off") }}
+{{ export("_toggle") }}
+{{ export("_write_a") }}
 {% endif %}
 {% if direction in ("in", "both") %}
-.export __{{ macro_prefix }}_read     = _{{ macro_prefix }}_read
+{{ export("_read") }}
+{{ export("_read_port") }}
+{% endif %}
+{% if direction == "both" %}
+{{ export("_set_output") }}
+{{ export("_set_input") }}
 {% endif %}

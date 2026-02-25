@@ -8,6 +8,14 @@
 {% set BIDIR = (direction == "both") %}
 {% if direction in ("out", "both") %}
 
+; Import tmp variable when included by external files.
+.ifndef {{ macro_prefix }}_tmp
+.importzp {{ macro_prefix }}_tmp
+.endif
+
+{% endif %}
+{% if direction in ("out", "both") %}
+
 ; =========================================================================
 ; Write a value to {{ device_id }}.
 ;
@@ -137,6 +145,35 @@
     eor #{{ MASK | hex }}
     sta {{ PORT_REG }}
 .endmacro
+
+; =========================================================================
+; Write the accumulator to {{ device_id }}.
+;
+; Does NOT change DDR direction. For bidirectional groups, call
+; {{ macro_prefix }}_set_output first if the bus was set to input.
+;
+; The value in A must have bits positioned within the group mask ({{ bits | hex }}).
+; Bits outside the mask are ignored{% if not exclusive_port %} and preserved{% endif %}.
+;
+; In:
+;   A = byte value to write (pre-positioned in {{ bits | hex }})
+; Out:
+;   A = clobbered
+
+{% if exclusive_port %}
+.macro {{ macro_prefix }}_write_a
+    sta {{ PORT_REG }}
+.endmacro
+{% else %}
+.macro {{ macro_prefix }}_write_a
+    and #{{ MASK | hex }}
+    sta {{ macro_prefix }}_tmp
+    lda {{ PORT_REG }}
+    and #{{ INV_MASK | hex }}
+    ora {{ macro_prefix }}_tmp
+    sta {{ PORT_REG }}
+.endmacro
+{% endif %}
 {% endif %}
 {% if direction in ("in", "both") %}
 
@@ -164,4 +201,59 @@
     lda {{ PORT_REG }}
     and #{{ MASK | hex }}
 .endmacro
+
+; =========================================================================
+; Read {{ device_id }} port value without changing DDR.
+;
+; For bidirectional groups, call {{ macro_prefix }}_set_input first
+; if the bus was set to output.
+;
+; Out:
+;   A = group state (masked to {{ bits | hex }})
+
+.macro {{ macro_prefix }}_read_port
+    lda {{ PORT_REG }}
+    and #{{ MASK | hex }}
+.endmacro
+{% endif %}
+{% if direction == "both" %}
+
+; =========================================================================
+; Switch {{ device_id }} DDR to output mode.
+;
+; Out:
+;   A = clobbered
+
+{% if exclusive_port %}
+.macro {{ macro_prefix }}_set_output
+    lda #{{ MASK | hex }}
+    sta {{ DDR_REG }}
+.endmacro
+{% else %}
+.macro {{ macro_prefix }}_set_output
+    lda {{ DDR_REG }}
+    ora #{{ MASK | hex }}
+    sta {{ DDR_REG }}
+.endmacro
+{% endif %}
+
+; =========================================================================
+; Switch {{ device_id }} DDR to input mode.
+;
+; Out:
+;   A = clobbered
+
+{% if exclusive_port %}
+.macro {{ macro_prefix }}_set_input
+    lda #$00
+    sta {{ DDR_REG }}
+.endmacro
+{% else %}
+.macro {{ macro_prefix }}_set_input
+    lda {{ DDR_REG }}
+    and #{{ INV_MASK | hex }}
+    sta {{ DDR_REG }}
+.endmacro
+{% endif %}
+
 {% endif %}
