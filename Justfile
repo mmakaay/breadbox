@@ -35,3 +35,10 @@ write-u:
     cd "{{invocation_directory()}}"
     minipro -u -p AT28C256 -w "./build/rom.bin"
 
+clean:
+    #!/bin/bash
+    cd "{{invocation_directory()}}"
+    if [ -d ./build -a -e ./build/CACHEDIR.TAG ]; then
+        rm -fR ./build
+    fi
+
