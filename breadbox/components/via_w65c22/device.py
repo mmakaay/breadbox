@@ -37,6 +37,10 @@ class ViaW65c22Device(Device):
     address: Address16
     _bus_clients: list[Device] = dataclasses.field(default_factory=list, init=False, repr=False)
 
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self._internal_fields.add("_bus_clients")
+
     @property
     def registers(self) -> list[tuple[str, int]]:
         return REGISTERS
