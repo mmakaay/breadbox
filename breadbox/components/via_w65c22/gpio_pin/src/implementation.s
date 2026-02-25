@@ -104,10 +104,10 @@
 ; =========================================================================
 
 {% if direction in ("out", "both") %}
-.export __{{ macro_prefix }}_turn_on  = _{{ macro_prefix }}_turn_on
-.export __{{ macro_prefix }}_turn_off = _{{ macro_prefix }}_turn_off
-.export __{{ macro_prefix }}_toggle   = _{{ macro_prefix }}_toggle
+{{ export("_turn_on") }}
+{{ export("_turn_off") }}
+{{ export("_toggle") }}
 {% endif %}
 {% if direction in ("in", "both") %}
-.export __{{ macro_prefix }}_read     = _{{ macro_prefix }}_read
+{{ export("_read") }}
 {% endif %}
