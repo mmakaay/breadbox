@@ -20,9 +20,7 @@ SCHERMPJE:
 
 UART:
   component: uart_6551
-  type: um6551
   address: $5000
-  baudrate: 19200
   irq: on
   rts:
     bus: VIA

@@ -22,14 +22,14 @@ class TestUart6551Device:
         assert device.address == 0x5000
         assert device.irq == "on"
 
-    @pytest.mark.parametrize("uart_type", ["w65c51", "um6551", "m6551", "generic"])
+    @pytest.mark.parametrize("uart_type", ["w65c51n", "um6551", "r6551", "generic"])
     def test_valid_types(self, uart_type):
         device = Uart6551Device(id=DeviceIdentifier("UART0"), type=uart_type, address=Address16("$5000"))
         assert device.type == uart_type
 
     def test_type_lowercased(self):
         device = Uart6551Device(id=DeviceIdentifier("UART0"), type="W65C51", address=Address16("$5000"))
-        assert device.type == "w65c51"
+        assert device.type == "w65c51n"
 
     def test_invalid_type(self):
         with pytest.raises(ValueError, match="Invalid UART type"):
@@ -55,7 +55,7 @@ class TestUart6551Device:
 class TestResolveWithoutRts:
     def test_no_rts_no_sub_devices(self):
         config = make_config()
-        settings = {"address": "$5000", "type": "w65c51"}
+        settings = {"address": "$5000", "type": "w65c51n"}
         device = resolve(config, DeviceIdentifier("UART0"), settings)
 
         assert isinstance(device, Uart6551Device)

@@ -2,12 +2,15 @@
 ; HD44780 LCD: {{ device_id }} ({{ mode }} mode)
 
 .scope {{ macro_prefix }}
-{{ importzp("_byte") }}
-{{ importzp("_ptr") }}
-{{ importfn("_init") }}
-{{ importfn("_write_cmnd") }}
-{{ importfn("_write") }}
-{{ importfn("_clr") }}
-{{ importfn("_home") }}
-{{ importfn("_print") }}
+
+{{ importzp("byte") }}
+{{ importzp("ptr") }}
+
+{{ importfn("init") }}
+{{ importfn("write_cmnd") }}
+{{ importfn("write") }}
+{{ importfn("clr") }}
+{{ importfn("home") }}
+{{ importfn("print") }}
+
 .endscope

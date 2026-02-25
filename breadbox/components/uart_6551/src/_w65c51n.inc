@@ -18,7 +18,7 @@
 
     _CHAR_TIME_US = 10000000 / {{ baudrate }}
 
-    .proc _{{ P }}_tx_delay
+    .proc {{ symbol("tx_delay") }}
         DELAY_US _CHAR_TIME_US
         rts
     .endproc
@@ -26,15 +26,15 @@
 {% if irq == "on" %}
 .segment "RAM"
 
-    {{ P }}_rx_buffer: .res $100          ; 256-byte RX ring buffer
+    {{ symbol("rx_buffer") }}: .res $100  ; 256-byte RX ring buffer
 
 .segment "ZEROPAGE"
 
-    {{ P }}_rx_w_ptr:   .res 1          ; Ring buffer write pointer (IRQ side)
-    {{ P }}_rx_r_ptr:   .res 1          ; Ring buffer read pointer (main side)
-    {{ P }}_rx_pending: .res 1          ; Number of bytes waiting in buffer
-    {{ P }}_rx_off:     .res 1          ; RTS deasserted flag (1 = flow stopped)
-    {{ P }}_status:     .res 1          ; Cached status register from last IRQ
+    {{ symbol("rx_w_ptr") }}:   .res 1    ; Ring buffer write pointer (IRQ side)
+    {{ symbol("rx_r_ptr") }}:   .res 1    ; Ring buffer read pointer (main side)
+    {{ symbol("rx_pending") }}: .res 1    ; Number of bytes waiting in buffer
+    {{ symbol("rx_off") }}:     .res 1    ; RTS deasserted flag (1 = flow stopped)
+    {{ symbol("status") }}:     .res 1    ; Cached status register from last IRQ
 
 .segment "KERNAL"
 
@@ -49,17 +49,17 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_init
-        jsr _{{ P }}_soft_reset
+    .proc {{ symbol("init") }}
+        jsr {{ symbol("soft_reset") }}
 
         ; Clear ring buffer state.
         lda #0
-        sta {{ P }}_rx_r_ptr
-        sta {{ P }}_rx_w_ptr
-        sta {{ P }}_rx_pending
-        sta {{ P }}_rx_off
-        lda {{ P }}_STATUS
-        sta {{ P }}_status
+        sta {{ symbol("rx_r_ptr") }}
+        sta {{ symbol("rx_w_ptr") }}
+        sta {{ symbol("rx_pending") }}
+        sta {{ symbol("rx_off") }}
+        lda {{ symbol("STATUS") }}
+        sta {{ symbol("status") }}
 {% if pin_rts %}
 
         ; Assert RTS: active low = ready to receive.
@@ -81,7 +81,7 @@
 
         rts
     .endproc
-    .constructor _{{ P }}_init
+    .constructor {{ symbol("init") }}
 
     ; =====================================================================
     ; IRQ handler.
@@ -92,17 +92,17 @@
     ;
     ; Register saving and RTI are handled by the core dispatcher.
 
-    .proc _{{ P }}_irq_handler
+    .proc {{ symbol("irq_handler") }}
         lda {{ P }}_STATUS
         sta {{ P }}_status
         and #{{ P }}_SR_IRQ
         beq @done
         lda {{ P }}_status
-        jsr _{{ P }}_irq_handler_rx
+        jsr {{ symbol("irq_handler_rx") }}
     @done:
         rts
     .endproc
-    .interruptor _{{ P }}_irq_handler
+    .interruptor {{ symbol("irq_handler") }}
 
     ; =====================================================================
     ; IRQ RX handler.
@@ -114,18 +114,18 @@
     ; In:
     ;   A = status register value (from irq_handler)
 
-    .proc _{{ P }}_irq_handler_rx
+    .proc {{ symbol("irq_handler_rx") }}
         and #{{ P }}_SR_RDRF
         beq @done
 
         lda {{ P }}_DATA
-        ldx {{ P }}_rx_w_ptr
-        sta {{ P }}_rx_buffer,X
-        inc {{ P }}_rx_w_ptr
-        inc {{ P }}_rx_pending
+        ldx {{ symbol("rx_w_ptr") }}
+        sta {{ symbol("rx_buffer,X") }}
+        inc {{ symbol("rx_w_ptr") }}
+        inc {{ symbol("rx_pending") }}
 {% if pin_rts %}
 
-        jsr _{{ P }}_turn_rx_off_if_buffer_almost_full
+        jsr {{ symbol("turn_rx_off_if_buffer_almost_full") }}
 {% endif %}
 
     @done:
@@ -139,16 +139,16 @@
     ; Called from the IRQ handler. When rx_pending reaches $D0 (208 of 256),
     ; sets the RTS pin high (deasserted = stop sending) to prevent overflow.
 
-    .proc _{{ P }}_turn_rx_off_if_buffer_almost_full
-        lda {{ P }}_rx_off
+    .proc {{ symbol("turn_rx_off_if_buffer_almost_full") }}
+        lda {{ symbol("rx_off") }}
         bne @done
 
-        lda {{ P }}_rx_pending
+        lda {{ symbol("rx_pending") }}
         cmp #$d0
         bcc @done
 
         lda #1
-        sta {{ P }}_rx_off
+        sta {{ symbol("rx_off") }}
         {{ P }}_PIN_RTS_on
 
     @done:
@@ -162,17 +162,17 @@
     ; $50 (80 of 256) and RTS was deasserted, reasserts RTS (pin low = ready)
     ; under sei/cli to avoid races with the IRQ handler.
 
-    .proc _{{ P }}_turn_rx_on_if_buffer_emptying
-        lda {{ P }}_rx_off
+    .proc {{ symbol("turn_rx_on_if_buffer_emptying") }}
+        lda {{ symbol("rx_off") }}
         beq @done
 
-        lda {{ P }}_rx_pending
+        lda {{ symbol("rx_pending") }}
         cmp #$50
         bcs @done
 
         sei
         lda #0
-        sta {{ P }}_rx_off
+        sta {{ symbol("rx_off") }}
         {{ P }}_PIN_RTS_off
         cli
 
@@ -193,19 +193,19 @@
     ;   byte = received data (valid only when C=1)
     ;   A, X = clobbered
 
-    .proc _{{ P }}_read
+    .proc {{ symbol("read") }}
         clc
-        lda {{ P }}_rx_pending
+        lda {{ symbol("rx_pending") }}
         beq @done
 
-        ldx {{ P }}_rx_r_ptr
-        lda {{ P }}_rx_buffer,X
-        sta {{ P }}_byte
-        inc {{ P }}_rx_r_ptr
-        dec {{ P }}_rx_pending
+        ldx {{ symbol("rx_r_ptr") }}
+        lda {{ symbol("rx_buffer,X") }}
+        sta {{ symbol("byte") }}
+        inc {{ symbol("rx_r_ptr") }}
+        dec {{ symbol("rx_pending") }}
 {% if pin_rts %}
 
-        jsr _{{ P }}_turn_rx_on_if_buffer_emptying
+        jsr {{ symbol("turn_rx_on_if_buffer_emptying") }}
 {% endif %}
         sec
 
@@ -220,9 +220,9 @@
     ;   byte = number of bytes waiting
     ;   A = clobbered
 
-    .proc _{{ P }}_check_rx
-        lda {{ P }}_rx_pending
-        sta {{ P }}_byte
+    .proc {{ symbol("check_rx") }}
+        lda {{ symbol("rx_pending") }}
+        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -236,9 +236,9 @@
     ;   byte = 1 (always ready)
     ;   A = clobbered
 
-    .proc _{{ P }}_check_tx
+    .proc {{ symbol("check_tx") }}
         lda #1
-        sta {{ P }}_byte
+        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -252,9 +252,9 @@
     ;   byte = cached status register contents
     ;   A = clobbered
 
-    .proc _{{ P }}_load_status
-        lda {{ P }}_status
-        sta {{ P }}_byte
+    .proc {{ symbol("load_status") }}
+        lda {{ symbol("status") }}
+        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -271,8 +271,8 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_init
-        jsr _{{ P }}_soft_reset
+    .proc {{ symbol("init") }}
+        jsr {{ symbol("soft_reset") }}
 {% if pin_rts %}
 
         ; Assert RTS: active low = ready to receive.
@@ -290,7 +290,7 @@
 
         rts
     .endproc
-    .constructor _{{ P }}_init
+    .constructor {{ symbol("init") }}
 
     ; =====================================================================
     ; Read a byte from the receiver (non-blocking).
@@ -304,7 +304,7 @@
     ;   byte = received data (valid only when C=1)
     ;   A = clobbered
 
-    .proc _{{ P }}_read
+    .proc {{ symbol("read") }}
         clc
         lda {{ P }}_STATUS
         and #{{ P }}_SR_RDRF
@@ -324,10 +324,10 @@
     ;   byte = non-zero if data available, zero if not
     ;   A = clobbered
 
-    .proc _{{ P }}_check_rx
+    .proc {{ symbol("check_rx") }}
         lda {{ P }}_STATUS
         and #{{ P }}_SR_RDRF
-        sta {{ P }}_byte
+        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -341,9 +341,9 @@
     ;   byte = 1 (always ready)
     ;   A = clobbered
 
-    .proc _{{ P }}_check_tx
+    .proc {{ symbol("check_tx") }}
         lda #1
-        sta {{ P }}_byte
+        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -354,9 +354,9 @@
     ;   byte = status register contents
     ;   A = clobbered
 
-    .proc _{{ P }}_load_status
+    .proc {{ symbol("load_status") }}
         lda {{ P }}_STATUS
-        sta {{ P }}_byte
+        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -372,9 +372,9 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_write
-        lda {{ P }}_byte
+    .proc {{ symbol("write") }}
+        lda {{ symbol("byte") }}
         sta {{ P }}_DATA
-        jsr _{{ P }}_tx_delay
+        jsr {{ symbol("tx_delay") }}
         rts
     .endproc

@@ -22,9 +22,9 @@
 
 .segment "ZEROPAGE"
 
-    {{ P }}_byte: .res 1                ; Parameter byte for LCD operations
-    {{ P }}_ptr:  .res 2                ; Pointer for string printing
-    {{ P }}_tmp:  .res 1                ; Internal temporary
+    {{ symbol("byte") }}: .res 1            ; Parameter byte for LCD operations
+    {{ symbol("ptr") }}:  .res 2            ; Pointer for string printing
+    {{ symbol("tmp") }}:  .res 1            ; Internal temporary
 
 .segment "KERNAL"
 
@@ -38,7 +38,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_pulse_en
+    .proc {{ symbol("pulse_en") }}
         {{ P }}_PIN_EN_on
         {{ P }}_PIN_EN_off
         rts
@@ -52,25 +52,25 @@
     ; Sends the high nibble first, then the low nibble, with EN pulses.
     ;
     ; In (zero page):
-    ;   {{ P }}_byte = byte to send
+    ;   {{ symbol("byte") }} = byte to send
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_write_nibbles
+    .proc {{ symbol("write_nibbles") }}
         ; High nibble: upper 4 bits are already in position.
-        lda {{ P }}_byte
+        lda {{ symbol("byte") }}
         and #$F0
         {{ DATA_P }}_write_a
-        jsr _{{ P }}_pulse_en
+        jsr {{ symbol("pulse_en") }}
 
         ; Low nibble: shift lower 4 bits into upper position.
-        lda {{ P }}_byte
+        lda {{ symbol("byte") }}
         asl
         asl
         asl
         asl
         {{ DATA_P }}_write_a
-        jsr _{{ P }}_pulse_en
+        jsr {{ symbol("pulse_en") }}
 
         rts
     .endproc
@@ -84,14 +84,14 @@
     ; the busy flag.
     ;
     ; In (zero page):
-    ;   {{ P }}_byte = byte to write
+    ;   {{ symbol("byte") }} = byte to write
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_write_init
-        lda {{ P }}_byte
+    .proc {{ symbol("write_init") }}
+        lda {{ symbol("byte") }}
         {{ DATA_P }}_write_a
-        jsr _{{ P }}_pulse_en
+        jsr {{ symbol("pulse_en") }}
         rts
     .endproc
 
@@ -104,24 +104,24 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_power_up
+    .proc {{ symbol("power_up") }}
         ; Wait >15 ms after Vcc rises before sending any commands.
         DELAY_MS 20
 
         ; Function Set for turning on 8-bit mode.
         lda #$30
-        sta {{ P }}_byte
+        sta {{ symbol("byte") }}
 
         ; 1st Function Set — wait >4.1 ms afterward.
-        jsr _{{ P }}_write_init
+        jsr {{ symbol("write_init") }}
         DELAY_MS 5
 
         ; 2nd Function Set — wait >100 µs afterward.
-        jsr _{{ P }}_write_init
+        jsr {{ symbol("write_init") }}
         DELAY_US 200
 
         ; 3rd Function Set — LCD is now reliably in 8-bit mode.
-        jsr _{{ P }}_write_init
+        jsr {{ symbol("write_init") }}
         DELAY_US 200
 
         rts
@@ -137,10 +137,10 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_enable_4bit
+    .proc {{ symbol("enable_4bit") }}
         lda #$20
-        sta {{ P }}_byte
-        jsr _{{ P }}_write_init
+        sta {{ symbol("byte") }}
+        jsr {{ symbol("write_init") }}
         DELAY_US 200
         rts
     .endproc
@@ -155,21 +155,21 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_configure
+    .proc {{ symbol("configure") }}
         lda #{{ P }}_CMD_FUNCSET
-        sta {{ P }}_byte
-        jsr _{{ P }}_wait_ready
-        jsr _{{ P }}_write_cmnd_raw
+        sta {{ symbol("byte") }}
+        jsr {{ symbol("wait_ready") }}
+        jsr {{ symbol("write_cmnd_raw") }}
 
         lda #{{ P }}_CMD_DISPLAY_ON
-        sta {{ P }}_byte
-        jsr _{{ P }}_wait_ready
-        jsr _{{ P }}_write_cmnd_raw
+        sta {{ symbol("byte") }}
+        jsr {{ symbol("wait_ready") }}
+        jsr {{ symbol("write_cmnd_raw") }}
 
         lda #{{ P }}_CMD_ENTRYMODE
-        sta {{ P }}_byte
-        jsr _{{ P }}_wait_ready
-        jsr _{{ P }}_write_cmnd_raw
+        sta {{ symbol("byte") }}
+        jsr {{ symbol("wait_ready") }}
+        jsr {{ symbol("write_cmnd_raw")}}
 
         rts
     .endproc
@@ -181,18 +181,18 @@
     ; Used internally — public API should use write_cmnd which polls BF.
     ;
     ; In (zero page):
-    ;   {{ P }}_byte = command byte to write
+    ;   {{ symbol("byte") }} = command byte to write
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_write_cmnd_raw
+    .proc {{ symbol("write_cmnd_raw") }}
         {{ CTRL_P }}_write {{ P }}_CTRL_CMD_WR
 {% if IS_4BIT %}
-        jsr _{{ P }}_write_nibbles
+        jsr {{ symbol("write_nibbles") }}
 {% else %}
-        lda {{ P }}_byte
+        lda {{ symbol("byte") }}
         {{ DATA_P }}_write_a
-        jsr _{{ P }}_pulse_en
+        jsr {{ symbol("pulse_en") }}
 {% endif %}
         rts
     .endproc
@@ -206,7 +206,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_wait_ready
+    .proc {{ symbol("wait_ready") }}
     @loop:
         ; Switch data pins to input.
         {{ DATA_P }}_set_input
@@ -222,7 +222,7 @@
 
 {% if IS_4BIT %}
         ; Clock out the low nibble (ignored).
-        jsr _{{ P }}_pulse_en
+        jsr {{ symbol("pulse_en") }}
 {% endif %}
 
         ; Restore data pins to output.
@@ -252,7 +252,7 @@
     ; Out:
     ;   A, X, Y = clobbered
 
-    .proc _{{ P }}_init
+    .proc {{ symbol("init") }}
         ; Set data pins to output.
         {{ DATA_P }}_set_output
 
@@ -261,25 +261,25 @@
         {{ CTRL_P }}_write {{ P }}_CTRL_CMD_WR
 
         ; Power-up: force LCD into known 8-bit state.
-        jsr _{{ P }}_power_up
+        jsr {{ symbol("power_up") }}
 
 {% if IS_4BIT %}
         ; Switch to 4-bit mode.
-        jsr _{{ P }}_enable_4bit
+        jsr {{ symbol("enable_4bit") }}
 {% endif %}
 
         ; Configure display parameters.
-        jsr _{{ P }}_configure
+        jsr {{ symbol("configure") }}
 
         ; Clear screen.
         lda #{{ P }}_CMD_CLEAR
-        sta {{ P }}_byte
-        jsr _{{ P }}_wait_ready
-        jsr _{{ P }}_write_cmnd_raw
+        sta {{ symbol("byte") }}
+        jsr {{ symbol("wait_ready") }}
+        jsr {{ symbol("write_cmnd_raw") }}
 
         rts
     .endproc
-    .constructor _{{ P }}_init
+    .constructor {{ symbol("init") }}
 
     ; =====================================================================
     ; Write a command byte to the LCD.
@@ -287,13 +287,13 @@
     ; Waits for the LCD to be ready, then sends the command.
     ;
     ; In (zero page):
-    ;   {{ P }}_byte = command byte
+    ;   {{ symbol("byte") }} = command byte
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_write_cmnd
-        jsr _{{ P }}_wait_ready
-        jsr _{{ P }}_write_cmnd_raw
+    .proc {{ symbol("write_cmnd") }}
+        jsr {{ symbol("wait_ready") }}
+        jsr {{ symbol("write_cmnd_raw") }}
         rts
     .endproc
 
@@ -303,22 +303,22 @@
     ; Waits for the LCD to be ready, sets RS=1 (data), then sends the byte.
     ;
     ; In (zero page):
-    ;   {{ P }}_byte = data byte
+    ;   {{ symbol("byte") }} = data byte
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_write
-        jsr _{{ P }}_wait_ready
+    .proc {{ symbol("write") }}
+        jsr {{ symbol("wait_ready") }}
 
         ; RS=1 (data register), RWB=0 (write).
         {{ CTRL_P }}_write {{ P }}_CTRL_DATA_WR
 
 {% if IS_4BIT %}
-        jsr _{{ P }}_write_nibbles
+        jsr {{ symbol("write_nibbles") }}
 {% else %}
-        lda {{ P }}_byte
+        lda {{ symbol("byte") }}
         {{ DATA_P }}_write_a
-        jsr _{{ P }}_pulse_en
+        jsr {{ symbol("pulse_en") }}
 {% endif %}
         rts
     .endproc
@@ -329,10 +329,10 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_clr
+    .proc {{ symbol("clr") }}
         lda #{{ P }}_CMD_CLEAR
-        sta {{ P }}_byte
-        jsr _{{ P }}_write_cmnd
+        sta {{ symbol("byte") }}
+        jsr {{ symbol("write_cmnd") }}
         rts
     .endproc
 
@@ -342,10 +342,10 @@
     ; Out:
     ;   A = clobbered
 
-    .proc _{{ P }}_home
+    .proc {{ symbol("home") }}
         lda #{{ P }}_CMD_HOME
-        sta {{ P }}_byte
-        jsr _{{ P }}_write_cmnd
+        sta {{ symbol("byte") }}
+        jsr {{ symbol("write_cmnd") }}
         rts
     .endproc
 
@@ -353,17 +353,17 @@
     ; Print a null-terminated string.
     ;
     ; In (zero page):
-    ;   {{ P }}_ptr = pointer to null-terminated string
+    ;   {{ symbol("ptr") }} = pointer to null-terminated string
     ; Out:
     ;   A, Y = clobbered
 
-    .proc _{{ P }}_print
+    .proc {{ symbol("print") }}
         ldy #0
-@loop:  lda ({{ P }}_ptr),y
+@loop:  lda ({{ symbol("ptr") }}),y
         beq @done
-        sta {{ P }}_byte
+        sta {{ symbol("byte") }}
         phy
-        jsr _{{ P }}_write
+        jsr {{ symbol("write") }}
         ply
         iny
         bne @loop
@@ -374,12 +374,12 @@
 ; Exports
 ; =========================================================================
 
-{{ exportzp("_byte") }}
-{{ exportzp("_ptr") }}
+{{ exportzp("byte") }}
+{{ exportzp("ptr") }}
 
-{{ export("_init") }}
-{{ export("_write_cmnd") }}
-{{ export("_write") }}
-{{ export("_clr") }}
-{{ export("_home") }}
-{{ export("_print") }}
+{{ export("init") }}
+{{ export("write_cmnd") }}
+{{ export("write") }}
+{{ export("clr") }}
+{{ export("home") }}
+{{ export("print") }}

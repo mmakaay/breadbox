@@ -7,7 +7,15 @@ from breadbox.types.address16 import Address16
 from breadbox.types.device import Device
 from breadbox.types.on_off import OnOff
 
-UART_TYPES = ("w65c51", "um6551", "m6551", "generic")
+UART_TYPES = {
+    "w65c51n": "w65c51n",
+    "um6551": "generic",
+    "r6551": "generic",
+    "generic": "generic",
+}
+"""
+Mapping of the configuration `type` value to the driver backend to use.
+"""
 
 BAUD_RATES: dict[int, int] = {
     1200: 0x08,
@@ -29,7 +37,7 @@ class Uart6551Device(Device):
     configurable baud rate and optional RTS flow control pin.
     """
 
-    type: str = "generic"
+    type: str = field(default="generic")
     address: Address16
     baudrate: int = field(default=19200)
     irq: OnOff = field(default=OnOff("on"))

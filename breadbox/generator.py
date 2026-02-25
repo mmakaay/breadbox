@@ -237,46 +237,57 @@ class CodeGenerator:
         """
         P = device.macro_prefix
 
+        def symbol(name: str) -> str:
+            """
+            Generate a private name for a symbol, to be used internally in breadbox code.
+
+            This ugly wrapping makes the symbol names unique (by prefixing with the `{ P }`refix,
+            and by adding double underscores in front). Once these symbols reach the space of the
+            public API, thet will be made properly scoped and nicer to read. E.g. the private
+            symbol `__UART_write` will be exposed to projects as `UART::write`.
+
+            We can't unfortunately not make use of scoping in symbol .export / .import, therefore
+            we're forced to use this somewhat ugly name mangling.
+            """
+            return f"__{P}_{name}"
+
         def export(name: str) -> str:
             """
             Generate a .export directive for a proc symbol.
 
-            Usage: {{ export("_init") }}
-            Output: .export __the_display_init = _the_display_init
+            Usage: {{ export("init") }}
+            Output: .export __the_display_init
             """
-            return f".export __{P}{name} = _{P}{name}"
+            return f".export {symbol(name)}"
 
         def exportzp(name: str) -> str:
             """
             Generate a .exportzp directive for a zero-page symbol.
             """
-            return f".exportzp __{P}{name} = {P}{name}"
+            return f".exportzp {symbol(name)}"
 
         def importfn(name: str) -> str:
             """
             Generate a .import directive with scope alias.
 
-            Usage: {{ importfn("_init") }}
+            Usage: {{ importfn("init") }}
             Output:
                 .import   __the_display_init
                 init       = __the_display_init
             """
-            alias = name.lstrip("_")
-            symbol = f"__{P}{name}"
-            return f"    .import   {symbol}\n    {alias:<10s} = {symbol}"
+            return f"    .import   {symbol(name)}\n    {name:<10s} = {symbol(name)}"
 
         def importzp(name: str) -> str:
             """
             Generate a .importzp directive with scope alias.
             """
-            alias = name.lstrip("_")
-            symbol = f"__{P}{name}"
-            return f"    .importzp {symbol}\n    {alias:<10s} = {symbol}"
+            return f"    .importzp {symbol(name)}\n    {name:<10s} = {symbol(name)}"
 
         context: dict = {
             "device_id": str(device.id),
             "macro_prefix": P,
             "component_type": device.component_type,
+            "symbol": symbol,
             "export": export,
             "exportzp": exportzp,
             "importfn": importfn,
