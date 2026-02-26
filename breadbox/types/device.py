@@ -111,11 +111,7 @@ class Device(ABC):
         return Path(self.make_path("/"))
 
     @cached_property
-    def asm_scope(self) -> str:
-        return self.make_path("::")
-
-    @cached_property
-    def macro_prefix(self) -> str:
+    def symbol_prefix(self) -> str:
         return self.make_path("_")
 
 

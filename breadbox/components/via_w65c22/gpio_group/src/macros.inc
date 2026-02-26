@@ -32,7 +32,7 @@
 ;   A = clobbered
 
 {% if exclusive_port %}
-.macro {{ macro_prefix }}_write value
+.macro {{ symbol_prefix }}_write value
 {% if BIDIR %}
     lda #{{ MASK | hex }}
     sta {{ DDR_REG }}
@@ -41,7 +41,7 @@
     sta {{ PORT_REG }}
 .endmacro
 {% else %}
-.macro {{ macro_prefix }}_write value
+.macro {{ symbol_prefix }}_write value
 {% if BIDIR %}
     lda {{ DDR_REG }}
     ora #{{ MASK | hex }}
@@ -65,7 +65,7 @@
 ;   A = clobbered
 
 {% if exclusive_port %}
-.macro {{ macro_prefix }}_on
+.macro {{ symbol_prefix }}_on
 {% if BIDIR %}
     lda #{{ MASK | hex }}
     sta {{ DDR_REG }}
@@ -76,7 +76,7 @@
 {% endif %}
 .endmacro
 {% else %}
-.macro {{ macro_prefix }}_on
+.macro {{ symbol_prefix }}_on
 {% if BIDIR %}
     lda {{ DDR_REG }}
     ora #{{ MASK | hex }}
@@ -99,7 +99,7 @@
 ;   A = clobbered
 
 {% if exclusive_port %}
-.macro {{ macro_prefix }}_off
+.macro {{ symbol_prefix }}_off
 {% if BIDIR %}
     lda #{{ MASK | hex }}
     sta {{ DDR_REG }}
@@ -108,7 +108,7 @@
     sta {{ PORT_REG }}
 .endmacro
 {% else %}
-.macro {{ macro_prefix }}_off
+.macro {{ symbol_prefix }}_off
 {% if BIDIR %}
     lda {{ DDR_REG }}
     ora #{{ MASK | hex }}
@@ -130,7 +130,7 @@
 ; Out:
 ;   A = clobbered
 
-.macro {{ macro_prefix }}_toggle
+.macro {{ symbol_prefix }}_toggle
 {% if BIDIR %}
 {% if exclusive_port %}
     lda #{{ MASK | hex }}
@@ -150,7 +150,7 @@
 ; Write the accumulator to {{ device_id }}.
 ;
 ; Does NOT change DDR direction. For bidirectional groups, call
-; {{ macro_prefix }}_set_output first if the bus was set to input.
+; {{ symbol_prefix }}_set_output first if the bus was set to input.
 ;
 ; The value in A must have bits positioned within the group mask ({{ bits | hex }}).
 ; Bits outside the mask are ignored{% if not exclusive_port %} and preserved{% endif %}.
@@ -161,11 +161,11 @@
 ;   A = clobbered
 
 {% if exclusive_port %}
-.macro {{ macro_prefix }}_write_a
+.macro {{ symbol_prefix }}_write_a
     sta {{ PORT_REG }}
 .endmacro
 {% else %}
-.macro {{ macro_prefix }}_write_a
+.macro {{ symbol_prefix }}_write_a
     and #{{ MASK | hex }}
     sta {{ symbol("tmp") }}
     lda {{ PORT_REG }}
@@ -187,7 +187,7 @@
 ; Out:
 ;   A = group state (masked to {{ bits | hex }})
 
-.macro {{ macro_prefix }}_read
+.macro {{ symbol_prefix }}_read
 {% if BIDIR %}
 {% if exclusive_port %}
     lda #$00
@@ -205,13 +205,13 @@
 ; =========================================================================
 ; Read {{ device_id }} port value without changing DDR.
 ;
-; For bidirectional groups, call {{ macro_prefix }}_set_input first
+; For bidirectional groups, call {{ symbol_prefix }}_set_input first
 ; if the bus was set to output.
 ;
 ; Out:
 ;   A = group state (masked to {{ bits | hex }})
 
-.macro {{ macro_prefix }}_read_port
+.macro {{ symbol_prefix }}_read_port
     lda {{ PORT_REG }}
     and #{{ MASK | hex }}
 .endmacro
@@ -225,12 +225,12 @@
 ;   A = clobbered
 
 {% if exclusive_port %}
-.macro {{ macro_prefix }}_set_output
+.macro {{ symbol_prefix }}_set_output
     lda #{{ MASK | hex }}
     sta {{ DDR_REG }}
 .endmacro
 {% else %}
-.macro {{ macro_prefix }}_set_output
+.macro {{ symbol_prefix }}_set_output
     lda {{ DDR_REG }}
     ora #{{ MASK | hex }}
     sta {{ DDR_REG }}
@@ -244,12 +244,12 @@
 ;   A = clobbered
 
 {% if exclusive_port %}
-.macro {{ macro_prefix }}_set_input
+.macro {{ symbol_prefix }}_set_input
     lda #$00
     sta {{ DDR_REG }}
 .endmacro
 {% else %}
-.macro {{ macro_prefix }}_set_input
+.macro {{ symbol_prefix }}_set_input
     lda {{ DDR_REG }}
     and #{{ INV_MASK | hex }}
     sta {{ DDR_REG }}

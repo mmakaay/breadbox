@@ -16,7 +16,7 @@
 {% endif %}
 ; Baud rate: {{ baudrate }}
 
-{% set P = macro_prefix %}
+{% set P = symbol_prefix %}
 
 .include "hardware.inc"
 .include "CORE/delay.inc"

@@ -3,7 +3,7 @@
 
 .include "{{ device_path }}/macros.inc"
 
-.scope {{ macro_prefix }}
+.scope {{ symbol_prefix }}
 
     {% if direction in ("out", "both") %}
     .import {{ alias("turn_on") }}

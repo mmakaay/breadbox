@@ -6,7 +6,7 @@
 ; Mode: polling (timed TX delay for TDRE bug workaround)
 {% endif %}
 
-{% set P = macro_prefix %}
+{% set P = symbol_prefix %}
 
     ; =====================================================================
     ; TX character time (microseconds) for the W65C51N timed-TX workaround.

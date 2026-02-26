@@ -134,19 +134,19 @@ class BreadboxConfig:
         """
         Check that no two devices produce the same symbol prefix.
 
-        The macro_prefix (e.g. CONSOLE_PIN_RTS) is derived from the
+        The symbol_prefix (e.g. CONSOLE_PIN_RTS) is derived from the
         device tree path using underscores. A flat device named A_B
         and a nested device A > B would both produce prefix 'A_B',
         causing symbol collisions in the generated assembly.
         """
         prefixes: dict[str, Device] = {}
         for device in self._all_devices():
-            prefix = device.macro_prefix
+            prefix = device.symbol_prefix
             if prefix in prefixes:
                 other = prefixes[prefix]
                 raise ConfigError(
-                    f"Symbol prefix collision: devices {other.asm_scope!r} and"
-                    f" {device.asm_scope!r} both produce prefix '{prefix}'"
+                    f"Symbol prefix collision: devices '{other.device_path}' and"
+                    f" '{device.device_path}' both produce prefix '{prefix}'"
                 )
             prefixes[prefix] = device
 

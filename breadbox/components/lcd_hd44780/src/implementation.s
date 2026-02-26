@@ -2,15 +2,15 @@
 ; HD44780 LCD: {{ device_id }} ({{ mode }} mode)
 ;
 ; Control: CTRL group (RS+RWB) on {{ ctrl.port }}, EN={{ pin_en.pin }}
-; Data bus: {{ data.asm_scope }} (port {{ data.port }} on {{ data.bus_device.id }}, mask {{ data.bits | hex }})
+; Data bus: {{ data.device_path }} (port {{ data.port }} on {{ data.bus_device.id }}, mask {{ data.bits | hex }})
 ;
-; All public procedures use {{ macro_prefix }}::byte (zero page) for parameter passing.
+; All public procedures use {{ symbol_prefix }}::byte (zero page) for parameter passing.
 ; Public API: init, write_cmnd, write, clr, home, print.
-; Call via JSR, e.g. `jsr {{ macro_prefix }}::write`.
+; Call via JSR, e.g. `jsr {{ symbol_prefix }}::write`.
 
-{% set P = macro_prefix %}
-{% set CTRL_P = ctrl.macro_prefix %}
-{% set DATA_P = data.macro_prefix %}
+{% set P = symbol_prefix %}
+{% set CTRL_P = ctrl.symbol_prefix %}
+{% set DATA_P = data.symbol_prefix %}
 {% set IS_4BIT = (mode == "4bit") %}
 
 .include "hardware.inc"

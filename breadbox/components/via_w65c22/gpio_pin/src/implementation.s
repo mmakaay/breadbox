@@ -2,7 +2,7 @@
 ; GPIO pin: {{ device_id }} ({{ pin }} on {{ bus_device.id }}, port {{ port }})
 ;
 ; Subroutine wrappers for {{ device_id }} macros.
-; Call via JSR, e.g. `jsr {{ macro_prefix }}::turn_on`.
+; Call via JSR, e.g. `jsr {{ symbol_prefix }}::turn_on`.
 
 .include "hardware.inc"
 .include "{{ device_path }}/macros.inc"
@@ -69,7 +69,7 @@
     ;   A = clobbered
 
     .proc {{ symbol("turn_on") }}
-        {{ macro_prefix }}_on
+        {{ symbol_prefix }}_on
         rts
     .endproc
 
@@ -80,7 +80,7 @@
     ;   A = clobbered
 
     .proc {{ symbol("turn_off") }}
-        {{ macro_prefix }}_off
+        {{ symbol_prefix }}_off
         rts
     .endproc
 
@@ -91,7 +91,7 @@
     ;   A = clobbered
 
     .proc {{ symbol("toggle") }}
-        {{ macro_prefix }}_toggle
+        {{ symbol_prefix }}_toggle
         rts
     .endproc
 {% endif %}
@@ -104,7 +104,7 @@
     ;   A = pin state (bit {{ pin[-1] }}, masked)
 
     .proc {{ symbol("read") }}
-        {{ macro_prefix }}_read
+        {{ symbol_prefix }}_read
         rts
     .endproc
 {% endif %}

@@ -6,7 +6,7 @@
 ; Mode: polling (TDRE poll for TX, RDRF poll for RX)
 {% endif %}
 
-{% set P = macro_prefix %}
+{% set P = symbol_prefix %}
 
 {% if irq == "on" %}
     ; CMD register presets for TX IRQ control.

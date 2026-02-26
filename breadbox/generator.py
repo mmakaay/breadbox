@@ -205,7 +205,7 @@ class CodeGenerator:
         """
         Build the Jinja2 template context for a device.
         """
-        P = device.macro_prefix
+        P = device.symbol_prefix
 
         def symbol(name: str) -> str:
             """
@@ -241,7 +241,7 @@ class CodeGenerator:
 
         context: dict = {
             "device_id": str(device.id),
-            "macro_prefix": P,
+            "symbol_prefix": P,
             "component_type": device.component_type,
             "symbol": symbol,
             "alias": alias,

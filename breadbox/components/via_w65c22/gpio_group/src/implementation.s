@@ -2,7 +2,7 @@
 ; GPIO group: {{ device_id }} (port {{ port }} on {{ bus_device.id }}, mask {{ bits | hex }})
 ;
 ; Subroutine wrappers for {{ device_id }} macros.
-; Call via JSR, e.g. `jsr {{ macro_prefix }}::turn_on`.
+; Call via JSR, e.g. `jsr {{ symbol_prefix }}::turn_on`.
 
 .exportzp {{ symbol("tmp") }}
 
@@ -23,7 +23,7 @@
 .export {{ symbol("set_input") }}
 {% endif %}
 
-{% set P = macro_prefix %}
+{% set P = symbol_prefix %}
 
 .segment "ZEROPAGE"
 

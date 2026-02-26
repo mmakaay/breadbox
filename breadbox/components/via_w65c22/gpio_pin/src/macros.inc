@@ -19,7 +19,7 @@
 ;   A = clobbered
 
 {% if exclusive_port %}
-.macro {{ macro_prefix }}_on
+.macro {{ symbol_prefix }}_on
 {% if BIDIR %}
     lda #{{ MASK | hex }}
     sta {{ DDR_REG }}
@@ -30,7 +30,7 @@
 {% endif %}
 .endmacro
 {% else %}
-.macro {{ macro_prefix }}_on
+.macro {{ symbol_prefix }}_on
 {% if BIDIR %}
     lda {{ DDR_REG }}
     ora #{{ MASK | hex }}
@@ -53,7 +53,7 @@
 ;   A = clobbered
 
 {% if exclusive_port %}
-.macro {{ macro_prefix }}_off
+.macro {{ symbol_prefix }}_off
 {% if BIDIR %}
     lda #{{ MASK | hex }}
     sta {{ DDR_REG }}
@@ -62,7 +62,7 @@
     sta {{ PORT_REG }}
 .endmacro
 {% else %}
-.macro {{ macro_prefix }}_off
+.macro {{ symbol_prefix }}_off
 {% if BIDIR %}
     lda {{ DDR_REG }}
     ora #{{ MASK | hex }}
@@ -84,7 +84,7 @@
 ; Out:
 ;   A = clobbered
 
-.macro {{ macro_prefix }}_toggle
+.macro {{ symbol_prefix }}_toggle
 {% if BIDIR %}
 {% if exclusive_port %}
     lda #{{ MASK | hex }}
@@ -112,7 +112,7 @@
 ; Out:
 ;   A = pin state (bit {{ pin[-1] }}, masked)
 
-.macro {{ macro_prefix }}_read
+.macro {{ symbol_prefix }}_read
 {% if BIDIR %}
 {% if exclusive_port %}
     lda #$00

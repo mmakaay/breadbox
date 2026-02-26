@@ -63,7 +63,7 @@ class TestValidateFromYaml:
 class TestValidateUniquePrefixes:
     """
     BreadboxConfig._validate() must reject configs where two devices
-    produce the same symbol prefix (macro_prefix).
+    produce the same symbol prefix (symbol_prefix).
     """
 
     def test_no_collision_passes(self):
