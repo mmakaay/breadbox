@@ -2,20 +2,6 @@ CORE:
   cpu: 65c02
   clock_mhz: 1.000
 
-KERNAL:
-  component: rom
-  address: $8000
-  size: $3000
-  segments: ["KERNAL"]
-
-ROM:
-  address: $b000
-  size: $5000
-
-RAM:
-  address: $0000
-  size: $1000
-
 BUS:
   component: via_w65c22
   address: $6000
