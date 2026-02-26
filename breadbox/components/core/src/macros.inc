@@ -4,8 +4,6 @@
 ; Convenience wrappers for common 6502 byte and word operations.
 ; =========================================================================
 
-.include "cpu_shims.inc"
-
 ; =========================================================================
 ; Store an 8-bit value in a memory location.
 ;

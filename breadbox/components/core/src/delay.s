@@ -1,8 +1,12 @@
-.include "cpu_shims.inc"
+{{ symbol("DELAY_S") }} = 1
+.include "{{ device_path }}/api.inc"
+
+.export {{ symbol("delay") }}
+.exportzp {{ symbol("delay_iterations") }}
 
 .segment "ZEROPAGE"
 
-    {{ symbol("delay_iterations") }}: .res 2               ; 16-bit iteration count (lo/hi)
+    {{ symbol("delay_iterations") }}: .res 2   ; 16-bit iteration count (lo/hi)
 
 .segment "KERNAL"
 
@@ -19,9 +23,9 @@
         phx
         phy
 
-        ldy {{ symbol("delay_iterations") }}               ; Low byte: partial first pass
-        ldx {{ symbol("delay_iterations") }}+1             ; High byte: number of full 256 passes
-        inx                          ; Always run at least the low-byte pass
+        ldy {{ symbol("delay_iterations") }}    ; Low byte: partial first pass
+        ldx {{ symbol("delay_iterations") }}+1  ; High byte: number of full 256 passes
+        inx                                     ; Always run at least the low-byte pass
     @loop:
         dey
         bne @loop
@@ -32,6 +36,3 @@
         plx
         rts
     .endproc
-
-{{ export("delay") }}
-{{ exportzp("delay_iterations") }}

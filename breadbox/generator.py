@@ -251,6 +251,24 @@ class CodeGenerator:
             """
             return f"__{P}_{name}"
 
+        def alias(name: str, alias: str | None = None) -> str:
+            """
+            Generates `<symbol_name>\n    <alias> = <symbol_name>`
+
+            The name is used as the alias by default.
+            Not that this is not only alias assignment, but it also echoes the
+            private symbol name. The targeted use for this, are constructs like:
+
+                .import {{ alias("do_it", "go") }}
+
+            which will result in:
+
+                .import __DEVICE_PATH_do_it
+                go = __DEVICE_PATH_do_it
+            """
+            alias = alias or name
+            return f"{symbol(name)}\n    {alias} = {symbol(name)}"
+
         def export(name: str) -> str:
             """
             Generate a .export directive for a proc symbol.
@@ -288,6 +306,7 @@ class CodeGenerator:
             "macro_prefix": P,
             "component_type": device.component_type,
             "symbol": symbol,
+            "alias": alias,
             "export": export,
             "exportzp": exportzp,
             "importfn": importfn,

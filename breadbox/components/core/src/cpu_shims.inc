@@ -4,7 +4,7 @@
 ; and 65C02 CPUs (saving some cycles on 65C02, losing some on 6502).
 
 .if .not .ismnemonic(phx)
-    {{ importzp("cpu_shim_scratch_byte") }}
+    .importzp {{ symbol("cpu_shim_scratch_byte") }}
 
     .macro phx
         sta {{ symbol("cpu_shim_scratch_byte") }}  ; save A

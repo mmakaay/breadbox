@@ -4,6 +4,7 @@
       <w>endmacro</w>
       <w>endproc</w>
       <w>ifndef</w>
+      <w>interruptor</w>
       <w>zeropage</w>
     </words>
   </dictionary>

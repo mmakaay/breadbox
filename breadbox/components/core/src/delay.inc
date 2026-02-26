@@ -1,6 +1,9 @@
-{{ importfn("delay") }}
-{{ importzp("delay_iterations") }}
 .include "{{ device_path }}/macros.inc"
+
+.ifndef {{ symbol("DELAY_S") }}  ; import + export in one module = unhappy linker
+.import {{ symbol("delay") }}
+.importzp {{ symbol("delay_iterations") }}
+.endif
 
 ; =========================================================================
 ; Delay for approximately a number of iterations * 5 CPU cycles.
