@@ -1,6 +1,8 @@
 import pytest
 
 from breadbox.components.core.device import CoreDevice
+from breadbox.components.ram.device import RamDevice
+from breadbox.components.rom.device import RomDevice
 from breadbox.components.via_w65c22.device import ViaW65c22Device
 from breadbox.components.via_w65c22.gpio_pin.device import ViaW65c22GpioPinDevice
 from breadbox.config import BreadboxConfig
@@ -57,7 +59,7 @@ class TestValidateFromYaml:
         config_path = tmp_path / "config.yaml"
         config_path.write_text("CORE:\n  cpu: '65c02'\n  clock_mhz: 1.0\n")
         config = BreadboxConfig(config_path)
-        assert len(config.devices) == 1
+        assert DeviceIdentifier("CORE") in config.devices
 
 
 class TestValidateUniquePrefixes:
@@ -164,3 +166,46 @@ class TestValidatePinConflicts:
         )
         with pytest.raises(ConfigError, match="Pin conflict.*PB0"):
             BreadboxConfig(config_path)
+
+
+class TestDefaultMemoryInjection:
+    """
+    BreadboxConfig injects default RAM and ROM when none are present.
+    """
+
+    def test_injects_default_ram_and_rom(self, tmp_path):
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("CORE:\n  cpu: '65c02'\n  clock_mhz: 1.0\n")
+        config = BreadboxConfig(config_path)
+        ram_devices = [d for d in config.devices.values() if isinstance(d, RamDevice)]
+        rom_devices = [d for d in config.devices.values() if isinstance(d, RomDevice)]
+        assert len(ram_devices) == 1
+        assert len(rom_devices) == 1
+        assert int(ram_devices[0].address) == 0x0000
+        assert ram_devices[0].size == 0x4000
+        assert int(rom_devices[0].address) == 0x8000
+        assert rom_devices[0].size == 0x8000
+
+    def test_does_not_inject_when_present(self, tmp_path):
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text(
+            "CORE:\n  cpu: '65c02'\n  clock_mhz: 1.0\n"
+            "MYRAM:\n  component: ram\n  address: '$0000'\n  size: 0x2000\n"
+            "MYROM:\n  component: rom\n  address: '$E000'\n  size: 0x2000\n"
+        )
+        config = BreadboxConfig(config_path)
+        ram_devices = [d for d in config.devices.values() if isinstance(d, RamDevice)]
+        rom_devices = [d for d in config.devices.values() if isinstance(d, RomDevice)]
+        assert len(ram_devices) == 1
+        assert str(ram_devices[0].id) == "MYRAM"
+        assert len(rom_devices) == 1
+        assert str(rom_devices[0].id) == "MYROM"
+
+    def test_memory_layout_resolved(self, tmp_path):
+        config_path = tmp_path / "config.yaml"
+        config_path.write_text("CORE:\n  cpu: '65c02'\n  clock_mhz: 1.0\n")
+        config = BreadboxConfig(config_path)
+        assert config.memory_layout is not None
+        region_names = [r.name for r in config.memory_layout.regions]
+        assert "ZEROPAGE" in region_names
+        assert "VECTORS" in region_names

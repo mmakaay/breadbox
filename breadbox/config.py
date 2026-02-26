@@ -5,10 +5,10 @@ from typing import Any
 import yaml
 
 from breadbox.errors import ConfigError
+from breadbox.memory import MemoryLayout, resolve_memory_layout
 from breadbox.types.device import Device
 from breadbox.types.device_identifier import DeviceIdentifier
 from breadbox.visitors.config_printer import ConfigPrinter
-
 
 class BreadboxConfig:
     def __init__(self, config_path: Path) -> None:
@@ -16,7 +16,9 @@ class BreadboxConfig:
         self.project_dir = self.config_path.parent
         self.config_data = self._load_config_data()
         self.devices: dict[DeviceIdentifier, Device] = {}
+        self.memory_layout: MemoryLayout | None = None
         self._resolve_config()
+        self._inject_default_memory()
         self._validate()
 
     def get(self, device_id: DeviceIdentifier) -> Device:
@@ -83,16 +85,12 @@ class BreadboxConfig:
     def _validate(self) -> None:
         """
         Validate the resolved configuration.
-
-        Checks:
-        - Exactly one CORE device is present.
-        - No two devices produce the same symbol prefix.
-        - No physical pin is claimed by multiple bus clients.
         """
         self._validate_single_core()
         self._collect_bus_clients()
         self._validate_bus_clients()
         self._validate_unique_prefixes()
+        self._resolve_memory()
 
     def _validate_single_core(self) -> None:
         from breadbox.components.core.device import CoreDevice
@@ -165,3 +163,36 @@ class BreadboxConfig:
             if device.parent is None:
                 _walk(device)
         return result
+
+    def _inject_default_memory(self) -> None:
+        """
+        Inject default RAM and ROM devices when none are present in the config.
+
+        Default RAM: $0000, size $4000 (16 KB, matches Ben Eater layout).
+        Default ROM: $8000, size $8000 (32 KB, top half of address space).
+        """
+        from breadbox.components.ram.device import RamDevice
+        from breadbox.components.rom.device import RomDevice
+
+        has_ram = any(isinstance(d, RamDevice) for d in self.devices.values())
+        has_rom = any(isinstance(d, RomDevice) for d in self.devices.values())
+
+        if not has_ram:
+            device = RamDevice(id=DeviceIdentifier("RAM"), address="$0000", size=0x4000)
+            self.devices[device.id] = device
+
+        if not has_rom:
+            device = RomDevice(id=DeviceIdentifier("ROM"), address="$8000", size=0x8000)
+            self.devices[device.id] = device
+
+    def _resolve_memory(self) -> None:
+        """
+        Resolve memory devices into a complete memory layout for linker.cfg.
+        """
+        from breadbox.components.ram.device import RamDevice
+        from breadbox.components.rom.device import RomDevice
+
+        ram_devices = [d for d in self.devices.values() if isinstance(d, RamDevice)]
+        rom_devices = [d for d in self.devices.values() if isinstance(d, RomDevice)]
+        if ram_devices or rom_devices:
+            self.memory_layout = resolve_memory_layout(ram_devices, rom_devices)
