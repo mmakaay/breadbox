@@ -20,6 +20,16 @@
 .include "{{ ctrl.device_path }}/macros.inc"
 .include "{{ pin_en.device_path }}/macros.inc"
 
+.exportzp {{ symbol("byte") }}
+.exportzp {{ symbol("ptr") }}
+
+.export {{ symbol("init") }}
+.export {{ symbol("write_cmnd") }}
+.export {{ symbol("write") }}
+.export {{ symbol("clr") }}
+.export {{ symbol("home") }}
+.export {{ symbol("print") }}
+
 .segment "ZEROPAGE"
 
     {{ symbol("byte") }}: .res 1            ; Parameter byte for LCD operations
@@ -369,17 +379,3 @@
         bne @loop
 @done:  rts
     .endproc
-
-; =========================================================================
-; Exports
-; =========================================================================
-
-{{ exportzp("byte") }}
-{{ exportzp("ptr") }}
-
-{{ export("init") }}
-{{ export("write_cmnd") }}
-{{ export("write") }}
-{{ export("clr") }}
-{{ export("home") }}
-{{ export("print") }}

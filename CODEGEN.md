@@ -21,7 +21,7 @@ projects/my-project/
 ├── build/                              ← breadbox generates everything here
 │   ├── breadbox/                       ← ca65 include path root (-I build/breadbox/)
 │   │   ├── breadbox.inc                ← master include (generated, pulls in everything)
-│   │   ├── breadbox.cfg                ← ld65 linker config (generated)
+│   │   ├── linker.cfg                  ← ld65 linker config (generated)
 │   │   ├── hardware.inc                ← device constants + macros (from config.yaml)
 │   │   ├── hardware.s                  ← device init functions + scoped subroutines
 │   │   └── core/                       ← pre-processed core assembly
@@ -209,16 +209,16 @@ Each component owns its templates alongside its Python code:
 
 ```
 breadbox/
-├── templates/                           ← top-level templates
+├── templates/                          ← top-level templates
 │   ├── breadbox.inc                    ← master include file
-│   ├── breadbox.cfg                    ← linker config
+│   ├── linker.cfg                      ← linker config
 │   ├── hardware.inc                    ← device constants + macros
 │   └── hardware.s                      ← device init + scoped functions
 └── components/
     ├── core/
     │   ├── device.py
     │   ├── component.py
-    │   └── src/                       ← core assembly source files
+    │   └── src/                        ← core assembly source files
     │       ├── boot.s / boot.inc
     │       ├── vectors.s / vectors.inc
     │       ├── delay.s / delay.inc
@@ -363,10 +363,10 @@ BREADBOX_INC = 1
 .endif
 ```
 
-**7. Linker config (breadbox.cfg)**
+**7. Linker config (linker.cfg)**
 
 Generated (or copied from a default template), tailored to the project's
-memory map. Initially based on the existing `src/breadbox.cfg`.
+memory map. Initially based on the existing `src/linker.cfg`.
 
 ### User Templates
 
@@ -414,7 +414,7 @@ ca65 -I build/breadbox/ build/breadbox/hardware.s
 ca65 -I build/breadbox/ build/project/project.s
 
 # Link everything
-ld65 --config build/breadbox/breadbox.cfg \
+ld65 --config build/breadbox/linker.cfg \
     build/breadbox/core/*.o \
     build/breadbox/hardware.o \
     build/project/project.o \

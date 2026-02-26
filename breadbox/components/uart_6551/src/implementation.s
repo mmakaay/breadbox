@@ -26,6 +26,16 @@
 .include "{{ pin_rts.device_path }}/macros.inc"
 {% endif %}
 
+.exportzp {{ symbol("byte") }}
+
+.export {{ symbol("init") }}
+.export {{ symbol("read") }}
+.export {{ symbol("write") }}
+.export {{ symbol("write_terminal") }}
+.export {{ symbol("load_status") }}
+.export {{ symbol("check_rx") }}
+.export {{ symbol("check_tx") }}
+
 .segment "ZEROPAGE"
 
     {{ symbol("byte") }}: .res 1                ; Parameter byte for UART operations
@@ -78,17 +88,3 @@
     @raw:
         jmp {{ symbol("write") }}
     .endproc
-
-; =========================================================================
-; Exports
-; =========================================================================
-
-{{ exportzp("byte") }}
-
-{{ export("init") }}
-{{ export("read") }}
-{{ export("write") }}
-{{ export("write_terminal") }}
-{{ export("load_status") }}
-{{ export("check_rx") }}
-{{ export("check_tx") }}

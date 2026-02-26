@@ -7,6 +7,16 @@
 .include "hardware.inc"
 .include "{{ device_path }}/macros.inc"
 
+{% if direction in ("out", "both") %}
+.export {{ symbol("turn_on") }}
+.export {{ symbol("turn_off") }}
+.export {{ symbol("toggle") }}
+{% endif %}
+
+{% if direction in ("in", "both") %}
+.export {{ symbol("read") }}
+{% endif %}
+
 {% set PORT_REG = bus_device.id ~ "_PORT" ~ port %}
 {% set DDR_REG = bus_device.id ~ "_DDR" ~ port %}
 {% set MASK = bitmask %}
@@ -97,17 +107,4 @@
         {{ macro_prefix }}_read
         rts
     .endproc
-{% endif %}
-
-; =========================================================================
-; Exports
-; =========================================================================
-
-{% if direction in ("out", "both") %}
-{{ export("turn_on") }}
-{{ export("turn_off") }}
-{{ export("toggle") }}
-{% endif %}
-{% if direction in ("in", "both") %}
-{{ export("read") }}
 {% endif %}

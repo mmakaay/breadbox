@@ -4,6 +4,25 @@
 ; Subroutine wrappers for {{ device_id }} macros.
 ; Call via JSR, e.g. `jsr {{ macro_prefix }}::turn_on`.
 
+.exportzp {{ symbol("tmp") }}
+
+{% if direction in ("out", "both") %}
+.export {{ symbol("turn_on") }}
+.export {{ symbol("turn_off") }}
+.export {{ symbol("toggle") }}
+.export {{ symbol("write_a") }}
+{% endif %}
+
+{% if direction in ("in", "both") %}
+.export {{ symbol("read") }}
+.export {{ symbol("read_port") }}
+{% endif %}
+
+{% if direction == "both" %}
+.export {{ symbol("set_output") }}
+.export {{ symbol("set_input") }}
+{% endif %}
+
 {% set P = macro_prefix %}
 
 .segment "ZEROPAGE"
@@ -147,24 +166,4 @@
         {{ P }}_set_input
         rts
     .endproc
-{% endif %}
-
-; =========================================================================
-; Exports
-; =========================================================================
-
-{{ exportzp("tmp") }}
-{% if direction in ("out", "both") %}
-{{ export("turn_on") }}
-{{ export("turn_off") }}
-{{ export("toggle") }}
-{{ export("write_a") }}
-{% endif %}
-{% if direction in ("in", "both") %}
-{{ export("read") }}
-{{ export("read_port") }}
-{% endif %}
-{% if direction == "both" %}
-{{ export("set_output") }}
-{{ export("set_input") }}
 {% endif %}

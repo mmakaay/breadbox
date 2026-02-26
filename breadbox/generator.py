@@ -64,7 +64,7 @@ class CodeGenerator:
                 device.accept(self)
         self._generate_hardware_inc()
         self._generate_breadbox_inc()
-        self._generate_breadbox_cfg()
+        self._generate_linker_cfg()
 
     def _collect_bus_clients(self) -> None:
         """
@@ -161,13 +161,13 @@ class CodeGenerator:
         rendered = template.render(devices=self.breadbox.config.devices)
         self._write_generated_output(Path("hardware.inc"), rendered)
 
-    def _generate_breadbox_cfg(self) -> None:
+    def _generate_linker_cfg(self) -> None:
         """
         Generate the ld65 linker configuration.
         """
-        template = self._template_env.get_template("breadbox.cfg")
+        template = self._template_env.get_template("linker.cfg")
         rendered = template.render()
-        self._write_generated_output(Path("breadbox.cfg"), rendered)
+        self._write_generated_output(Path("linker.cfg"), rendered)
 
     def _process_component_sources(self, device: Device) -> None:
         """
@@ -269,48 +269,12 @@ class CodeGenerator:
             alias = alias or name
             return f"{symbol(name)}\n    {alias} = {symbol(name)}"
 
-        def export(name: str) -> str:
-            """
-            Generate a .export directive for a proc symbol.
-
-            Usage: {{ export("init") }}
-            Output: .export __the_display_init
-            """
-            return f".export {symbol(name)}"
-
-        def exportzp(name: str) -> str:
-            """
-            Generate a .exportzp directive for a zero-page symbol.
-            """
-            return f".exportzp {symbol(name)}"
-
-        def importfn(name: str) -> str:
-            """
-            Generate a .import directive with scope alias.
-
-            Usage: {{ importfn("init") }}
-            Output:
-                .import   __the_display_init
-                init       = __the_display_init
-            """
-            return f"    .import   {symbol(name)}\n    {name:<10s} = {symbol(name)}"
-
-        def importzp(name: str) -> str:
-            """
-            Generate a .importzp directive with scope alias.
-            """
-            return f"    .importzp {symbol(name)}\n    {name:<10s} = {symbol(name)}"
-
         context: dict = {
             "device_id": str(device.id),
             "macro_prefix": P,
             "component_type": device.component_type,
             "symbol": symbol,
             "alias": alias,
-            "export": export,
-            "exportzp": exportzp,
-            "importfn": importfn,
-            "importzp": importzp,
         }
         for f in dataclasses.fields(device):
             if f.name not in device._internal_fields:

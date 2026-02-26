@@ -96,7 +96,7 @@ class Builder:
         """
         Link object files into a ROM binary with ld65.
         """
-        cfg_path = self.project.generated_dir / "breadbox.cfg"
+        cfg_path = self.project.generated_dir / "linker.cfg"
         cmd = [str(self.ld65), "--config", str(cfg_path)]
         cmd.extend(str(o) for o in object_files)
         cmd.extend(["-o", str(rom_path)])
