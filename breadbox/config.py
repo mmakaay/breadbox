@@ -84,10 +84,17 @@ class BreadboxConfig:
         """
         Validate the resolved configuration.
 
-        Ensures exactly one CORE device is present. A breadbox project
-        requires a single CPU core to function; zero or multiple core
-        devices are invalid.
+        Checks:
+        - Exactly one CORE device is present.
+        - No two devices produce the same symbol prefix.
+        - No physical pin is claimed by multiple bus clients.
         """
+        self._validate_single_core()
+        self._collect_bus_clients()
+        self._validate_bus_clients()
+        self._validate_unique_prefixes()
+
+    def _validate_single_core(self) -> None:
         from breadbox.components.core.device import CoreDevice
 
         cores = [d for d in self.devices.values() if isinstance(d, CoreDevice)]
@@ -98,3 +105,63 @@ class BreadboxConfig:
             raise ConfigError(
                 f"Configuration must have exactly one CORE device, found {len(cores)}: {ids}"
             )
+
+    def _collect_bus_clients(self) -> None:
+        """
+        Walk the device tree and register bus clients on their bus devices.
+
+        Must run before bus client validation so that bus devices can
+        answer queries about their clients (e.g. port exclusivity, pin conflicts).
+        """
+        from breadbox.visitors.bus_client_collector import BusClientCollector
+
+        collector = BusClientCollector()
+        for device in self.devices.values():
+            if device.parent is None:
+                device.accept(collector)
+
+    def _validate_bus_clients(self) -> None:
+        """
+        Ask each device to validate its registered bus clients.
+        """
+        for device in self.devices.values():
+            try:
+                device.validate_bus_clients()
+            except ValueError as e:
+                raise ConfigError(str(e)) from None
+
+    def _validate_unique_prefixes(self) -> None:
+        """
+        Check that no two devices produce the same symbol prefix.
+
+        The macro_prefix (e.g. CONSOLE_PIN_RTS) is derived from the
+        device tree path using underscores. A flat device named A_B
+        and a nested device A > B would both produce prefix 'A_B',
+        causing symbol collisions in the generated assembly.
+        """
+        prefixes: dict[str, Device] = {}
+        for device in self._all_devices():
+            prefix = device.macro_prefix
+            if prefix in prefixes:
+                other = prefixes[prefix]
+                raise ConfigError(
+                    f"Symbol prefix collision: devices {other.asm_scope!r} and"
+                    f" {device.asm_scope!r} both produce prefix '{prefix}'"
+                )
+            prefixes[prefix] = device
+
+    def _all_devices(self) -> list[Device]:
+        """
+        Flatten the device tree into a list of all devices.
+        """
+        result: list[Device] = []
+
+        def _walk(device: Device) -> None:
+            result.append(device)
+            for sub in device.devices:
+                _walk(sub)
+
+        for device in self.devices.values():
+            if device.parent is None:
+                _walk(device)
+        return result

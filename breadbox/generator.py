@@ -9,9 +9,7 @@ from typing import TYPE_CHECKING
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from rich.console import Console
 
-from breadbox.errors import ConfigError
 from breadbox.project import BreadboxProject
-from breadbox.visitors.bus_client_collector import BusClientCollector
 
 if TYPE_CHECKING:
     from breadbox.types.device import Device
@@ -47,16 +45,12 @@ class CodeGenerator:
     def __init__(self, breadbox: BreadboxProject) -> None:
         self.breadbox = breadbox
         self._template_env = self._create_template_env()
-        self._bus_collector = BusClientCollector()
         self._device_includes: list[Path] = []
 
     def generate(self) -> None:
         """
         Generate all assembly output from the resolved config.
         """
-        self._collect_bus_clients()
-        self._validate_bus_clients()
-
         self._prepare_build_dir()
         self._process_project_sources()
         for device in self.breadbox.config.devices.values():
@@ -65,30 +59,6 @@ class CodeGenerator:
         self._generate_hardware_inc()
         self._generate_breadbox_inc()
         self._generate_linker_cfg()
-
-    def _collect_bus_clients(self) -> None:
-        """
-        Walk the full device tree and register bus clients.
-
-        Must run before code generation so that bus devices
-        can answer queries about their clients (e.g. port exclusivity).
-        """
-        for device in self.breadbox.config.devices.values():
-            if device.parent is None:
-                device.accept(self._bus_collector)
-
-    def _validate_bus_clients(self) -> None:
-        """
-        Ask each device to validate its registered bus clients.
-
-        Wraps any ValueError from device validation as ConfigError
-        so the CLI can display it cleanly without a stack trace.
-        """
-        for device in self.breadbox.config.devices.values():
-            try:
-                device.validate_bus_clients()
-            except ValueError as e:
-                raise ConfigError(str(e)) from None
 
     def _prepare_build_dir(self) -> None:
         """
