@@ -1,8 +1,8 @@
 ; =========================================================================
 ; Halt program execution.
 
-.import __core_halt
+{{ importfn("halt") }}
 
 .macro HALT
-    jmp __core_halt
+    jmp {{ symbol("halt") }}
 .endmacro

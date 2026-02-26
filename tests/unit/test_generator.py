@@ -122,7 +122,7 @@ class TestCoreGeneration:
 
     def test_s_files_match_source(self, tmp_path):
         """
-        Assembly source files (.s) pass through unchanged.
+        Assembly source files (.s) without template tags pass through unchanged.
         """
         project = make_project(tmp_path, make_core_config())
         output_dir = project.generated_dir
@@ -131,7 +131,7 @@ class TestCoreGeneration:
 
         src_dir = COMPONENTS_DIR / "core" / "src"
         for src_file in src_dir.iterdir():
-            if src_file.suffix == ".s":
+            if src_file.suffix == ".s" and "{{" not in src_file.read_text():
                 generated = output_dir / "CORE" / src_file.name
                 assert generated.read_text() == src_file.read_text(), f"Content mismatch for {src_file.name}"
 

@@ -1,8 +1,6 @@
-.ifndef __CORE_VECTORS_S
-.importzp __core_nmi_vector
-.importzp __core_irq_vector
-nmi_vector = __core_nmi_vector
-irq_vector = __core_irq_vector
+.ifndef {{ symbol("vectors_s") }}
+{{ importzp("nmi_vector") }}
+{{ importzp("irq_vector") }}
 .endif
 
 .include "macros.inc"

@@ -1,6 +1,6 @@
-.import   __core_delay
-.importzp __core_delay_iterations
-.include "CORE/macros.inc"
+{{ importfn("delay") }}
+{{ importzp("delay_iterations") }}
+.include "{{ device_path }}/macros.inc"
 
 ; =========================================================================
 ; Delay for approximately a number of iterations * 5 CPU cycles.
@@ -11,8 +11,8 @@
 ;   A = clobbered
 
 .macro DELAY _iterations
-    SET_WORD __core_delay_iterations, _iterations
-    jsr __core_delay
+    SET_WORD {{ symbol("delay_iterations") }}, _iterations
+    jsr {{ symbol("delay") }}
 .endmacro
 
 ; =========================================================================
