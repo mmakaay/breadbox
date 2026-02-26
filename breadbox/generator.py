@@ -134,10 +134,39 @@ class CodeGenerator:
     def _generate_linker_cfg(self) -> None:
         """
         Generate the ld65 linker configuration.
+
+        If the project directory contains a linker.cfg, it is used as a
+        Jinja2 template (with the resolved memory layout as context) instead
+        of the built-in template.
         """
-        template = self._template_env.get_template("linker.cfg")
-        rendered = template.render()
+        project_cfg = self.breadbox.project_dir / "linker.cfg"
+        if project_cfg.is_file():
+            env = Environment(
+                loader=FileSystemLoader(str(self.breadbox.project_dir)),
+                undefined=StrictUndefined,
+                keep_trailing_newline=True,
+                lstrip_blocks=True,
+                trim_blocks=True,
+            )
+            env.filters["hex"] = _hex_filter
+            template = env.get_template("linker.cfg")
+        else:
+            template = self._template_env.get_template("linker.cfg")
+        context = self._build_linker_context()
+        rendered = template.render(context)
         self._write_generated_output(Path("linker.cfg"), rendered)
+
+    def _build_linker_context(self) -> dict:
+        """
+        Build the Jinja2 template context for linker.cfg generation.
+        """
+        layout = self.breadbox.config.memory_layout
+        if layout is None:
+            return {"regions": [], "segments": []}
+        return {
+            "regions": layout.regions,
+            "segments": layout.segments,
+        }
 
     def _process_component_sources(self, device: Device) -> None:
         """
