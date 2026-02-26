@@ -2,15 +2,26 @@
 
 ## Features
 
-Adds a 6551-family UART (a.k.a. ACIA) to your computer.
+Drives a 6551-family UART (a.k.a. ACIA) for RS232 serial communication. The ACIA is
+memory-mapped directly on the CPU bus (active-low chip select address decoded
+from the address lines).
 
-- **Multiple IC models** (W65C51N, UM6551, generic)
+Features:
+
+- **Multiple IC models** (W65C51N, UM6551, R6551, generic)
 - **Configurable baud rate**
 - **Polling-based RX/TX** (not recommended)
 - **IRQ-based RX/TX** (recommended), enabling:
   - **Hardware flow control** (RTS, signals the remote side to stop sending)
   - **RX read buffer**
   - **TX send buffer** (when supported by the hardware)
+
+## Model-specific documentation
+
+For a wiring schema and model-specific information, take a look at:
+
+- [WDC W65C51N](type_w65c51n.md) (different TX behavior, to work around a hardware bug)
+- [Generic](type_generic.md) (UM6551, R6551, or other ICs that follow the same specification)
 
 ## Configuration
 
