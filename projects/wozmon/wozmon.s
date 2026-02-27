@@ -4,7 +4,7 @@
 ; Differences with the original:
 ; - No hard-coded memory addresses, but using the linker for
 ;   assigning these automatically.
-; - Serial console is used for output, via UART0::write_terminal
+; - Serial console is used for output, via CONSOLE::write_terminal
 ;   which automatically expands CR to CR+LF for correct terminal
 ;   line endings.
 ; - The Apple II only supports upper case, resulting in the
@@ -37,12 +37,9 @@
 ;
 ; -----------------------------------------------------------------
 
-.ifndef KERNAL_WOZMON_S
-KERNAL_WOZMON_S = 1
-
 .include "breadbox.inc"
 
-.scope WOZMON
+.export WOZMON
 
 .segment "ZEROPAGE"
 
@@ -59,7 +56,9 @@ KERNAL_WOZMON_S = 1
 
     IN: .res $FF                ; Input buffer
 
-.segment "WOZMON"
+.segment "ROM"
+
+    WOZMON:
 
     ; No hardware initialization required like the original, since
     ; the KERNAL initialization already set up the hardware for us.
@@ -88,8 +87,8 @@ KERNAL_WOZMON_S = 1
         bmi GETLINE            ; Beyond start of line, reinitialize.
 
     NEXTCHAR:
-        jsr UART0::read        ; Wait for a character.
-        lda UART0::byte        ; Get received byte.
+        jsr CONSOLE::read      ; Wait for a character.
+        lda CONSOLE::byte      ; Get received byte.
         cmp #$7F               ; DEL? (backspace on many terminals)
         bne @not_del
         lda #$08               ; Normalize to BS.
@@ -240,10 +239,6 @@ KERNAL_WOZMON_S = 1
 
     ; Output the character in A to the serial console.
     ECHO:
-        sta UART0::byte
-        jsr UART0::write_terminal
+        sta CONSOLE::byte
+        jsr CONSOLE::write_terminal
         rts
-
-.endscope
-
-.endif
