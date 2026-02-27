@@ -103,17 +103,16 @@ class TestDefaultSegments:
         seg_names = [s.name for s in layout.segments]
         assert "ROM" in seg_names
 
-    def test_kernal_auto_assigned_to_vectors_rom(self):
+    def test_kernalrom_auto_assigned_to_vectors_rom(self):
         ram = make_ram()
         rom = make_rom()
         layout = resolve_memory_layout([ram], [rom])
-        kernal = [s for s in layout.segments if s.name == "KERNAL"]
+        kernal = [s for s in layout.segments if s.name == "KERNALROM"]
         assert len(kernal) == 1
         assert kernal[0].load == "ROM"
 
-
 class TestFixedSegments:
-    """ZEROPAGE, STACK, and VECTORS are always auto-assigned."""
+    """ZEROPAGE, KERNALZP, STACK, and VECTORS are always auto-assigned."""
 
     def test_zeropage_present(self):
         ram = make_ram()
@@ -218,43 +217,43 @@ class TestReservedSegments:
             resolve_memory_layout([ram], [rom1, rom2])
 
 
-class TestKernalOverride:
-    """KERNAL segment can be explicitly assigned to a different ROM."""
+class TestKernalromOverride:
+    """KERNALROM segment can be explicitly assigned to a different ROM."""
 
-    def test_kernal_default_in_vectors_rom(self):
+    def test_kernalrom_default_in_vectors_rom(self):
         ram = make_ram()
         rom = make_rom("ROM")
         layout = resolve_memory_layout([ram], [rom])
-        kernal = [s for s in layout.segments if s.name == "KERNAL"]
+        kernal = [s for s in layout.segments if s.name == "KERNALROM"]
         assert kernal[0].load == "ROM"
 
-    def test_kernal_override_to_different_rom(self):
+    def test_kernalrom_override_to_different_rom(self):
         ram = make_ram()
-        rom0 = make_rom("ROM0", address="$8000", size=0x4000, segments=["KERNAL"])
+        rom0 = make_rom("ROM0", address="$8000", size=0x4000, segments=["KERNALROM"])
         rom1 = make_rom("ROM1", address="$C000", size=0x4000)
         layout = resolve_memory_layout([ram], [rom0, rom1])
-        kernal = [s for s in layout.segments if s.name == "KERNAL"]
+        kernal = [s for s in layout.segments if s.name == "KERNALROM"]
         assert len(kernal) == 1
         assert kernal[0].load == "ROM0"
 
-    def test_kernal_in_ram_raises(self):
-        ram = make_ram(segments=["KERNAL"])
+    def test_kernalrom_in_ram_raises(self):
+        ram = make_ram(segments=["KERNALROM"])
         rom = make_rom()
         with pytest.raises(ConfigError, match="ROM device"):
             resolve_memory_layout([ram], [rom])
 
     def test_device_id_matching_auto_rom_segment_no_duplicate(self):
-        """ROM device named KERNAL with segments=[KERNAL] must not emit KERNAL twice."""
+        """ROM device named KERNALROM with segments=[KERNALROM] must not emit KERNALROM twice."""
         ram = make_ram()
-        kernal_rom = make_rom("KERNAL", address="$8000", size=0x2000, segments=["KERNAL"])
+        kernal_rom = make_rom("KERNALROM", address="$8000", size=0x2000, segments=["KERNALROM"])
         rom = make_rom("ROM", address="$A000", size=0x6000)
         layout = resolve_memory_layout([ram], [kernal_rom, rom])
-        kernal_segs = [s for s in layout.segments if s.name == "KERNAL"]
+        kernal_segs = [s for s in layout.segments if s.name == "KERNALROM"]
         assert len(kernal_segs) == 1
-        assert kernal_segs[0].load == "KERNAL"
+        assert kernal_segs[0].load == "KERNALROM"
 
 class TestCodeSegment:
-    """CODE segment (ca65 default) is auto-assigned like KERNAL."""
+    """CODE segment (ca65 default) is auto-assigned like KERNALROM."""
 
     def test_code_auto_assigned_to_vectors_rom(self):
         ram = make_ram()
@@ -279,16 +278,15 @@ class TestCodeSegment:
         with pytest.raises(ConfigError, match="ROM device"):
             resolve_memory_layout([ram], [rom])
 
-    def test_kernal_and_code_on_different_roms(self):
+    def test_kernalrom_and_code_on_different_roms(self):
         ram = make_ram()
         rom0 = make_rom("ROM0", address="$8000", size=0x4000, segments=["CODE"])
-        rom1 = make_rom("ROM1", address="$C000", size=0x4000, segments=["KERNAL"])
+        rom1 = make_rom("ROM1", address="$C000", size=0x4000, segments=["KERNALROM"])
         layout = resolve_memory_layout([ram], [rom0, rom1])
         code = [s for s in layout.segments if s.name == "CODE"]
-        kernal = [s for s in layout.segments if s.name == "KERNAL"]
+        kernal = [s for s in layout.segments if s.name == "KERNALROM"]
         assert code[0].load == "ROM0"
         assert kernal[0].load == "ROM1"
-
 
 class TestSegmentUniqueness:
     """No segment name can appear in multiple devices."""
@@ -369,6 +367,72 @@ class TestDefaultLayout:
         assert "ZEROPAGE" in seg_names
         assert "STACK" in seg_names
         assert "RAM" in seg_names
-        assert "KERNAL" in seg_names
+        assert "KERNALROM" in seg_names
         assert "CODE" in seg_names
         assert "VECTORS" in seg_names
+        assert "KERNALZP" in seg_names
+        assert "KERNALRAM" in seg_names
+
+
+class TestKernalzpSegment:
+    """KERNALZP segment is auto-assigned to the ZEROPAGE memory region."""
+
+    def test_kernalzp_present(self):
+        ram = make_ram()
+        rom = make_rom()
+        layout = resolve_memory_layout([ram], [rom])
+        kzp = [s for s in layout.segments if s.name == "KERNALZP"]
+        assert len(kzp) == 1
+        assert kzp[0].type == "zp"
+        assert kzp[0].load == "ZEROPAGE"
+
+    def test_kernalzp_before_zeropage_in_segment_order(self):
+        ram = make_ram()
+        rom = make_rom()
+        layout = resolve_memory_layout([ram], [rom])
+        seg_names = [s.name for s in layout.segments]
+        assert seg_names.index("KERNALZP") < seg_names.index("ZEROPAGE")
+
+    def test_kernalzp_reserved(self):
+        ram = make_ram(segments=["KERNALZP"])
+        rom = make_rom()
+        with pytest.raises(ConfigError, match="reserved"):
+            resolve_memory_layout([ram], [rom])
+
+
+class TestKernalramSegment:
+    """KERNALRAM segment is auto-assigned to the main RAM device."""
+
+    def test_kernalram_present(self):
+        ram = make_ram()
+        rom = make_rom()
+        layout = resolve_memory_layout([ram], [rom])
+        kram = [s for s in layout.segments if s.name == "KERNALRAM"]
+        assert len(kram) == 1
+        assert kram[0].type == "bss"
+        assert kram[0].load == "RAM"
+
+    def test_kernalram_override_to_different_ram(self):
+        ram0 = make_ram("RAM0", address="$0000", size=0x2000)
+        ram1 = make_ram("RAM1", address="$2000", size=0x2000, segments=["KERNALRAM"])
+        rom = make_rom()
+        layout = resolve_memory_layout([ram0, ram1], [rom])
+        kram = [s for s in layout.segments if s.name == "KERNALRAM"]
+        assert len(kram) == 1
+        assert kram[0].load == "RAM1"
+
+    def test_kernalram_in_rom_raises(self):
+        ram = make_ram()
+        rom = make_rom(segments=["KERNALRAM"])
+        with pytest.raises(ConfigError, match="RAM device"):
+            resolve_memory_layout([ram], [rom])
+
+    def test_kernalram_default_on_main_ram(self):
+        """KERNALRAM defaults to the RAM covering $0000 (main RAM)."""
+        ram0 = make_ram("RAM0", address="$0000", size=0x2000)
+        ram1 = make_ram("RAM1", address="$2000", size=0x2000)
+        rom = make_rom()
+        layout = resolve_memory_layout([ram0, ram1], [rom])
+        kram = [s for s in layout.segments if s.name == "KERNALRAM"]
+        assert len(kram) == 1
+        assert kram[0].load == "RAM0"

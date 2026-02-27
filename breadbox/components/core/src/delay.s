@@ -4,11 +4,11 @@
 .export {{ symbol("delay") }}
 .exportzp {{ symbol("delay_iterations") }}
 
-.segment "ZEROPAGE"
+.segment "KERNALZP" : zeropage
 
     {{ symbol("delay_iterations") }}: .res 2   ; 16-bit iteration count (lo/hi)
 
-.segment "KERNAL"
+.segment "KERNALROM"
 
     ; =========================================================================
     ; Delay for approximately a number of iterations * 5 CPU cycles.

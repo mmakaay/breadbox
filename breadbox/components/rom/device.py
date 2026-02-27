@@ -13,8 +13,8 @@ class RomDevice(Device):
 
     Defines a contiguous ROM address range for the linker configuration.
     VECTORS ($FFFA-$FFFF) are automatically carved from the ROM device
-    whose address range covers those bytes. KERNAL is assigned to that
-    same ROM by default, but can be overridden by including "KERNAL"
+    whose address range covers those bytes. KERNALROM is assigned to that
+    same ROM by default, but can be overridden by including "KERNALROM"
     in another ROM's segments list.
     """
 

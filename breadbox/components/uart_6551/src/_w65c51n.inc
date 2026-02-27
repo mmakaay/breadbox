@@ -24,11 +24,11 @@
     .endproc
 
 {% if irq == "on" %}
-.segment "RAM"
+.segment "KERNALRAM"
 
     {{ symbol("rx_buffer") }}: .res $100  ; 256-byte RX ring buffer
 
-.segment "ZEROPAGE"
+.segment "KERNALZP" : zeropage
 
     {{ symbol("rx_w_ptr") }}:   .res 1    ; Ring buffer write pointer (IRQ side)
     {{ symbol("rx_r_ptr") }}:   .res 1    ; Ring buffer read pointer (main side)
@@ -36,7 +36,7 @@
     {{ symbol("rx_off") }}:     .res 1    ; RTS deasserted flag (1 = flow stopped)
     {{ symbol("status") }}:     .res 1    ; Cached status register from last IRQ
 
-.segment "KERNAL"
+.segment "KERNALROM"
 
     ; =====================================================================
     ; Initialize the UART (IRQ mode).
@@ -259,7 +259,7 @@
     .endproc
 
 {% else %}
-.segment "KERNAL"
+.segment "KERNALROM"
 
     ; =====================================================================
     ; Initialize the UART (polling mode).

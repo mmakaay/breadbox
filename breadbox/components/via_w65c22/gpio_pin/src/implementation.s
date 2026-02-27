@@ -21,7 +21,7 @@
 {% set DDR_REG = bus_device.id ~ "_DDR" ~ port %}
 {% set MASK = bitmask %}
 {% set INV_MASK = 255 - bitmask %}
-.segment "KERNAL"
+.segment "KERNALROM"
 {% if direction in ("out", "both") or default is not none %}
 
     ; =========================================================================

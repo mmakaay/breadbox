@@ -25,14 +25,14 @@
 
 {% set P = symbol_prefix %}
 
-.segment "ZEROPAGE"
+.segment "KERNALZP" : zeropage
 
 {{ symbol("tmp") }}: .res 1                   ; Internal temporary for read-modify-write
 
 .include "hardware.inc"
 .include "{{ device_path }}/macros.inc"
 
-.segment "KERNAL"
+.segment "KERNALROM"
 {% if direction in ("out", "both") or default is not none %}
 
     ; =========================================================================

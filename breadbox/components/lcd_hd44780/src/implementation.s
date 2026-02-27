@@ -30,13 +30,13 @@
 .export {{ symbol("home") }}
 .export {{ symbol("print") }}
 
-.segment "ZEROPAGE"
+.segment "KERNALZP" : zeropage
 
     {{ symbol("byte") }}: .res 1            ; Parameter byte for LCD operations
     {{ symbol("ptr") }}:  .res 2            ; Pointer for string printing
     {{ symbol("tmp") }}:  .res 1            ; Internal temporary
 
-.segment "KERNAL"
+.segment "KERNALROM"
 
     ; =========================================================================
     ; Private: pulse EN high then low.

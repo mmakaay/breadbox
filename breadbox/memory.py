@@ -2,8 +2,8 @@
 Memory layout resolution for linker configuration.
 
 Resolves RAM/ROM devices and user-defined segments into a complete
-memory map with all auto-assigned segments (ZEROPAGE, STACK, VECTORS,
-KERNAL) placed correctly.
+memory map with all auto-assigned segments (ZEROPAGE, KERNALZP, STACK,
+VECTORS, KERNALROM, KERNALRAM) placed correctly.
 """
 
 from __future__ import annotations
@@ -12,16 +12,22 @@ from dataclasses import dataclass, field
 
 from breadbox.errors import ConfigError
 
-RESERVED_SEGMENTS = frozenset({"ZEROPAGE", "STACK", "VECTORS"})
+RESERVED_SEGMENTS = frozenset({"ZEROPAGE", "STACK", "VECTORS", "KERNALZP"})
 """Segment names that are always auto-assigned and cannot be used by the user."""
 
-AUTO_ROM_SEGMENTS = frozenset({"KERNAL", "CODE"})
+AUTO_ROM_SEGMENTS = frozenset({"KERNALROM", "CODE"})
 """
 Segment names that are auto-assigned to the vectors ROM by default,
 but can be overridden to a different ROM by including them in that ROM's
 segments list. Cannot be assigned to RAM.
 """
 
+AUTO_RAM_SEGMENTS = frozenset({"KERNALRAM"})
+"""
+Segment names that are auto-assigned to the main RAM device by default,
+but can be overridden to a different RAM by including them in that RAM's
+segments list. Cannot be assigned to ROM.
+"""
 
 @dataclass
 class MemoryRegion:
@@ -63,12 +69,14 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
 
     Steps:
     1. Collect user-defined segments from all devices.
-    2. Reject reserved names (ZEROPAGE, STACK, VECTORS).
-    3. Allow KERNAL and CODE as explicit overrides (ROM only).
-    4. Check uniqueness across all user segments.
-    5. Build memory regions with auto-carved fixed segments.
-    6. Assign KERNAL and CODE to vectors ROM if not explicitly claimed.
-    7. Create default segments for devices with no explicit segments.
+    2. Reject reserved names (ZEROPAGE, STACK, VECTORS, KERNALZP).
+    3. Allow KERNALROM and CODE as explicit overrides (ROM only).
+    4. Allow KERNALRAM as explicit override (RAM only).
+    5. Check uniqueness across all user segments.
+    6. Build memory regions with auto-carved fixed segments.
+    7. Assign KERNALROM and CODE to vectors ROM if not explicitly claimed.
+    8. Assign KERNALRAM to main RAM if not explicitly claimed.
+    9. Create default segments for devices with no explicit segments.
     """
     from breadbox.components.ram.device import RamDevice
     from breadbox.components.rom.device import RomDevice
@@ -81,8 +89,8 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
 
     # --- Collect and validate user segments ---
     user_segments: dict[str, str] = {}  # segment_name -> device_id
-    auto_rom_overrides: dict[str, str] = {}  # segment_name -> device_id (for KERNAL, CODE)
-
+    auto_rom_overrides: dict[str, str] = {}  # segment_name -> device_id (for KERNALROM, CODE)
+    auto_ram_overrides: dict[str, str] = {}  # segment_name -> device_id (for KERNALRAM)
     for device in ram_devices + rom_devices:
         for seg_name in device.segments:
             seg_upper = seg_name.upper()
@@ -98,6 +106,13 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
                         f" not RAM device '{device.id}'"
                     )
                 auto_rom_overrides[seg_upper] = str(device.id)
+            if seg_upper in AUTO_RAM_SEGMENTS:
+                if not isinstance(device, RamDevice):
+                    raise ConfigError(
+                        f"{seg_upper} segment can only be assigned to a RAM device,"
+                        f" not ROM device '{device.id}'"
+                    )
+                auto_ram_overrides[seg_upper] = str(device.id)
             if seg_upper in user_segments:
                 raise ConfigError(
                     f"Segment '{seg_upper}' is defined in both"
@@ -114,9 +129,22 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
     assert vectors_rom is not None  # Already validated in _validate_memory_coverage
 
     # --- Assign auto ROM segments to vectors ROM if not explicitly claimed ---
-    for seg_name in AUTO_ROM_SEGMENTS:
+    for seg_name in sorted(AUTO_ROM_SEGMENTS):
         if seg_name not in auto_rom_overrides:
             auto_rom_overrides[seg_name] = str(vectors_rom.id)
+
+    # --- Find the main RAM (covers $0000) for auto RAM segment assignment ---
+    main_ram = None
+    for device in ram_devices:
+        if device.covers(0x0000, 0x0100):
+            main_ram = device
+            break
+    assert main_ram is not None  # Already validated in _validate_memory_coverage
+
+    # --- Assign auto RAM segments to main RAM if not explicitly claimed ---
+    for seg_name in sorted(AUTO_RAM_SEGMENTS):
+        if seg_name not in auto_ram_overrides:
+            auto_ram_overrides[seg_name] = str(main_ram.id)
 
     # --- Build memory regions and segments ---
 
@@ -135,6 +163,13 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
                     size=0x0100,
                     type="rw",
                     file="",
+                )
+            )
+            layout.segments.append(
+                Segment(
+                    name="KERNALZP",
+                    load="ZEROPAGE",
+                    type="zp",
                 )
             )
             layout.segments.append(
@@ -189,10 +224,11 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
                 )
             )
 
-            # User-defined segments, or default segment named after device
+            # User-defined segments (excluding auto segments, handled separately)
             device_segments = [
                 s.upper() for s in device.segments
                 if s.upper() not in AUTO_ROM_SEGMENTS
+                and s.upper() not in AUTO_RAM_SEGMENTS
             ]
             if not device_segments:
                 device_segments = [device_id]
@@ -205,6 +241,17 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
                         type="bss",
                     )
                 )
+
+            # Auto RAM segments (KERNALRAM) assigned to this device
+            for seg_name, target_id in auto_ram_overrides.items():
+                if target_id == device_id:
+                    layout.segments.append(
+                        Segment(
+                            name=seg_name,
+                            load=device_id,
+                            type="bss",
+                        )
+                    )
 
     # Process ROM devices (sorted by address)
     for device in sorted(rom_devices, key=lambda d: int(d.address)):
@@ -230,7 +277,7 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
                 )
             )
 
-            # Auto ROM segments (KERNAL, CODE) assigned to this device
+            # Auto ROM segments (KERNALROM, CODE) assigned to this device
             auto_for_device: set[str] = set()
             for seg_name, target_id in auto_rom_overrides.items():
                 if target_id == device_id:
@@ -242,11 +289,11 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
                             type="ro",
                         )
                     )
-
             # User-defined segments (excluding auto ROM segments, handled above)
             device_segments = [
                 s.upper() for s in device.segments
                 if s.upper() not in AUTO_ROM_SEGMENTS
+                and s.upper() not in AUTO_RAM_SEGMENTS
             ]
             if not device_segments and device_id not in auto_for_device:
                 # No user segments and device_id not already emitted

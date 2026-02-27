@@ -10,7 +10,7 @@
 
 .constructor {{ symbol("init_vectors") }}, 32  ; Add constructor, max prio.
 
-.segment "ZEROPAGE"
+.segment "KERNALZP" : zeropage
 
     ; Address vectors, that can be modified in order to point
     ; to a custom interrupt handler.
@@ -22,7 +22,7 @@
     nmi_vector = {{ symbol("nmi_vector") }}
     irq_vector = {{ symbol("irq_vector") }}
 
-.segment "KERNAL"
+.segment "KERNALROM"
 
     ; =========================================================================
     ; Setup the default vectors and interrupt handling.

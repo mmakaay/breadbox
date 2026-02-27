@@ -8,12 +8,12 @@
 .export {{ symbol("boot") }}
 .export {{ symbol("halt") }}
 
-.segment "ZEROPAGE"
+.segment "KERNALZP" : zeropage
 
     {{ symbol("constructor_ptr") }}:.res 2          ; Target address for trampoline construction
     {{ symbol("condes_ptr") }}:     .res 2          ; Pointer into constructor table (boot only)
 
-.segment "KERNAL"
+.segment "KERNALROM"
 
     ; =========================================================================
     ; KERNAL Boot sequence

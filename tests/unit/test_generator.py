@@ -99,7 +99,7 @@ class TestOutputDirectory:
         files = {f.name for f in output_dir.iterdir() if f.is_file()}
         dirs = {d.name for d in output_dir.iterdir() if d.is_dir()}
         assert files == {"breadbox.inc", "hardware.inc", "linker.cfg"}
-        assert dirs == set()
+        assert dirs == {"stdlib"}
 
 
 class TestCoreGeneration:
@@ -451,7 +451,7 @@ class TestBreadboxCfg:
 
         content = (output_dir / "linker.cfg").read_text()
         assert "CODE:" in content
-        assert "KERNAL:" in content
+        assert "KERNALROM:" in content
         assert "VECTORS:" in content
 
     def test_no_include_guard(self, tmp_path):

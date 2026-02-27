@@ -36,11 +36,11 @@
 .export {{ symbol("check_rx") }}
 .export {{ symbol("check_tx") }}
 
-.segment "ZEROPAGE"
+.segment "KERNALZP" : zeropage
 
     {{ symbol("byte") }}: .res 1                ; Parameter byte for UART operations
 
-.segment "KERNAL"
+.segment "KERNALROM"
 
     ; =====================================================================
     ; Soft reset the ACIA.
