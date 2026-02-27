@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 COMPONENTS_DIR = Path(__file__).parent / "components"
 TEMPLATES_DIR = Path(__file__).parent / "templates"
+STDLIB_DIR = Path(__file__).parent / "stdlib"
 
 console = Console()
 
@@ -52,6 +53,7 @@ class CodeGenerator:
         Generate all assembly output from the resolved config.
         """
         self._prepare_build_dir()
+        self._process_stdlib()
         self._process_project_sources()
         for device in self.breadbox.config.devices.values():
             if device.parent is None:
@@ -72,6 +74,36 @@ class CodeGenerator:
             "Signature: 8a477f597d28d172789f06886806bc55\n"
             "# This directory is managed by breadbox and can be safely regenerated.\n"
         )
+
+    def _process_stdlib(self) -> None:
+        """
+        Process stdlib source files through Jinja2 with stdlib-specific context.
+        """
+        if not STDLIB_DIR.is_dir():
+            return
+
+        src_files = sorted(STDLIB_DIR.rglob("*"))
+        src_files = [f for f in src_files if f.is_file() and f.suffix in (".s", ".inc")]
+        if not src_files:
+            return
+
+        env = Environment(
+            loader=FileSystemLoader(str(STDLIB_DIR)),
+            undefined=StrictUndefined,
+            keep_trailing_newline=True,
+            lstrip_blocks=True,
+            trim_blocks=True,
+        )
+        env.filters["hex"] = _hex_filter
+
+        for src_file in src_files:
+            relative = src_file.relative_to(STDLIB_DIR)
+            output_path = Path("stdlib") / relative
+            context = self._build_stdlib_context(src_file.stem)
+            template = env.get_template(str(relative))
+            rendered = template.render(context)
+            console.print(f"  Create: {output_path}")
+            self._write_generated_output(output_path, rendered)
 
     def _process_project_sources(self) -> None:
         """
@@ -228,6 +260,20 @@ class CodeGenerator:
         guard = "__" + str(relative_path).replace("/", "_").replace(".", "_").upper()
         content = content.rstrip()
         return f".ifndef {guard}\n{guard} = 1\n\n{content}\n\n.endif\n"
+
+    @staticmethod
+    def _build_stdlib_context(prefix: str) -> dict:
+        """
+        Build the Jinja2 template context for a stdlib file.
+
+        Stdlib files get a symbol() helper keyed on the file stem
+        (e.g. divmod16 -> __divmod16_name).
+        """
+
+        def symbol(name: str) -> str:
+            return f"__{prefix}_{name}"
+
+        return {"symbol": symbol}
 
     @staticmethod
     def _build_context(device: Device) -> dict:
