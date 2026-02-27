@@ -14,6 +14,7 @@
 ;   A = clobbered
 
 .macro DELAY _iterations
+    .assert _iterations <= 65535, error, "DELAY overflow: iteration count exceeds 16-bit max (65535). Use a hardware timer for longer delays."
     SET_WORD {{ symbol("delay_iterations") }}, _iterations
     jsr {{ symbol("delay") }}
 .endmacro
@@ -31,7 +32,7 @@
 
 .macro DELAY_US us
     .local ITERATIONS
-    ITERATIONS = (us * (CPU_CLOCK / 1000000)) / 5
+    ITERATIONS = (us * (CPU_CLOCK / 1000)) / 5000
     DELAY ITERATIONS
  .endmacro
 
@@ -47,5 +48,7 @@
 ;   A = clobbered
 
 .macro DELAY_MS ms
-    DELAY_US ms * 1000
+    .local US
+    US = ms * 1000
+    DELAY_US US
 .endmacro
