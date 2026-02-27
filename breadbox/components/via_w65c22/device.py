@@ -76,7 +76,7 @@ class ViaW65c22Device(Device):
                     other = pin_owners[pin]
                     raise ValueError(
                         f"Pin conflict on {self.id}: pin {pin} is used by both"
-                        f" '{other.device_path}' and '{client.device_path}'"
+                    f" '{other.component_path}' and '{client.component_path}'"
                     )
                 pin_owners[pin] = client
 

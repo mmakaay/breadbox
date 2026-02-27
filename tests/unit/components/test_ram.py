@@ -1,11 +1,11 @@
 import pytest
 
 from breadbox.components.ram.device import RamDevice
-from breadbox.types.device_identifier import DeviceIdentifier
+from breadbox.types.component_identifier import ComponentIdentifier
 
 
-def make_ram(device_id="RAM", address="$0000", size=0x4000, **kwargs):
-    return RamDevice(id=DeviceIdentifier(device_id), address=address, size=size, **kwargs)
+def make_ram(component_id="RAM", address="$0000", size=0x4000, **kwargs):
+    return RamDevice(id=ComponentIdentifier(component_id), address=address, size=size, **kwargs)
 
 
 class TestRamDevice:

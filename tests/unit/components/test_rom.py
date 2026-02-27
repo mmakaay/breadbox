@@ -1,11 +1,11 @@
 import pytest
 
 from breadbox.components.rom.device import RomDevice
-from breadbox.types.device_identifier import DeviceIdentifier
+from breadbox.types.component_identifier import ComponentIdentifier
 
 
-def make_rom(device_id="ROM", address="$8000", size=0x8000, **kwargs):
-    return RomDevice(id=DeviceIdentifier(device_id), address=address, size=size, **kwargs)
+def make_rom(component_id="ROM", address="$8000", size=0x8000, **kwargs):
+    return RomDevice(id=ComponentIdentifier(component_id), address=address, size=size, **kwargs)
 
 
 class TestRomDevice:

@@ -4,16 +4,16 @@ from breadbox.components.via_w65c22.device import ViaW65c22Device
 from breadbox.components.via_w65c22.gpio_group.device import ViaW65c22GpioGroupDevice
 from breadbox.config import BreadboxConfig
 from breadbox.types.bits import Bits
-from breadbox.types.device import Device
-from breadbox.types.device_identifier import DeviceIdentifier
+from breadbox.types.component import Component
+from breadbox.types.component_identifier import ComponentIdentifier
 
 
 def resolve(
     breadbox: BreadboxConfig,
-    device_id: DeviceIdentifier,
+    component_id: ComponentIdentifier,
     bus_device: ViaW65c22Device,
     device_settings: dict[str, Any],
-) -> Device:
+) -> Component:
     has_port_bits = "port" in device_settings and "bits" in device_settings
     has_pins = "pins" in device_settings
 
@@ -39,7 +39,7 @@ def resolve(
 
     else:
         raise ValueError(
-            f"Configuration for {device_id!r} requires either 'port' + 'bits' or 'pins' (not both)"
+            f"Configuration for {component_id!r} requires either 'port' + 'bits' or 'pins' (not both)"
         )
 
-    return ViaW65c22GpioGroupDevice(id=device_id, bus_device=bus_device, **device_settings)
+    return ViaW65c22GpioGroupDevice(id=component_id, bus_device=bus_device, **device_settings)

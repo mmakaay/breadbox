@@ -3,8 +3,8 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol
 
 if TYPE_CHECKING:
-    from breadbox.types.device import Device
+    from breadbox.types.component import Component
 
 
-class DeviceVisitor(Protocol):
-    def visit(self, device: Device) -> None: ...
+class ComponentVisitor(Protocol):
+    def visit(self, component: Component) -> None: ...

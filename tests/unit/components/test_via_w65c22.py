@@ -8,11 +8,11 @@ from breadbox.components.via_w65c22.device import (
 from breadbox.components.via_w65c22.gpio_group.device import ViaW65c22GpioGroupDevice
 from breadbox.components.via_w65c22.gpio_pin.device import ViaW65c22GpioPinDevice
 from breadbox.types.address16 import Address16
-from breadbox.types.device_identifier import DeviceIdentifier
+from breadbox.types.component_identifier import ComponentIdentifier
 
 
 def make_via(address="$6000"):
-    return ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16(address))
+    return ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16(address))
 
 
 class TestViaW65c22Device:
@@ -25,7 +25,7 @@ class TestViaW65c22Device:
         """
         Raw string address is auto-coerced to Address16 by Device base.
         """
-        via = ViaW65c22Device(id=DeviceIdentifier("VIA0"), address="$6000")  # type: ignore
+        via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address="$6000")  # type: ignore
         assert isinstance(via.address, Address16)
         assert via.address == 0x6000
 
@@ -157,7 +157,7 @@ def _make_pin(via, pin_id, pin_name, **kwargs):
     defaults = {"bus": "VIA0", "direction": "out"}
     defaults.update(kwargs)
     pin = ViaW65c22GpioPinDevice(
-        id=DeviceIdentifier(pin_id), bus_device=via, pin=pin_name, **defaults
+        id=ComponentIdentifier(pin_id), bus_device=via, pin=pin_name, **defaults
     )
     via.register_bus_client(pin)
     return pin
@@ -167,7 +167,7 @@ def _make_group(via, group_id, pins, port, bits, **kwargs):
     defaults = {"bus": "VIA0", "direction": "both"}
     defaults.update(kwargs)
     group = ViaW65c22GpioGroupDevice(
-        id=DeviceIdentifier(group_id), bus_device=via,
+        id=ComponentIdentifier(group_id), bus_device=via,
         pins=pins, port=port, bits=bits, **defaults
     )
     via.register_bus_client(group)

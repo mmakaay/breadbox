@@ -2,7 +2,7 @@
 
 .include "hardware.inc"
 
-; Device includes.
-{% for inc_path in device_includes %}
+; Component includes.
+{% for inc_path in component_includes %}
 .include "{{ inc_path }}"
 {% endfor %}

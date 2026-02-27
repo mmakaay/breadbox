@@ -10,7 +10,7 @@ from breadbox.generator import CodeGenerator, COMPONENTS_DIR, _hex_filter
 from breadbox.memory import resolve_memory_layout
 from breadbox.project import BreadboxProject
 from breadbox.types.address16 import Address16
-from breadbox.types.device_identifier import DeviceIdentifier
+from breadbox.types.component_identifier import ComponentIdentifier
 
 CORE_ASSEMBLY_FILES = {
     "boot.s",
@@ -28,27 +28,27 @@ CORE_ASSEMBLY_FILES = {
 
 def make_config():
     config = object.__new__(BreadboxConfig)
-    config.devices = {}
+    config.components = {}
     config.memory_layout = None
     return config
 
 
 def make_core_config(cpu="65c02", clock_mhz=1.0):
     config = make_config()
-    core = CoreDevice(id=DeviceIdentifier("CORE"), cpu=cpu, clock_mhz=clock_mhz)
-    config.devices[DeviceIdentifier("CORE")] = core
-    ram = RamDevice(id=DeviceIdentifier("RAM"), address="$0000", size=0x4000)
-    rom = RomDevice(id=DeviceIdentifier("ROM"), address="$8000", size=0x8000)
-    config.devices[ram.id] = ram
-    config.devices[rom.id] = rom
+    core = CoreDevice(id=ComponentIdentifier("CORE"), cpu=cpu, clock_mhz=clock_mhz)
+    config.components[ComponentIdentifier("CORE")] = core
+    ram = RamDevice(id=ComponentIdentifier("RAM"), address="$0000", size=0x4000)
+    rom = RomDevice(id=ComponentIdentifier("ROM"), address="$8000", size=0x8000)
+    config.components[ram.id] = ram
+    config.components[rom.id] = rom
     config.memory_layout = resolve_memory_layout([ram], [rom])
     return config
 
 
 def make_core_via_config(cpu="65c02", clock_mhz=1.0, via_address="$6000"):
     config = make_core_config(cpu=cpu, clock_mhz=clock_mhz)
-    via = ViaW65c22Device(id=DeviceIdentifier("VIA"), address=Address16(via_address))
-    config.devices[DeviceIdentifier("VIA")] = via
+    via = ViaW65c22Device(id=ComponentIdentifier("VIA"), address=Address16(via_address))
+    config.components[ComponentIdentifier("VIA")] = via
     return config
 
 
@@ -537,15 +537,15 @@ class TestHexFilter:
 
 class TestBuildContext:
     def test_core_device_context(self):
-        core = CoreDevice(id=DeviceIdentifier("CORE"), cpu="65c02", clock_mhz=1.0)
+        core = CoreDevice(id=ComponentIdentifier("CORE"), cpu="65c02", clock_mhz=1.0)
         context = CodeGenerator._build_context(core)
-        assert context["device_id"] == "CORE"
+        assert context["component_id"] == "CORE"
         assert context["component_type"] == "core"
         assert context["cpu"] == "65c02"
         assert context["clock_mhz"] == 1.0
 
     def test_excludes_internal_fields(self):
-        core = CoreDevice(id=DeviceIdentifier("CORE"), cpu="65c02", clock_mhz=1.0)
+        core = CoreDevice(id=ComponentIdentifier("CORE"), cpu="65c02", clock_mhz=1.0)
         context = CodeGenerator._build_context(core)
         assert "id" not in context
         assert "parent" not in context

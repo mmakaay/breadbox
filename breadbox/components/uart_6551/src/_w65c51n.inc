@@ -1,4 +1,4 @@
-; W65C51N driver: {{ device_id }}
+; W65C51N driver: {{ component_id }}
 ;
 {% if irq == "on" %}
 ; Mode: IRQ (RX ring buffer, timed TX delay for TDRE bug workaround)

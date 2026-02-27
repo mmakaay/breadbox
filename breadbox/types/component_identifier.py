@@ -22,7 +22,7 @@ _RESERVED_WORDS = frozenset({
 })
 
 
-class DeviceIdentifier(str):
+class ComponentIdentifier(str):
     """
     Device identifier: starts with a letter, letters/digits/underscores only.
 
@@ -36,7 +36,7 @@ class DeviceIdentifier(str):
             raise ValueError(f"Expected a string, got {type(value).__name__!r}")
         if not _DEVICE_ID_RE.match(value):
             raise ValueError(
-                f"{value!r} is not a valid DeviceIdentifier "
+                f"{value!r} is not a valid ComponentIdentifier "
                 f"(must start with an upper-case letter, upper-case letters/digits/underscores only)"
             )
         if value in _RESERVED_WORDS:
@@ -47,4 +47,4 @@ class DeviceIdentifier(str):
         return super().__new__(cls, value)
 
     def __repr__(self) -> str:
-        return f"DeviceIdentifier({str(self)!r})"
+        return f"ComponentIdentifier({str(self)!r})"

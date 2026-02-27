@@ -6,16 +6,16 @@ from breadbox.components.via_w65c22.gpio_group.device import ViaW65c22GpioGroupD
 from breadbox.config import BreadboxConfig
 from breadbox.types.address16 import Address16
 from breadbox.types.bits import Bits
-from breadbox.types.device_identifier import DeviceIdentifier
+from breadbox.types.component_identifier import ComponentIdentifier
 
 
 def make_via():
-    return ViaW65c22Device(id=DeviceIdentifier("VIA0"), address=Address16("$6000"))
+    return ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
 
 
 def make_config():
     config = object.__new__(BreadboxConfig)
-    config.devices = {}
+    config.components = {}
     return config
 
 
@@ -24,7 +24,7 @@ class TestPortBitsPath:
         via = make_via()
         config = make_config()
         settings = {"bus": "VIA0", "port": "A", "bits": 0b00000011}
-        device = resolve(config, DeviceIdentifier("LEDS"), via, settings)
+        device = resolve(config, ComponentIdentifier("LEDS"), via, settings)
 
         assert isinstance(device, ViaW65c22GpioGroupDevice)
         assert device.id == "LEDS"
@@ -36,7 +36,7 @@ class TestPortBitsPath:
         via = make_via()
         config = make_config()
         settings = {"bus": "VIA0", "port": "B", "bits": 0b11110000}
-        device = resolve(config, DeviceIdentifier("DATA"), via, settings)
+        device = resolve(config, ComponentIdentifier("DATA"), via, settings)
 
         assert isinstance(device, ViaW65c22GpioGroupDevice)
         assert device.port == "B"
@@ -48,7 +48,7 @@ class TestPinsPath:
         via = make_via()
         config = make_config()
         settings = {"bus": "VIA0", "pins": ["PA0", "PA1"]}
-        device = resolve(config, DeviceIdentifier("LEDS"), via, settings)
+        device = resolve(config, ComponentIdentifier("LEDS"), via, settings)
 
         assert isinstance(device, ViaW65c22GpioGroupDevice)
         assert device.port == "A"
@@ -64,8 +64,8 @@ class TestPathEquivalence:
         port_bits_settings = {"bus": "VIA0", "port": "A", "bits": 0b00000011}
         pins_settings = {"bus": "VIA0", "pins": ["PA0", "PA1"]}
 
-        d1 = resolve(config, DeviceIdentifier("G1"), via, port_bits_settings)
-        d2 = resolve(config, DeviceIdentifier("G2"), via, pins_settings)
+        d1 = resolve(config, ComponentIdentifier("G1"), via, port_bits_settings)
+        d2 = resolve(config, ComponentIdentifier("G2"), via, pins_settings)
 
         assert isinstance(d1, ViaW65c22GpioGroupDevice)
         assert isinstance(d2, ViaW65c22GpioGroupDevice)
@@ -80,14 +80,14 @@ class TestInvalidConfig:
         config = make_config()
         settings = {"bus": "VIA0"}
         with pytest.raises(ValueError, match="requires either"):
-            resolve(config, DeviceIdentifier("BAD"), via, settings)
+            resolve(config, ComponentIdentifier("BAD"), via, settings)
 
     def test_both_paths_raises(self):
         via = make_via()
         config = make_config()
         settings = {"bus": "VIA0", "port": "A", "bits": 0b11, "pins": ["PA0", "PA1"]}
         with pytest.raises(ValueError, match="requires either"):
-            resolve(config, DeviceIdentifier("BAD"), via, settings)
+            resolve(config, ComponentIdentifier("BAD"), via, settings)
 
 
 class TestDefaults:
@@ -95,7 +95,7 @@ class TestDefaults:
         via = make_via()
         config = make_config()
         settings = {"bus": "VIA0", "port": "A", "bits": 0b00000001}
-        device = resolve(config, DeviceIdentifier("LEDS"), via, settings)
+        device = resolve(config, ComponentIdentifier("LEDS"), via, settings)
 
         assert isinstance(device, ViaW65c22GpioGroupDevice)
         assert device.direction == "both"
@@ -105,7 +105,7 @@ class TestDefaults:
         via = make_via()
         config = make_config()
         settings = {"bus": "VIA0", "port": "A", "bits": 0b00000001, "direction": "out", "default": "on"}
-        device = resolve(config, DeviceIdentifier("LEDS"), via, settings)
+        device = resolve(config, ComponentIdentifier("LEDS"), via, settings)
 
         assert isinstance(device, ViaW65c22GpioGroupDevice)
         assert device.direction == "out"

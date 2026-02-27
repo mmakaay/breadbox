@@ -6,26 +6,27 @@ import yaml
 
 from breadbox.errors import ConfigError
 from breadbox.memory import MemoryLayout, resolve_memory_layout
-from breadbox.types.device import Device
-from breadbox.types.device_identifier import DeviceIdentifier
+from breadbox.types.component import Component
+from breadbox.types.component_identifier import ComponentIdentifier
 from breadbox.visitors.config_printer import ConfigPrinter
+
 
 class BreadboxConfig:
     def __init__(self, config_path: Path) -> None:
         self.config_path = self._resolve_config_path(config_path)
         self.project_dir = self.config_path.parent
         self.config_data = self._load_config_data()
-        self.devices: dict[DeviceIdentifier, Device] = {}
+        self.components: dict[ComponentIdentifier, Component] = {}
         self.memory_layout: MemoryLayout | None = None
         self._resolve_config()
         self._inject_default_memory()
         self._validate()
 
-    def get(self, device_id: DeviceIdentifier) -> Device:
+    def get(self, component_id: ComponentIdentifier) -> Component:
         try:
-            return self.devices[device_id]
+            return self.components[component_id]
         except KeyError:
-            raise ValueError(f"Device '{device_id}' not found") from None
+            raise ValueError(f"Component '{component_id}' not found") from None
 
     @staticmethod
     def _resolve_config_path(config_path: Path) -> Path:
@@ -50,7 +51,7 @@ class BreadboxConfig:
     def _resolve_config(self) -> None:
         for raw_id, settings in self.config_data.items():
             try:
-                device_id = DeviceIdentifier(raw_id)
+                component_id = ComponentIdentifier(raw_id)
 
                 # Determine the component type.
                 try:
@@ -64,12 +65,10 @@ class BreadboxConfig:
                 try:
                     module = importlib.import_module(module_name)
                 except ModuleNotFoundError:
-                    raise ConfigError(
-                        f"No implementation found for component type '{component_type}'"
-                    ) from None
+                    raise ConfigError(f"No implementation found for component type '{component_type}'") from None
 
-                device: Device = module.resolve(self, device_id, settings)
-                self.devices[device_id] = device
+                component: Component = module.resolve(self, component_id, settings)
+                self.components[component_id] = component
             except ConfigError:
                 raise
             except (ValueError, TypeError, KeyError) as e:
@@ -77,10 +76,10 @@ class BreadboxConfig:
 
     def print_config(self, console: Any) -> None:
         printer = ConfigPrinter(console)
-        for device in self.devices.values():
-            # Only print top-level devices (sub-devices are visited recursively).
-            if device.parent is None:
-                device.accept(printer)
+        for component in self.components.values():
+            # Only print top-level components (children are visited recursively).
+            if component.parent is None:
+                component.accept(printer)
 
     def _validate(self) -> None:
         """
@@ -95,18 +94,16 @@ class BreadboxConfig:
     def _validate_single_core(self) -> None:
         from breadbox.components.core.device import CoreDevice
 
-        cores = [d for d in self.devices.values() if isinstance(d, CoreDevice)]
+        cores = [c for c in self.components.values() if isinstance(c, CoreDevice)]
         if len(cores) == 0:
             raise ConfigError("Configuration must include a CORE device")
         if len(cores) > 1:
-            ids = ", ".join(str(d.id) for d in cores)
-            raise ConfigError(
-                f"Configuration must have exactly one CORE device, found {len(cores)}: {ids}"
-            )
+            ids = ", ".join(str(c.id) for c in cores)
+            raise ConfigError(f"Configuration must have exactly one CORE device, found {len(cores)}: {ids}")
 
     def _collect_bus_clients(self) -> None:
         """
-        Walk the device tree and register bus clients on their bus devices.
+        Walk the component tree and register bus clients on their bus devices.
 
         Must run before bus client validation so that bus devices can
         answer queries about their clients (e.g. port exclusivity, pin conflicts).
@@ -114,54 +111,57 @@ class BreadboxConfig:
         from breadbox.visitors.bus_client_collector import BusClientCollector
 
         collector = BusClientCollector()
-        for device in self.devices.values():
-            if device.parent is None:
-                device.accept(collector)
+        for component in self.components.values():
+            if component.parent is None:
+                component.accept(collector)
 
     def _validate_bus_clients(self) -> None:
         """
         Ask each device to validate its registered bus clients.
         """
-        for device in self.devices.values():
-            try:
-                device.validate_bus_clients()
-            except ValueError as e:
-                raise ConfigError(str(e)) from None
+        from breadbox.types.device import Device
+
+        for component in self.components.values():
+            if isinstance(component, Device):
+                try:
+                    component.validate_bus_clients()
+                except ValueError as e:
+                    raise ConfigError(str(e)) from None
 
     def _validate_unique_prefixes(self) -> None:
         """
-        Check that no two devices produce the same symbol prefix.
+        Check that no two components produce the same symbol prefix.
 
         The symbol_prefix (e.g. CONSOLE_PIN_RTS) is derived from the
-        device tree path using underscores. A flat device named A_B
-        and a nested device A > B would both produce prefix 'A_B',
+        component tree path using underscores. A flat component named A_B
+        and a nested component A > B would both produce prefix 'A_B',
         causing symbol collisions in the generated assembly.
         """
-        prefixes: dict[str, Device] = {}
-        for device in self._all_devices():
-            prefix = device.symbol_prefix
+        prefixes: dict[str, Component] = {}
+        for component in self._all_components():
+            prefix = component.symbol_prefix
             if prefix in prefixes:
                 other = prefixes[prefix]
                 raise ConfigError(
-                    f"Symbol prefix collision: devices '{other.device_path}' and"
-                    f" '{device.device_path}' both produce prefix '{prefix}'"
+                    f"Symbol prefix collision: components '{other.component_path}' and"
+                    f" '{component.component_path}' both produce prefix '{prefix}'"
                 )
-            prefixes[prefix] = device
+            prefixes[prefix] = component
 
-    def _all_devices(self) -> list[Device]:
+    def _all_components(self) -> list[Component]:
         """
-        Flatten the device tree into a list of all devices.
+        Flatten the component tree into a list of all components.
         """
-        result: list[Device] = []
+        result: list[Component] = []
 
-        def _walk(device: Device) -> None:
-            result.append(device)
-            for sub in device.devices:
+        def _walk(component: Component) -> None:
+            result.append(component)
+            for sub in component.children:
                 _walk(sub)
 
-        for device in self.devices.values():
-            if device.parent is None:
-                _walk(device)
+        for component in self.components.values():
+            if component.parent is None:
+                _walk(component)
         return result
 
     def _inject_default_memory(self) -> None:
@@ -174,16 +174,16 @@ class BreadboxConfig:
         from breadbox.components.ram.device import RamDevice
         from breadbox.components.rom.device import RomDevice
 
-        has_ram = any(isinstance(d, RamDevice) for d in self.devices.values())
-        has_rom = any(isinstance(d, RomDevice) for d in self.devices.values())
+        has_ram = any(isinstance(c, RamDevice) for c in self.components.values())
+        has_rom = any(isinstance(c, RomDevice) for c in self.components.values())
 
         if not has_ram:
-            device = RamDevice(id=DeviceIdentifier("RAM"), address="$0000", size=0x4000)
-            self.devices[device.id] = device
+            device = RamDevice(id=ComponentIdentifier("RAM"), address="$0000", size=0x4000)
+            self.components[device.id] = device
 
         if not has_rom:
-            device = RomDevice(id=DeviceIdentifier("ROM"), address="$8000", size=0x8000)
-            self.devices[device.id] = device
+            device = RomDevice(id=ComponentIdentifier("ROM"), address="$8000", size=0x8000)
+            self.components[device.id] = device
 
     def _resolve_memory(self) -> None:
         """
@@ -192,7 +192,7 @@ class BreadboxConfig:
         from breadbox.components.ram.device import RamDevice
         from breadbox.components.rom.device import RomDevice
 
-        ram_devices = [d for d in self.devices.values() if isinstance(d, RamDevice)]
-        rom_devices = [d for d in self.devices.values() if isinstance(d, RomDevice)]
+        ram_devices = [c for c in self.components.values() if isinstance(c, RamDevice)]
+        rom_devices = [c for c in self.components.values() if isinstance(c, RomDevice)]
         if ram_devices or rom_devices:
             self.memory_layout = resolve_memory_layout(ram_devices, rom_devices)

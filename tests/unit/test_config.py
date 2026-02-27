@@ -8,21 +8,21 @@ from breadbox.components.via_w65c22.gpio_pin.device import ViaW65c22GpioPinDevic
 from breadbox.config import BreadboxConfig
 from breadbox.errors import ConfigError
 from breadbox.types.address16 import Address16
-from breadbox.types.device import Device
-from breadbox.types.device_identifier import DeviceIdentifier
+from breadbox.types.component import Component
+from breadbox.types.component_identifier import ComponentIdentifier
 
 
-def make_config(**devices: Device) -> BreadboxConfig:
+def make_config(**components: Component) -> BreadboxConfig:
     """
-    Build a BreadboxConfig with pre-populated devices, bypassing __init__.
+    Build a BreadboxConfig with pre-populated components, bypassing __init__.
     """
     config = object.__new__(BreadboxConfig)
-    config.devices = {DeviceIdentifier(k): v for k, v in devices.items()}
+    config.components = {ComponentIdentifier(k): v for k, v in components.items()}
     return config
 
 
-def make_core(device_id: str = "CORE", cpu: str = "65c02", clock_mhz: float = 1.0) -> CoreDevice:
-    return CoreDevice(id=DeviceIdentifier(device_id), cpu=cpu, clock_mhz=clock_mhz)
+def make_core(component_id: str = "CORE", cpu: str = "65c02", clock_mhz: float = 1.0) -> CoreDevice:
+    return CoreDevice(id=ComponentIdentifier(component_id), cpu=cpu, clock_mhz=clock_mhz)
 
 
 class TestValidateCoreDevice:
@@ -59,7 +59,7 @@ class TestValidateFromYaml:
         config_path = tmp_path / "config.yaml"
         config_path.write_text("CORE:\n  cpu: '65c02'\n  clock_mhz: 1.0\n")
         config = BreadboxConfig(config_path)
-        assert DeviceIdentifier("CORE") in config.devices
+        assert ComponentIdentifier("CORE") in config.components
 
 
 class TestValidateUniquePrefixes:
@@ -69,7 +69,7 @@ class TestValidateUniquePrefixes:
     """
 
     def test_no_collision_passes(self):
-        via = ViaW65c22Device(id=DeviceIdentifier("VIA"), address=Address16("$6000"))
+        via = ViaW65c22Device(id=ComponentIdentifier("VIA"), address=Address16("$6000"))
         config = make_config(CORE=make_core(), VIA=via)
         config._validate()
 
@@ -77,10 +77,10 @@ class TestValidateUniquePrefixes:
         """
         A flat device VIA_LED and a nested VIA > LED both produce prefix 'VIA_LED'.
         """
-        via = ViaW65c22Device(id=DeviceIdentifier("VIA"), address=Address16("$6000"))
-        led = ViaW65c22Device(id=DeviceIdentifier("LED"), address=Address16("$6001"))
+        via = ViaW65c22Device(id=ComponentIdentifier("VIA"), address=Address16("$6000"))
+        led = ViaW65c22Device(id=ComponentIdentifier("LED"), address=Address16("$6001"))
         via.add(led)
-        via_led = ViaW65c22Device(id=DeviceIdentifier("VIA_LED"), address=Address16("$6002"))
+        via_led = ViaW65c22Device(id=ComponentIdentifier("VIA_LED"), address=Address16("$6002"))
         config = make_config(CORE=make_core(), VIA=via, VIA_LED=via_led)
         with pytest.raises(ConfigError, match="Symbol prefix collision.*VIA_LED"):
             config._validate()
@@ -90,13 +90,13 @@ class TestValidateUniquePrefixes:
         FOO > BAR > BAZ produces prefix 'FOO_BAR_BAZ',
         which collides with a flat device named FOO_BAR_BAZ.
         """
-        foo = ViaW65c22Device(id=DeviceIdentifier("FOO"), address=Address16("$6000"))
-        bar = ViaW65c22Device(id=DeviceIdentifier("BAR"), address=Address16("$6001"))
-        baz = ViaW65c22Device(id=DeviceIdentifier("BAZ"), address=Address16("$6002"))
+        foo = ViaW65c22Device(id=ComponentIdentifier("FOO"), address=Address16("$6000"))
+        bar = ViaW65c22Device(id=ComponentIdentifier("BAR"), address=Address16("$6001"))
+        baz = ViaW65c22Device(id=ComponentIdentifier("BAZ"), address=Address16("$6002"))
         foo.add(bar)
         bar.add(baz)
 
-        flat = ViaW65c22Device(id=DeviceIdentifier("FOO_BAR_BAZ"), address=Address16("$6003"))
+        flat = ViaW65c22Device(id=ComponentIdentifier("FOO_BAR_BAZ"), address=Address16("$6003"))
 
         config = make_config(CORE=make_core(), FOO=foo, FOO_BAR_BAZ=flat)
         with pytest.raises(ConfigError, match="Symbol prefix collision.*FOO_BAR_BAZ"):
@@ -106,9 +106,9 @@ class TestValidateUniquePrefixes:
         """
         Nested devices with unique prefixes should not collide.
         """
-        via = ViaW65c22Device(id=DeviceIdentifier("VIA"), address=Address16("$6000"))
-        led = ViaW65c22Device(id=DeviceIdentifier("LED"), address=Address16("$6001"))
-        btn = ViaW65c22Device(id=DeviceIdentifier("BTN"), address=Address16("$6002"))
+        via = ViaW65c22Device(id=ComponentIdentifier("VIA"), address=Address16("$6000"))
+        led = ViaW65c22Device(id=ComponentIdentifier("LED"), address=Address16("$6001"))
+        btn = ViaW65c22Device(id=ComponentIdentifier("BTN"), address=Address16("$6002"))
         via.add(led)
         via.add(btn)
         config = make_config(CORE=make_core(), VIA=via)
@@ -122,23 +122,23 @@ class TestValidatePinConflicts:
     """
 
     def test_no_pin_conflict_passes(self):
-        via = ViaW65c22Device(id=DeviceIdentifier("VIA"), address=Address16("$6000"))
+        via = ViaW65c22Device(id=ComponentIdentifier("VIA"), address=Address16("$6000"))
         pin1 = ViaW65c22GpioPinDevice(
-            id=DeviceIdentifier("LED1"), bus_device=via, pin="PB0", bus="VIA"
+            id=ComponentIdentifier("LED1"), bus_device=via, pin="PB0", bus="VIA"
         )
         pin2 = ViaW65c22GpioPinDevice(
-            id=DeviceIdentifier("LED2"), bus_device=via, pin="PB1", bus="VIA"
+            id=ComponentIdentifier("LED2"), bus_device=via, pin="PB1", bus="VIA"
         )
         config = make_config(CORE=make_core(), VIA=via, LED1=pin1, LED2=pin2)
         config._validate()
 
     def test_same_pin_raises(self):
-        via = ViaW65c22Device(id=DeviceIdentifier("VIA"), address=Address16("$6000"))
+        via = ViaW65c22Device(id=ComponentIdentifier("VIA"), address=Address16("$6000"))
         pin1 = ViaW65c22GpioPinDevice(
-            id=DeviceIdentifier("LED1"), bus_device=via, pin="PB0", bus="VIA"
+            id=ComponentIdentifier("LED1"), bus_device=via, pin="PB0", bus="VIA"
         )
         pin2 = ViaW65c22GpioPinDevice(
-            id=DeviceIdentifier("LED2"), bus_device=via, pin="PB0", bus="VIA"
+            id=ComponentIdentifier("LED2"), bus_device=via, pin="PB0", bus="VIA"
         )
         config = make_config(CORE=make_core(), VIA=via, LED1=pin1, LED2=pin2)
         with pytest.raises(ConfigError, match="Pin conflict.*PB0"):
@@ -177,8 +177,8 @@ class TestDefaultMemoryInjection:
         config_path = tmp_path / "config.yaml"
         config_path.write_text("CORE:\n  cpu: '65c02'\n  clock_mhz: 1.0\n")
         config = BreadboxConfig(config_path)
-        ram_devices = [d for d in config.devices.values() if isinstance(d, RamDevice)]
-        rom_devices = [d for d in config.devices.values() if isinstance(d, RomDevice)]
+        ram_devices = [d for d in config.components.values() if isinstance(d, RamDevice)]
+        rom_devices = [d for d in config.components.values() if isinstance(d, RomDevice)]
         assert len(ram_devices) == 1
         assert len(rom_devices) == 1
         assert int(ram_devices[0].address) == 0x0000
@@ -194,8 +194,8 @@ class TestDefaultMemoryInjection:
             "MYROM:\n  component: rom\n  address: '$E000'\n  size: 0x2000\n"
         )
         config = BreadboxConfig(config_path)
-        ram_devices = [d for d in config.devices.values() if isinstance(d, RamDevice)]
-        rom_devices = [d for d in config.devices.values() if isinstance(d, RomDevice)]
+        ram_devices = [d for d in config.components.values() if isinstance(d, RamDevice)]
+        rom_devices = [d for d in config.components.values() if isinstance(d, RomDevice)]
         assert len(ram_devices) == 1
         assert str(ram_devices[0].id) == "MYRAM"
         assert len(rom_devices) == 1

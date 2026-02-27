@@ -63,7 +63,7 @@ class Uart6551Device(Device):
         """
         The RTS flow control GPIO pin sub-device, or None.
         """
-        for d in self.devices:
+        for d in self.children:
             if str(d.id) == "PIN_RTS":
                 return d
         return None

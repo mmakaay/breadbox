@@ -2,13 +2,13 @@ from typing import Any
 
 from breadbox.components.ram.device import RamDevice
 from breadbox.config import BreadboxConfig
-from breadbox.types.device import Device
-from breadbox.types.device_identifier import DeviceIdentifier
+from breadbox.types.component import Component
+from breadbox.types.component_identifier import ComponentIdentifier
 
 
 def resolve(
     breadbox: BreadboxConfig,
-    device_id: DeviceIdentifier,
+    component_id: ComponentIdentifier,
     device_settings: dict[str, Any],
-) -> Device:
-    return RamDevice(id=device_id, **device_settings)
+) -> Component:
+    return RamDevice(id=component_id, **device_settings)

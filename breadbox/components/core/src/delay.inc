@@ -1,4 +1,4 @@
-.include "{{ device_path }}/macros.inc"
+.include "{{ component_path }}/macros.inc"
 
 .ifndef {{ symbol("DELAY_S") }}  ; import + export in one module = unhappy linker
 .import {{ symbol("delay") }}

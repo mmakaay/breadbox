@@ -4,21 +4,21 @@ from breadbox.components.ram.device import RamDevice
 from breadbox.components.rom.device import RomDevice
 from breadbox.errors import ConfigError
 from breadbox.memory import resolve_memory_layout
-from breadbox.types.device_identifier import DeviceIdentifier
+from breadbox.types.component_identifier import ComponentIdentifier
 
 
-def make_ram(device_id="RAM", address="$0000", size=0x4000, segments=None):
+def make_ram(component_id="RAM", address="$0000", size=0x4000, segments=None):
     return RamDevice(
-        id=DeviceIdentifier(device_id),
+        id=ComponentIdentifier(component_id),
         address=address,
         size=size,
         segments=segments or [],
     )
 
 
-def make_rom(device_id="ROM", address="$8000", size=0x8000, segments=None):
+def make_rom(component_id="ROM", address="$8000", size=0x8000, segments=None):
     return RomDevice(
-        id=DeviceIdentifier(device_id),
+        id=ComponentIdentifier(component_id),
         address=address,
         size=size,
         segments=segments or [],
@@ -89,14 +89,14 @@ class TestMemoryOverlap:
 class TestDefaultSegments:
     """When no segments specified, defaults are generated."""
 
-    def test_default_ram_segment_uses_device_id(self):
+    def test_default_ram_segment_uses_component_id(self):
         ram = make_ram("RAM", address="$0000", size=0x4000)
         rom = make_rom()
         layout = resolve_memory_layout([ram], [rom])
         seg_names = [s.name for s in layout.segments]
         assert "RAM" in seg_names
 
-    def test_default_rom_segment_uses_device_id(self):
+    def test_default_rom_segment_uses_component_id(self):
         ram = make_ram()
         rom = make_rom("ROM")
         layout = resolve_memory_layout([ram], [rom])
@@ -242,7 +242,7 @@ class TestKernalromOverride:
         with pytest.raises(ConfigError, match="ROM device"):
             resolve_memory_layout([ram], [rom])
 
-    def test_device_id_matching_auto_rom_segment_no_duplicate(self):
+    def test_component_id_matching_auto_rom_segment_no_duplicate(self):
         """ROM device named KERNALROM with segments=[KERNALROM] must not emit KERNALROM twice."""
         ram = make_ram()
         kernal_rom = make_rom("KERNALROM", address="$8000", size=0x2000, segments=["KERNALROM"])

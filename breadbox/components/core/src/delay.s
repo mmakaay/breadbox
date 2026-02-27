@@ -1,5 +1,5 @@
 {{ symbol("DELAY_S") }} = 1
-.include "{{ device_path }}/api.inc"
+.include "{{ component_path }}/api.inc"
 
 .export {{ symbol("delay") }}
 .exportzp {{ symbol("delay_iterations") }}

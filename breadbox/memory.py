@@ -88,9 +88,9 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
     _validate_no_overlap(ram_devices + rom_devices)
 
     # --- Collect and validate user segments ---
-    user_segments: dict[str, str] = {}  # segment_name -> device_id
-    auto_rom_overrides: dict[str, str] = {}  # segment_name -> device_id (for KERNALROM, CODE, DATA)
-    auto_ram_overrides: dict[str, str] = {}  # segment_name -> device_id (for KERNALRAM)
+    user_segments: dict[str, str] = {}  # segment_name -> component_id
+    auto_rom_overrides: dict[str, str] = {}  # segment_name -> component_id (for KERNALROM, CODE, DATA)
+    auto_ram_overrides: dict[str, str] = {}  # segment_name -> component_id (for KERNALRAM)
     for device in ram_devices + rom_devices:
         for seg_name in device.segments:
             seg_upper = seg_name.upper()
@@ -152,7 +152,7 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
     for device in sorted(ram_devices, key=lambda d: int(d.address)):
         addr = int(device.address)
         size = device.size
-        device_id = str(device.id)
+        component_id = str(device.id)
 
         # Carve ZEROPAGE and STACK from the RAM that covers them
         if device.covers(0x0000, 0x0100):
@@ -216,7 +216,7 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
         if ram_size > 0:
             layout.regions.append(
                 MemoryRegion(
-                    name=device_id,
+                    name=component_id,
                     start=ram_start,
                     size=ram_size,
                     type="rw",
@@ -231,24 +231,24 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
                 and s.upper() not in AUTO_RAM_SEGMENTS
             ]
             if not device_segments:
-                device_segments = [device_id]
+                device_segments = [component_id]
 
             for seg_name in device_segments:
                 layout.segments.append(
                     Segment(
                         name=seg_name,
-                        load=device_id,
+                        load=component_id,
                         type="bss",
                     )
                 )
 
             # Auto RAM segments (KERNALRAM) assigned to this device
             for seg_name, target_id in auto_ram_overrides.items():
-                if target_id == device_id:
+                if target_id == component_id:
                     layout.segments.append(
                         Segment(
                             name=seg_name,
-                            load=device_id,
+                            load=component_id,
                             type="bss",
                         )
                     )
@@ -257,7 +257,7 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
     for device in sorted(rom_devices, key=lambda d: int(d.address)):
         addr = int(device.address)
         size = device.size
-        device_id = str(device.id)
+        component_id = str(device.id)
         is_vectors_rom = device is vectors_rom
 
         # Main ROM region (minus VECTORS if this is the vectors ROM)
@@ -268,7 +268,7 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
         if rom_size > 0:
             layout.regions.append(
                 MemoryRegion(
-                    name=device_id,
+                    name=component_id,
                     start=addr,
                     size=rom_size,
                     type="ro",
@@ -280,12 +280,12 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
             # Auto ROM segments (KERNALROM, CODE, DATA) assigned to this device
             auto_for_device: set[str] = set()
             for seg_name, target_id in auto_rom_overrides.items():
-                if target_id == device_id:
+                if target_id == component_id:
                     auto_for_device.add(seg_name)
                     layout.segments.append(
                         Segment(
                             name=seg_name,
-                            load=device_id,
+                            load=component_id,
                             type="ro",
                         )
                     )
@@ -295,16 +295,16 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
                 if s.upper() not in AUTO_ROM_SEGMENTS
                 and s.upper() not in AUTO_RAM_SEGMENTS
             ]
-            if not device_segments and device_id not in auto_for_device:
-                # No user segments and device_id not already emitted
+            if not device_segments and component_id not in auto_for_device:
+                # No user segments and component_id not already emitted
                 # as an auto ROM segment: add default segment named after device
-                device_segments = [device_id]
+                device_segments = [component_id]
 
             for seg_name in device_segments:
                 layout.segments.append(
                     Segment(
                         name=seg_name,
-                        load=device_id,
+                        load=component_id,
                         type="ro",
                     )
                 )

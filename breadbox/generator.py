@@ -12,7 +12,7 @@ from rich.console import Console
 from breadbox.project import BreadboxProject
 
 if TYPE_CHECKING:
-    from breadbox.types.device import Device
+    from breadbox.types.component import Component
 
 COMPONENTS_DIR = Path(__file__).parent / "components"
 TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -32,9 +32,9 @@ def _hex_filter(value: int) -> str:
 
 class CodeGenerator:
     """
-    Walks the resolved device tree and generates ca65 assembly output.
+    Walks the resolved component tree and generates ca65 assembly output.
 
-    Implements the DeviceVisitor protocol to traverse the device hierarchy.
+    Implements the ComponentVisitor protocol to traverse the component hierarchy.
     Each component can ship assembly source files in a src/ directory alongside
     its Python code. The generator processes these through Jinja2 and writes
     the output to the target directory.
@@ -46,7 +46,7 @@ class CodeGenerator:
     def __init__(self, breadbox: BreadboxProject) -> None:
         self.breadbox = breadbox
         self._template_env = self._create_template_env()
-        self._device_includes: list[Path] = []
+        self._component_includes: list[Path] = []
 
     def generate(self) -> None:
         """
@@ -55,9 +55,9 @@ class CodeGenerator:
         self._prepare_build_dir()
         self._process_stdlib()
         self._process_project_sources()
-        for device in self.breadbox.config.devices.values():
-            if device.parent is None:
-                device.accept(self)
+        for component in self.breadbox.config.components.values():
+            if component.parent is None:
+                component.accept(self)
         self._generate_hardware_inc()
         self._generate_breadbox_inc()
         self._generate_linker_cfg()
@@ -115,18 +115,18 @@ class CodeGenerator:
         project_output_dir.mkdir(parents=True)
 
         src_files = sorted(f for f in self.breadbox.project_dir.iterdir() if f.suffix in (".s", ".inc"))
-        for src in  src_files:
+        for src in src_files:
             if src.suffix in {".s", ".inc"}:
                 dest = project_output_dir / src.name
                 console.print(f"  Create: {dest}")
                 shutil.copy2(src, dest)
 
-    def visit(self, device: Device) -> None:
+    def visit(self, component: Component) -> None:
         """
-        Process a device and recurse into its sub-devices.
+        Process a component and recurse into its children.
         """
-        self._process_component_sources(device)
-        for sub in device.devices:
+        self._process_component_sources(component)
+        for sub in component.children:
             sub.accept(self)
 
     @staticmethod
@@ -149,18 +149,18 @@ class CodeGenerator:
         Generate the master include file (breadbox.inc).
 
         Pulls in hardware definitions, core assembly, and all
-        device-generated include files.
+        component-generated include files.
         """
         template = self._template_env.get_template("breadbox.inc")
-        rendered = template.render(device_includes=self._device_includes)
+        rendered = template.render(component_includes=self._component_includes)
         self._write_generated_output(Path("breadbox.inc"), rendered)
 
     def _generate_hardware_inc(self) -> None:
         """
-        Generate hardware definitions (constants, macros) from device tree.
+        Generate hardware definitions (constants, macros) from component tree.
         """
         template = self._template_env.get_template("hardware.inc")
-        rendered = template.render(devices=self.breadbox.config.devices)
+        rendered = template.render(components=self.breadbox.config.components)
         self._write_generated_output(Path("hardware.inc"), rendered)
 
     def _generate_linker_cfg(self) -> None:
@@ -200,15 +200,15 @@ class CodeGenerator:
             "segments": layout.segments,
         }
 
-    def _process_component_sources(self, device: Device) -> None:
+    def _process_component_sources(self, component: Component) -> None:
         """
         Process a component's assembly source files into the output directory.
 
-        Uses the device's component_dir (via inspect) to locate the src/
-        directory. Output files are placed under the device's build_dir,
-        which mirrors the device tree (e.g. the_display/pin_rs/).
+        Uses the component's component_dir (via inspect) to locate the src/
+        directory. Output files are placed under the component's build_dir,
+        which mirrors the component tree (e.g. the_display/pin_rs/).
         """
-        src_dir = device.component_dir / "src"
+        src_dir = component.component_dir / "src"
         if not src_dir.is_dir():
             return
 
@@ -221,17 +221,17 @@ class CodeGenerator:
         )
         env.filters["hex"] = _hex_filter
 
-        context = self._build_context(device)
+        context = self._build_context(component)
 
         src_files = sorted(f for f in src_dir.iterdir() if f.suffix in (".s", ".inc"))
         for src_file in src_files:
             template = env.get_template(src_file.name)
             rendered = template.render(context)
-            relative_path = device.device_path / src_file.name
+            relative_path = component.component_path / src_file.name
             console.print(f"  Create: {relative_path}")
             self._write_generated_output(relative_path, rendered)
             if src_file.name == "api.inc":
-                self._device_includes.append(relative_path)
+                self._component_includes.append(relative_path)
 
     def _write_generated_output(self, relative_path: Path, content: str) -> None:
         """
@@ -276,11 +276,11 @@ class CodeGenerator:
         return {"symbol": symbol}
 
     @staticmethod
-    def _build_context(device: Device) -> dict:
+    def _build_context(component: Component) -> dict:
         """
-        Build the Jinja2 template context for a device.
+        Build the Jinja2 template context for a component.
         """
-        P = device.symbol_prefix
+        P = component.symbol_prefix
 
         def symbol(name: str) -> str:
             """
@@ -315,23 +315,26 @@ class CodeGenerator:
             return f"{symbol(name)}\n    {alias} = {symbol(name)}"
 
         context: dict = {
-            "device_id": str(device.id),
+            "component_id": str(component.id),
             "symbol_prefix": P,
-            "component_type": device.component_type,
+            "component_type": component.component_type,
             "symbol": symbol,
             "alias": alias,
         }
-        for f in dataclasses.fields(device):
-            if f.name not in device._internal_fields:
-                context[f.name] = getattr(device, f.name)
+        for f in dataclasses.fields(component):
+            if f.name not in component._internal_fields:
+                context[f.name] = getattr(component, f.name)
 
         # Expose cached properties (e.g. port, bitmask, exclusive_port).
-        for name in dir(type(device)):
-            if isinstance(getattr(type(device), name, None), cached_property) and name not in device._internal_fields:
-                context[name] = getattr(device, name)
+        for name in dir(type(component)):
+            if (
+                isinstance(getattr(type(component), name, None), cached_property)
+                and name not in component._internal_fields
+            ):
+                context[name] = getattr(component, name)
 
         # Expose the bus device reference for register name generation.
-        bus_device = getattr(device, "bus_device", None)
+        bus_device = getattr(component, "bus_device", None)
         if bus_device is not None:
             context["bus_device"] = bus_device
 

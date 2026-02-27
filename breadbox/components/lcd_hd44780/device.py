@@ -6,30 +6,30 @@ from typing import cast
 
 from breadbox.components.via_w65c22.gpio_group.device import ViaW65c22GpioGroupDevice
 from breadbox.types.device import Device
-from breadbox.types.device_identifier import DeviceIdentifier
+from breadbox.types.component_identifier import ComponentIdentifier
 
 
 @dataclass(kw_only=True)
 class CmndSettings:
-    bus: DeviceIdentifier
+    bus: ComponentIdentifier
     rs_pin: str
     rwb_pin: str
     en_pin: str
 
     def __post_init__(self) -> None:
-        if not isinstance(self.bus, DeviceIdentifier):
-            self.bus = DeviceIdentifier(self.bus)
+        if not isinstance(self.bus, ComponentIdentifier):
+            self.bus = ComponentIdentifier(self.bus)
 
 
 @dataclass(kw_only=True)
 class DataSettings:
-    bus: DeviceIdentifier
+    bus: ComponentIdentifier
     mode: str
     port: str
 
     def __post_init__(self) -> None:
-        if not isinstance(self.bus, DeviceIdentifier):
-            self.bus = DeviceIdentifier(self.bus)
+        if not isinstance(self.bus, ComponentIdentifier):
+            self.bus = ComponentIdentifier(self.bus)
         self.mode = self.mode.lower()
         if self.mode not in ("4bit", "8bit"):
             raise ValueError(f"Invalid mode {self.mode!r} (expected '4bit' or '8bit')")
@@ -99,19 +99,19 @@ class LcdHd44780Device(Device):
         return 1 << port_pins.index(pin_name)
     def _sub(self, name: str) -> Device:
         """
-        Look up a sub-device by its device ID.
+        Look up a child component by its ID.
         """
-        for d in self.devices:
+        for d in self.children:
             if str(d.id) == name:
                 return d
-        raise ValueError(f"Sub-device {name!r} not found on {self.id!r}")
+        raise ValueError(f"Child component {name!r} not found on {self.id!r}")
 
     def validate_pins(self) -> None:
         """
         Verify that no physical pin is used by more than one sub-device.
         """
         seen: set[tuple[str, str]] = set()
-        for sub in self.devices:
+        for sub in self.children:
             bus = getattr(sub, "bus", None)
             if bus is None:
                 continue
