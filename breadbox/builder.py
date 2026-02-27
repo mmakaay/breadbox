@@ -74,8 +74,9 @@ class Builder:
 
         # Link everything into a ROM binary.
         rom_path = self.project.build_dir / "rom.bin"
+        ld65_map_path = self.project.build_dir / "ld65.map"
         console.print("[green]Link object files \u2192 rom.bin[/green]")
-        self._link(object_files, rom_path)
+        self._link(object_files, rom_path, ld65_map_path)
         return rom_path
 
     def _assemble(self, source: Path) -> Path:
@@ -84,7 +85,11 @@ class Builder:
         """
         object_file = source.with_suffix(".o")
         result = subprocess.run(
-            [str(self.ca65), "-I", str(self.project.generated_dir), str(source)],
+            [
+                str(self.ca65),
+                "-I", str(self.project.generated_dir),
+                str(source)
+            ],
             capture_output=True,
             text=True,
         )
@@ -92,14 +97,19 @@ class Builder:
             raise BuildError(f"Assembly failed for {source.name}:\n{result.stderr}")
         return object_file
 
-    def _link(self, object_files: list[Path], rom_path: Path) -> None:
+    def _link(
+        self, object_files: list[Path], rom_path: Path, map_path: Path
+    ) -> None:
         """
         Link object files into a ROM binary with ld65.
+
+        Also generates an ld65 map file at map_path.
         """
         cfg_path = self.project.generated_dir / "linker.cfg"
         cmd = [str(self.ld65), "--config", str(cfg_path)]
         cmd.extend(str(o) for o in object_files)
         cmd.extend(["-o", str(rom_path)])
+        cmd.extend(["-m", str(map_path)])
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             raise BuildError(f"Linking failed:\n{result.stderr}")

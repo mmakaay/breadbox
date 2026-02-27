@@ -6,6 +6,7 @@ from rich.console import Console
 from breadbox.builder import Builder
 from breadbox.errors import BuildError, ConfigError
 from breadbox.generator import CodeGenerator
+from breadbox.mapfile import write_memory_map
 from breadbox.project import BreadboxProject
 
 app = typer.Typer(no_args_is_help=True)
@@ -62,7 +63,15 @@ def build(
         rom_path = builder.build()
         size = rom_path.stat().st_size
 
+        # Generate memory map from ld65 output.
+        ld65_map_path = project.build_dir / "ld65.map"
+        map_path = project.build_dir / "memory.map"
+        segments = write_memory_map(
+            ld65_map_path, map_path, project.config.memory_layout
+        )
+
         console.print(f"[green]Built:[/green] {rom_path} ({size:,} bytes)")
+        console.print(f"[green]Map:[/green]   {map_path}")
 
     except ConfigError as e:
         console.print(f"[red]Error:[/red] {e}")

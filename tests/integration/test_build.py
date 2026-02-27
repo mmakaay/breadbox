@@ -12,6 +12,10 @@ from pathlib import Path
 from breadbox.builder import Builder, find_tool
 from breadbox.errors import BuildError
 from breadbox.generator import CodeGenerator
+from breadbox.mapfile import write_memory_map
+from breadbox.project import BreadboxProject
+from breadbox.errors import BuildError
+from breadbox.generator import CodeGenerator
 from breadbox.project import BreadboxProject
 
 
@@ -128,6 +132,55 @@ class TestBuildMinimal:
 
         assert (project.build_dir / "project" / "main.s").exists()
 
+    def test_ld65_map_created(self, tmp_path):
+        """
+        ld65 map file should be created during build.
+        """
+        project = _setup_project(tmp_path, MINIMAL_CONFIG)
+        builder = Builder(project)
+        builder.build()
+
+        assert (project.build_dir / "ld65.map").exists()
+
+    def test_memory_map_created(self, tmp_path):
+        """
+        Clean memory map file should be created from ld65 output.
+        """
+        project = _setup_project(tmp_path, MINIMAL_CONFIG)
+        builder = Builder(project)
+        builder.build()
+
+        ld65_map_path = project.build_dir / "ld65.map"
+        map_path = project.build_dir / "memory.map"
+        segments = write_memory_map(
+            ld65_map_path, map_path, project.config.memory_layout
+        )
+
+        assert map_path.exists()
+        content = map_path.read_text()
+        assert "[ZEROPAGE]" in content
+        assert "KERNALZP" in content
+        assert "(free)" in content
+
+    def test_memory_map_shows_segments(self, tmp_path):
+        """
+        Memory map should contain all placed segments.
+        """
+        project = _setup_project(tmp_path, MINIMAL_CONFIG)
+        builder = Builder(project)
+        builder.build()
+
+        ld65_map_path = project.build_dir / "ld65.map"
+        map_path = project.build_dir / "memory.map"
+        segments = write_memory_map(
+            ld65_map_path, map_path, project.config.memory_layout
+        )
+
+        names = [s.name for s in segments]
+        assert "KERNALZP" in names
+        assert "KERNALROM" in names
+        assert "CODE" in names
+        assert "VECTORS" in names
 
 @requires_ca65
 class TestBuildWithVia:
