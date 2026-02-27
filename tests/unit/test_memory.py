@@ -170,11 +170,11 @@ class TestUserSegments:
     """User-defined segments are placed correctly."""
 
     def test_user_ram_segments(self):
-        ram = make_ram(segments=["DATA", "BSS"])
+        ram = make_ram(segments=["APPDATA", "BSS"])
         rom = make_rom()
         layout = resolve_memory_layout([ram], [rom])
         seg_names = [s.name for s in layout.segments]
-        assert "DATA" in seg_names
+        assert "APPDATA" in seg_names
         assert "BSS" in seg_names
 
     def test_user_rom_segments(self):
@@ -288,17 +288,43 @@ class TestCodeSegment:
         assert code[0].load == "ROM0"
         assert kernal[0].load == "ROM1"
 
+class TestDataSegment:
+    """DATA segment is auto-assigned to vectors ROM like CODE."""
+
+    def test_data_auto_assigned_to_vectors_rom(self):
+        ram = make_ram()
+        rom = make_rom("ROM")
+        layout = resolve_memory_layout([ram], [rom])
+        data = [s for s in layout.segments if s.name == "DATA"]
+        assert len(data) == 1
+        assert data[0].load == "ROM"
+
+    def test_data_override_to_different_rom(self):
+        ram = make_ram()
+        rom0 = make_rom("ROM0", address="$8000", size=0x4000, segments=["DATA"])
+        rom1 = make_rom("ROM1", address="$C000", size=0x4000)
+        layout = resolve_memory_layout([ram], [rom0, rom1])
+        data = [s for s in layout.segments if s.name == "DATA"]
+        assert len(data) == 1
+        assert data[0].load == "ROM0"
+
+    def test_data_in_ram_raises(self):
+        ram = make_ram(segments=["DATA"])
+        rom = make_rom()
+        with pytest.raises(ConfigError, match="ROM device"):
+            resolve_memory_layout([ram], [rom])
+
 class TestSegmentUniqueness:
     """No segment name can appear in multiple devices."""
 
     def test_duplicate_segment_raises(self):
-        ram = make_ram(segments=["DATA"])
-        rom = make_rom(segments=["DATA"])
+        ram = make_ram(segments=["SHARED"])
+        rom = make_rom(segments=["SHARED"])
         with pytest.raises(ConfigError, match="defined in both"):
             resolve_memory_layout([ram], [rom])
 
     def test_unique_segments_pass(self):
-        ram = make_ram(segments=["DATA"])
+        ram = make_ram(segments=["APPDATA"])
         rom = make_rom(segments=["CODE"])
         layout = resolve_memory_layout([ram], [rom])
         assert layout is not None
@@ -369,6 +395,7 @@ class TestDefaultLayout:
         assert "RAM" in seg_names
         assert "KERNALROM" in seg_names
         assert "CODE" in seg_names
+        assert "DATA" in seg_names
         assert "VECTORS" in seg_names
         assert "KERNALZP" in seg_names
         assert "KERNALRAM" in seg_names
