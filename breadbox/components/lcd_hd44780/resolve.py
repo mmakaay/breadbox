@@ -1,7 +1,7 @@
 from typing import Any
 
-from breadbox.components.gpio_group import component as gpio_group_component
-from breadbox.components.gpio_pin import component as gpio_pin_component
+from breadbox.components.gpio_group import resolve as gpio_group_resolve
+from breadbox.components.gpio_pin import resolve as gpio_pin_resolve
 from breadbox.components.lcd_hd44780.device import CmndSettings, DataSettings, LcdHd44780Device
 from breadbox.config import BreadboxConfig
 from breadbox.types.component_identifier import ComponentIdentifier
@@ -18,7 +18,7 @@ def resolve(
     device = LcdHd44780Device(id=component_id, mode=data.mode, rs_pin=cmnd.rs_pin, rwb_pin=cmnd.rwb_pin)
 
     device.add(
-        gpio_group_component.resolve(
+        gpio_group_resolve.resolve(
             breadbox,
             ComponentIdentifier("CTRL"),
             {"bus": cmnd.bus, "pins": [cmnd.rs_pin, cmnd.rwb_pin], "direction": "out"},
@@ -26,7 +26,7 @@ def resolve(
     )
 
     device.add(
-        gpio_pin_component.resolve(
+        gpio_pin_resolve.resolve(
             breadbox,
             ComponentIdentifier("PIN_EN"),
             {"bus": cmnd.bus, "pin": cmnd.en_pin, "direction": "out"},
@@ -42,7 +42,7 @@ def resolve(
         raise ValueError(f"Invalid data.mode {mode!r} for component {component_id!r} (expected: 4BIT or 8BIT)")
 
     device.add(
-        gpio_group_component.resolve(
+        gpio_group_resolve.resolve(
             breadbox,
             ComponentIdentifier("DATA"),
             {"bus": data.bus, "port": data.port, "bits": bits},

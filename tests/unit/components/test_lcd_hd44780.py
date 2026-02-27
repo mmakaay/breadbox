@@ -1,7 +1,7 @@
 import pytest
 
 from breadbox.components.lcd_hd44780.device import CmndSettings, DataSettings, LcdHd44780Device
-from breadbox.components.lcd_hd44780.component import resolve
+from breadbox.components.lcd_hd44780.resolve import resolve
 from breadbox.components.via_w65c22.device import ViaW65c22Device
 from breadbox.components.via_w65c22.gpio_group.device import ViaW65c22GpioGroupDevice
 from breadbox.config import BreadboxConfig

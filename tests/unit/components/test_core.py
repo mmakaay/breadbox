@@ -1,7 +1,7 @@
 import pytest
 
 from breadbox.components.core.device import CoreDevice
-from breadbox.components.core.component import resolve
+from breadbox.components.core.resolve import resolve
 from breadbox.config import BreadboxConfig
 from breadbox.types.component_identifier import ComponentIdentifier
 

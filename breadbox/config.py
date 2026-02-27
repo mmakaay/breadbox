@@ -61,7 +61,7 @@ class BreadboxConfig:
                     component_type = raw_id.lower()
 
                 # Load the python module for the current component type.
-                module_name = f"breadbox.components.{component_type}.component"
+                module_name = f"breadbox.components.{component_type}.resolve"
                 try:
                     module = importlib.import_module(module_name)
                 except ModuleNotFoundError:

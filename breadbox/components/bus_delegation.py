@@ -18,7 +18,7 @@ def resolve_via_bus(
         raise ValueError(f"Component {component_id!r}: missing '{bus_key}' field")
     bus_device = breadbox.get(ComponentIdentifier(bus_id))
     bus_type = bus_device.component_type
-    module_name = f"breadbox.components.{bus_type}.{interface_name}.component"
+    module_name = f"breadbox.components.{bus_type}.{interface_name}.resolve"
     try:
         module = importlib.import_module(module_name)
     except ModuleNotFoundError:

@@ -1,7 +1,7 @@
 import pytest
 
 from breadbox.components.via_w65c22.device import ViaW65c22Device
-from breadbox.components.via_w65c22.gpio_group.component import resolve
+from breadbox.components.via_w65c22.gpio_group.resolve import resolve
 from breadbox.components.via_w65c22.gpio_group.device import ViaW65c22GpioGroupDevice
 from breadbox.config import BreadboxConfig
 from breadbox.types.address16 import Address16
