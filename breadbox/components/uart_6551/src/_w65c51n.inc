@@ -28,7 +28,7 @@
 
     {{ symbol("rx_buffer") }}: .res $100  ; 256-byte RX ring buffer
 
-.segment "KERNALZP" : zeropage
+.segment "ZEROPAGE" : zeropage
 
     {{ symbol("rx_w_ptr") }}:   .res 1    ; Ring buffer write pointer (IRQ side)
     {{ symbol("rx_r_ptr") }}:   .res 1    ; Ring buffer read pointer (main side)

@@ -30,7 +30,7 @@
 .export {{ symbol("home") }}
 .export {{ symbol("print") }}
 
-.segment "KERNALZP" : zeropage
+.segment "ZEROPAGE" : zeropage
 
     {{ symbol("byte") }}: .res 1            ; Parameter byte for LCD operations
     {{ symbol("ptr") }}:  .res 2            ; Pointer for string printing

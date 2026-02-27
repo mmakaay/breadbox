@@ -2,7 +2,7 @@
 Memory layout resolution for linker configuration.
 
 Resolves RAM/ROM devices and user-defined segments into a complete
-memory map with all auto-assigned segments (ZEROPAGE, KERNALZP, STACK,
+memory map with all auto-assigned segments (ZEROPAGE, STACK, VECTORS,
 VECTORS, KERNALROM, KERNALRAM, CODE, DATA) placed correctly.
 """
 
@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 from breadbox.errors import ConfigError
 
-RESERVED_SEGMENTS = frozenset({"ZEROPAGE", "STACK", "VECTORS", "KERNALZP"})
+RESERVED_SEGMENTS = frozenset({"ZEROPAGE", "STACK", "VECTORS"})
 """Segment names that are always auto-assigned and cannot be used by the user."""
 
 AUTO_ROM_SEGMENTS = frozenset({"KERNALROM", "CODE", "DATA"})
@@ -69,7 +69,7 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
 
     Steps:
     1. Collect user-defined segments from all devices.
-    2. Reject reserved names (ZEROPAGE, STACK, VECTORS, KERNALZP).
+    2. Reject reserved names (ZEROPAGE, STACK, VECTORS).
     3. Allow KERNALROM, CODE and DATA as explicit overrides (ROM only).
     4. Allow KERNALRAM as explicit override (RAM only).
     5. Check uniqueness across all user segments.
@@ -163,13 +163,6 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
                     size=0x0100,
                     type="rw",
                     file="",
-                )
-            )
-            layout.segments.append(
-                Segment(
-                    name="KERNALZP",
-                    load="ZEROPAGE",
-                    type="zp",
                 )
             )
             layout.segments.append(

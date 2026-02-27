@@ -41,7 +41,7 @@
 
 .export WOZMON
 
-.segment "ZEROPAGE"
+.segment "ZEROPAGE" : zeropage
 
     XAML: .res 1                ; Last "opened" location Low
     XAMH: .res 1                ; Last "opened" location High
@@ -56,7 +56,7 @@
 
     IN: .res $FF                ; Input buffer
 
-.segment "ROM"
+.segment "CODE"
 
     WOZMON:
 
@@ -88,6 +88,7 @@
 
     NEXTCHAR:
         jsr CONSOLE::read      ; Wait for a character.
+        bcc NEXTCHAR           ; No character read? Try again.
         lda CONSOLE::byte      ; Get received byte.
         cmp #$7F               ; DEL? (backspace on many terminals)
         bne @not_del
@@ -231,11 +232,6 @@
         cmp #$3A               ; Digit?
         bcc ECHO               ; Yes, output it.
         adc #$06               ; Add offset for letter.
-
-        ; NOP padding to keep ECHO at the well-known address $FFEF.
-        nop
-        nop
-        nop
 
     ; Output the character in A to the serial console.
     ECHO:

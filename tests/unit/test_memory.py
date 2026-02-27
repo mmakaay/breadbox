@@ -112,7 +112,7 @@ class TestDefaultSegments:
         assert kernal[0].load == "ROM"
 
 class TestFixedSegments:
-    """ZEROPAGE, KERNALZP, STACK, and VECTORS are always auto-assigned."""
+    """ZEROPAGE, STACK, and VECTORS are always auto-assigned."""
 
     def test_zeropage_present(self):
         ram = make_ram()
@@ -397,34 +397,9 @@ class TestDefaultLayout:
         assert "CODE" in seg_names
         assert "DATA" in seg_names
         assert "VECTORS" in seg_names
-        assert "KERNALZP" in seg_names
+        assert "ZEROPAGE" in seg_names
         assert "KERNALRAM" in seg_names
 
-
-class TestKernalzpSegment:
-    """KERNALZP segment is auto-assigned to the ZEROPAGE memory region."""
-
-    def test_kernalzp_present(self):
-        ram = make_ram()
-        rom = make_rom()
-        layout = resolve_memory_layout([ram], [rom])
-        kzp = [s for s in layout.segments if s.name == "KERNALZP"]
-        assert len(kzp) == 1
-        assert kzp[0].type == "zp"
-        assert kzp[0].load == "ZEROPAGE"
-
-    def test_kernalzp_before_zeropage_in_segment_order(self):
-        ram = make_ram()
-        rom = make_rom()
-        layout = resolve_memory_layout([ram], [rom])
-        seg_names = [s.name for s in layout.segments]
-        assert seg_names.index("KERNALZP") < seg_names.index("ZEROPAGE")
-
-    def test_kernalzp_reserved(self):
-        ram = make_ram(segments=["KERNALZP"])
-        rom = make_rom()
-        with pytest.raises(ConfigError, match="reserved"):
-            resolve_memory_layout([ram], [rom])
 
 
 class TestKernalramSegment:

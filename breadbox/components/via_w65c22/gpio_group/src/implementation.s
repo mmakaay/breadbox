@@ -25,7 +25,7 @@
 
 {% set P = symbol_prefix %}
 
-.segment "KERNALZP" : zeropage
+.segment "ZEROPAGE" : zeropage
 
 {{ symbol("tmp") }}: .res 1                   ; Internal temporary for read-modify-write
 

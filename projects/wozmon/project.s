@@ -7,6 +7,7 @@
 .DATA
 
     lcd_text:     .asciiz "Running WozMon"
+
     introduction: .byte   $0d, $0d, "** Welcome to BREADBOX WozMon **", $0d
                   .byte   $0d, "Commands:", $0d
                   .byte   "-------------+------------------------------------------------", $0d
@@ -22,8 +23,6 @@
 .CODE
 
     main:
-
-        ;PRINT LCD, lcd_text
+        PRINT LCD, lcd_text
         ;PRINT CONSOLE, introduction
         jmp WOZMON
-

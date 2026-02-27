@@ -9,10 +9,10 @@ SAMPLE_LD65_MAP = """\
 Modules list:
 -------------
 boot.o:
-    KERNALZP          Offs=000000  Size=000004  Align=00001  Fill=0000
+    ZEROPAGE           Offs=000000  Size=000004  Align=00001  Fill=0000
     KERNALROM         Offs=000000  Size=000040  Align=00001  Fill=0000
 vectors.o:
-    KERNALZP          Offs=000007  Size=000006  Align=00001  Fill=0000
+    ZEROPAGE           Offs=000007  Size=000006  Align=00001  Fill=0000
     KERNALROM         Offs=000064  Size=000068  Align=00001  Fill=0000
     VECTORS           Offs=000000  Size=000006  Align=00001  Fill=0000
 project.o:
@@ -23,7 +23,7 @@ Segment list:
 -------------
 Name                   Start     End    Size  Align
 ----------------------------------------------------
-KERNALZP              000000  00000C  00000D  00001
+ZEROPAGE              000000  00000C  00000D  00001
 CODE                  008000  00803C  00003D  00001
 KERNALROM             00803D  00812C  0000F0  00001
 VECTORS               00FFFA  00FFFF  000006  00001
@@ -41,7 +41,7 @@ Segment list:
 -------------
 Name                   Start     End    Size  Align
 ----------------------------------------------------
-KERNALZP              000000  00001B  00001C  00001
+ZEROPAGE              000000  00001B  00001C  00001
 KERNALRAM             000200  0003FF  000200  00001
 CODE                  008000  008032  000033  00001
 KERNALROM             008033  008469  000437  00001
@@ -61,7 +61,6 @@ def _make_default_layout():
             MemoryRegion(name="VECTORS", start=0xFFFA, size=0x0006, type="ro", file="%O", fill=True),
         ],
         segments=[
-            Segment(name="KERNALZP", load="ZEROPAGE", type="zp"),
             Segment(name="ZEROPAGE", load="ZEROPAGE", type="zp"),
             Segment(name="STACK", load="STACK", type="bss"),
             Segment(name="RAM", load="RAM", type="bss"),
@@ -79,7 +78,7 @@ class TestParseLd65Map:
     def test_parses_all_segments(self):
         entries = parse_ld65_map(SAMPLE_LD65_MAP)
         names = [e.name for e in entries]
-        assert "KERNALZP" in names
+        assert "ZEROPAGE" in names
         assert "CODE" in names
         assert "KERNALROM" in names
         assert "VECTORS" in names
@@ -92,7 +91,7 @@ class TestParseLd65Map:
         entries = parse_ld65_map(SAMPLE_LD65_MAP)
         by_name = {e.name: e for e in entries}
 
-        kzp = by_name["KERNALZP"]
+        kzp = by_name["ZEROPAGE"]
         assert kzp.start == 0x0000
         assert kzp.end == 0x000C
         assert kzp.size == 0x000D
@@ -144,12 +143,12 @@ class TestFormatMemoryMap:
         assert "[ROM]" in output
         assert "[VECTORS]" in output
 
-    def test_shows_kernalzp_placement(self):
+    def test_shows_zeropage_placement(self):
         entries = parse_ld65_map(SAMPLE_LD65_MAP)
         layout = _make_default_layout()
         output = format_memory_map(entries, layout)
 
-        assert "KERNALZP" in output
+        assert "ZEROPAGE" in output
         assert "$0000-$000C" in output
 
     def test_shows_free_space_in_zeropage(self):
@@ -158,7 +157,7 @@ class TestFormatMemoryMap:
         output = format_memory_map(entries, layout)
 
         assert "(free)" in output
-        # KERNALZP ends at $000C, so free starts at $000D
+        # ZEROPAGE ends at $000C, so free starts at $000D
         assert "$000D-$00FF" in output
 
     def test_shows_kernalram_placement(self):

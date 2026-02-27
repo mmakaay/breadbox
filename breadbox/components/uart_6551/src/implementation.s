@@ -36,7 +36,7 @@
 .export {{ symbol("check_rx") }}
 .export {{ symbol("check_tx") }}
 
-.segment "KERNALZP" : zeropage
+.segment "ZEROPAGE" : zeropage
 
     {{ symbol("byte") }}: .res 1                ; Parameter byte for UART operations
 

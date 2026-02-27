@@ -159,7 +159,7 @@ class TestBuildMinimal:
         assert map_path.exists()
         content = map_path.read_text()
         assert "[ZEROPAGE]" in content
-        assert "KERNALZP" in content
+        assert "ZEROPAGE" in content
         assert "(free)" in content
 
     def test_memory_map_shows_segments(self, tmp_path):
@@ -177,7 +177,7 @@ class TestBuildMinimal:
         )
 
         names = [s.name for s in segments]
-        assert "KERNALZP" in names
+        assert "ZEROPAGE" in names
         assert "KERNALROM" in names
         assert "CODE" in names
         assert "VECTORS" in names
