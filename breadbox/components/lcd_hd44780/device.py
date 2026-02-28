@@ -56,6 +56,13 @@ class LcdHd44780Device(Device):
         if self.mode not in ("4bit", "8bit"):
             raise ValueError(f"Invalid mode {self.mode!r} (expected '4bit' or '8bit')")
 
+        if self.width < 1 or self.height < 1:
+            raise ValueError(f"Invalid dimensions {self.width}x{self.height} (width and height must be >= 1)")
+
+        byte_size = self.width * self.height
+        if byte_size > 80:
+            raise ValueError(f"Invalid width x height (requires {byte_size} bytes, but device has 80 bytes)")
+
     @cached_property
     def ctrl(self) -> Device:
         """

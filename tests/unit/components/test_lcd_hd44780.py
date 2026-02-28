@@ -58,6 +58,45 @@ class TestLcdHd44780Device:
         assert device.mode == "8bit"
         assert len(device.children) == 0
 
+    def test_defaults(self):
+        device = LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit")
+        assert device.width == 16
+        assert device.height == 2
+        assert device.characters == "5x8"
+
+    def test_custom_dimensions(self):
+        device = LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit", width=20, height=4)
+        assert device.width == 20
+        assert device.height == 4
+
+    def test_characters_5x10(self):
+        device = LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit", characters="5x10")
+        assert device.characters == "5x10"
+
+    def test_characters_normalized(self):
+        device = LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit", characters="5 X 8")
+        assert device.characters == "5x8"
+
+    def test_invalid_characters_raises(self):
+        with pytest.raises(ValueError, match="Invalid character_set"):
+            LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit", characters="8x8")
+
+    def test_width_x_height_exceeds_80_bytes_raises(self):
+        with pytest.raises(ValueError, match="requires 84 bytes"):
+            LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit", width=21, height=4)
+
+    def test_width_x_height_at_limit(self):
+        device = LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit", width=20, height=4)
+        assert device.width * device.height == 80
+
+    def test_zero_width_raises(self):
+        with pytest.raises(ValueError, match="width and height must be >= 1"):
+            LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit", width=0)
+
+    def test_zero_height_raises(self):
+        with pytest.raises(ValueError, match="width and height must be >= 1"):
+            LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit", height=0)
+
     def test_mode_4bit(self):
         device = LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="4bit")
         assert device.mode == "4bit"
