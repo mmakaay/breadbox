@@ -26,8 +26,6 @@
 .include "{{ pin_rts.component_path }}/macros.inc"
 {% endif %}
 
-.exportzp {{ symbol("byte") }}
-
 .export {{ symbol("init") }}
 .export {{ symbol("read") }}
 .export {{ symbol("write") }}
@@ -35,10 +33,6 @@
 .export {{ symbol("load_status") }}
 .export {{ symbol("check_rx") }}
 .export {{ symbol("check_tx") }}
-
-.segment "ZEROPAGE" : zeropage
-
-    {{ symbol("byte") }}: .res 1                ; Parameter byte for UART operations
 
 .segment "KERNALROM"
 
@@ -71,20 +65,18 @@
     ;
     ; Handles CR → CR+LF conversion for terminal-style output.
     ;
-    ; In (zero page):
-    ;   byte = data byte to transmit
+    ; In:
+    ;   A = data byte to transmit
     ; Out:
     ;   A = clobbered
 
     .proc {{ symbol("write_terminal") }}
-        lda {{ symbol("byte") }}
         cmp #$0d
         bne @raw
 
         ; Send CR first, then queue LF.
         jsr {{ symbol("write") }}
         lda #$0a
-        sta {{ symbol("byte") }}
     @raw:
         jmp {{ symbol("write") }}
     .endproc

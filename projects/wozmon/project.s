@@ -1,4 +1,5 @@
 .include "breadbox.inc"
+.include "stdlib/io/print.inc"
 
 .import WOZMON
 
@@ -6,7 +7,8 @@
 
 .DATA
 
-    lcd_text:     .asciiz "Running WozMon"
+    lcd_text1:     .asciiz "BREADBOX  WozMon"
+    lcd_text2:     .asciiz "Running @ serial"
 
     introduction: .byte   $0d, $0d, "** Welcome to BREADBOX WozMon **", $0d
                   .byte   $0d, "Commands:", $0d
@@ -23,6 +25,8 @@
 .CODE
 
     main:
-        PRINT LCD, lcd_text
-        ;PRINT CONSOLE, introduction
+        PRINT LCD::write, lcd_text1
+        jsr LCD::
+        PRINT LCD::write, lcd_text2
+        PRINT CONSOLE::write_terminal, introduction
         jmp WOZMON

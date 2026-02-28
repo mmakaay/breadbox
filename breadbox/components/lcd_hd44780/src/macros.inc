@@ -43,7 +43,6 @@
 
 .macro {{ P }}_goto line
     lda #({{ P }}_CMD_SETDDRAM | line)
-    sta {{ P }}::byte
     jsr {{ P }}::write_cmnd
 .endmacro
 
@@ -57,6 +56,5 @@
 
 .macro {{ P }}_putc char
     lda #char
-    sta {{ P }}::byte
     jsr {{ P }}::write
 .endmacro

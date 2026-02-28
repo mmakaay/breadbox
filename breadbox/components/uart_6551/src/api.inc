@@ -5,8 +5,6 @@
 
 .scope {{ symbol_prefix }}
 
-    .importzp {{ alias("byte") }}
-
     .import {{ alias("init") }}
     .import {{ alias("read") }}
     .import {{ alias("write") }}

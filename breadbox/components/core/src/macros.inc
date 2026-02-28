@@ -141,20 +141,3 @@
     plx
     pla
 .endmacro
-
-; =========================================================================
-; Print a null-terminated string on a device.
-;
-; The device scope must provide a `ptr` (zero page pointer) and a
-; `print` subroutine that walks the string at `ptr`.
-;
-; In:
-;   _scope  = device scope name (e.g. LCD)
-;   _string = address of null-terminated string
-; Out:
-;   A = clobbered (additional clobbers depend on the device)
-
-.macro PRINT _scope, _string
-    CP_ADDRESS _scope::ptr, _string
-    jsr _scope::print
-.endmacro

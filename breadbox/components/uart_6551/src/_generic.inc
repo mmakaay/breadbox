@@ -228,8 +228,8 @@
     ;
     ; Out:
     ;   C = 1 if byte received, 0 if buffer empty
-    ;   byte = received data (valid only when C=1)
-    ;   A, X = clobbered
+    ;   A = received data (valid only when C=1)
+    ;   X = clobbered
 
     .proc {{ symbol("read") }}
         clc
@@ -238,12 +238,15 @@
 
         ldx {{ symbol("rx_r_ptr") }}
         lda {{ symbol("rx_buffer") }},X
-        sta {{ symbol("byte") }}
+{% if pin_rts %}
+        pha
+{% endif %}
         inc {{ symbol("rx_r_ptr") }}
         dec {{ symbol("rx_pending") }}
 {% if pin_rts %}
 
         jsr {{ symbol("turn_rx_on_if_buffer_emptying") }}
+        pla
 {% endif %}
         sec
 
@@ -258,19 +261,20 @@
     ; the TX IRQ by switching CMD to TX_ACTIVE. If the buffer is full,
     ; spins until space is available.
     ;
-    ; In (zero page):
-    ;   byte = data byte to transmit
+    ; In:
+    ;   A = data byte to transmit
     ; Out:
     ;   A, X = clobbered
 
     .proc {{ symbol("write") }}
         sei
+        pha
 
         lda {{ symbol("tx_pending") }}
         cmp #$FF
         beq @full
 
-        lda {{ symbol("byte") }}
+        pla
         ldx {{ symbol("tx_w_ptr") }}
         sta {{ symbol("tx_buffer") }},X
         inc {{ symbol("tx_w_ptr") }}
@@ -289,6 +293,7 @@
 
     @full:
         ; Buffer full — re-enable interrupts, let TX IRQ drain, retry.
+        pla
         cli
         nop
         jmp {{ symbol("write") }}
@@ -298,12 +303,10 @@
     ; Check how many bytes are pending in the receive buffer.
     ;
     ; Out:
-    ;   byte = number of bytes waiting
-    ;   A = clobbered
+    ;   A = number of bytes waiting
 
     .proc {{ symbol("check_rx") }}
         lda {{ symbol("rx_pending") }}
-        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -314,29 +317,25 @@
     ; zero means the buffer is completely full.
     ;
     ; Out:
-    ;   byte = inverted tx_pending (non-zero = space available)
-    ;   A = clobbered
+    ;   A = inverted tx_pending (non-zero = space available)
 
     .proc {{ symbol("check_tx") }}
         lda {{ symbol("tx_pending") }}
         eor #$FF
-        sta {{ symbol("byte") }}
         rts
     .endproc
 
     ; =====================================================================
-    ; Load the cached ACIA status register into the byte variable.
+    ; Load the cached ACIA status register.
     ;
     ; In IRQ mode the status register is read by the IRQ handler and
     ; cached in a ZP variable to avoid side effects from re-reading.
     ;
     ; Out:
-    ;   byte = cached status register contents
-    ;   A = clobbered
+    ;   A = cached status register contents
 
     .proc {{ symbol("load_status") }}
         lda {{ symbol("status") }}
-        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -377,14 +376,12 @@
     ; =====================================================================
     ; Read a byte from the receiver (non-blocking).
     ;
-    ; Checks the RDRF status bit. If a byte is waiting, reads it into
-    ; the byte variable and returns with carry set. Otherwise returns
-    ; with carry clear.
+    ; Checks the RDRF status bit. If a byte is waiting, reads it and
+    ; returns with carry set. Otherwise returns with carry clear.
     ;
     ; Out:
     ;   C = 1 if byte received, 0 if buffer empty
-    ;   byte = received data (valid only when C=1)
-    ;   A = clobbered
+    ;   A = received data (valid only when C=1)
 
     .proc {{ symbol("read") }}
         clc
@@ -393,7 +390,6 @@
         beq @done
 
         lda {{ P }}_DATA
-        sta {{ symbol("byte") }}
         sec
     @done:
         rts
@@ -405,18 +401,19 @@
     ; Polls the TDRE bit until the transmit data register is empty, then
     ; writes the byte. Unlike the W65C51N, the UM6551 TDRE works correctly.
     ;
-    ; In (zero page):
-    ;   byte = data byte to transmit
+    ; In:
+    ;   A = data byte to transmit
     ; Out:
     ;   A = clobbered
 
     .proc {{ symbol("write") }}
+        pha
     @wait:
         lda {{ P }}_STATUS
         and #{{ P }}_SR_TDRE
         beq @wait
 
-        lda {{ symbol("byte") }}
+        pla
         sta {{ P }}_DATA
         rts
     .endproc
@@ -425,13 +422,11 @@
     ; Check whether receive data is available.
     ;
     ; Out:
-    ;   byte = non-zero if data available, zero if not
-    ;   A = clobbered
+    ;   A = non-zero if data available, zero if not
 
     .proc {{ symbol("check_rx") }}
         lda {{ P }}_STATUS
         and #{{ P }}_SR_RDRF
-        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -442,26 +437,22 @@
     ; the UM6551.
     ;
     ; Out:
-    ;   byte = non-zero if ready, zero if busy
-    ;   A = clobbered
+    ;   A = non-zero if ready, zero if busy
 
     .proc {{ symbol("check_tx") }}
         lda {{ P }}_STATUS
         and #{{ P }}_SR_TDRE
-        sta {{ symbol("byte") }}
         rts
     .endproc
 
     ; =====================================================================
-    ; Load the ACIA status register into the byte variable.
+    ; Load the ACIA status register.
     ;
     ; Out:
-    ;   byte = status register contents
-    ;   A = clobbered
+    ;   A = status register contents
 
     .proc {{ symbol("load_status") }}
         lda {{ P }}_STATUS
-        sta {{ symbol("byte") }}
         rts
     .endproc
 

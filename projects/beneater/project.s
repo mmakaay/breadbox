@@ -1,25 +1,27 @@
 .include "breadbox.inc"
+.include "stdlib/io/print.inc"
 
 .export main
 
 greeting_message: .asciiz "Hello, world!"
 
 .proc main
-    PRINT SCHERMPJE, greeting_message
+    PRINT SCHERMPJE::write, greeting_message
 
 @loop:
-    jsr UART::check_rx
-    lda UART::byte
+    jsr UART::check_rx       ; A = pending count
     beq @loop
 
-    jsr UART::read
+    jsr UART::read            ; A = received byte
+    pha                        ; save for later
 
     jsr SCHERMPJE::clr
-    lda UART::byte
-    sta SCHERMPJE::byte
-    jsr SCHERMPJE::write
+    pla                        ; restore byte
+    pha                        ; save again
+    jsr SCHERMPJE::write      ; write takes A
 
-    jsr UART::write_terminal
+    pla                        ; restore byte
+    jsr UART::write_terminal  ; write_terminal takes A
 
     jmp @loop
 .endproc

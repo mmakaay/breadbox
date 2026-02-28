@@ -11,6 +11,7 @@
 ; -----------------------------------------------------------------
 
 .include "breadbox.inc"
+.include "stdlib/io/print.inc"
 
 .segment "ZEROPAGE"
 
@@ -32,11 +33,11 @@
         beq @is_65c02
 
     @is_6502:
-        PRINT LCD, msg_6502
+        PRINT LCD::write, msg_6502
         HALT
 
     @is_65c02:
-        PRINT LCD, msg_65c02
+        PRINT LCD::write, msg_65c02
         HALT
     .endproc
 

@@ -190,8 +190,8 @@
     ;
     ; Out:
     ;   C = 1 if byte received, 0 if buffer empty
-    ;   byte = received data (valid only when C=1)
-    ;   A, X = clobbered
+    ;   A = received data (valid only when C=1)
+    ;   X = clobbered
 
     .proc {{ symbol("read") }}
         clc
@@ -200,12 +200,15 @@
 
         ldx {{ symbol("rx_r_ptr") }}
         lda {{ symbol("rx_buffer") }},X
-        sta {{ symbol("byte") }}
+{% if pin_rts %}
+        pha
+{% endif %}
         inc {{ symbol("rx_r_ptr") }}
         dec {{ symbol("rx_pending") }}
 {% if pin_rts %}
 
         jsr {{ symbol("turn_rx_on_if_buffer_emptying") }}
+        pla
 {% endif %}
         sec
 
@@ -217,12 +220,10 @@
     ; Check how many bytes are pending in the receive buffer.
     ;
     ; Out:
-    ;   byte = number of bytes waiting
-    ;   A = clobbered
+    ;   A = number of bytes waiting
 
     .proc {{ symbol("check_rx") }}
         lda {{ symbol("rx_pending") }}
-        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -233,28 +234,24 @@
     ; so we always report ready.
     ;
     ; Out:
-    ;   byte = 1 (always ready)
-    ;   A = clobbered
+    ;   A = 1 (always ready)
 
     .proc {{ symbol("check_tx") }}
         lda #1
-        sta {{ symbol("byte") }}
         rts
     .endproc
 
     ; =====================================================================
-    ; Load the cached ACIA status register into the byte variable.
+    ; Load the cached ACIA status register.
     ;
     ; In IRQ mode the status register is read by the IRQ handler and
     ; cached in a ZP variable to avoid side effects from re-reading.
     ;
     ; Out:
-    ;   byte = cached status register contents
-    ;   A = clobbered
+    ;   A = cached status register contents
 
     .proc {{ symbol("load_status") }}
         lda {{ symbol("status") }}
-        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -295,14 +292,12 @@
     ; =====================================================================
     ; Read a byte from the receiver (non-blocking).
     ;
-    ; Checks the RDRF status bit. If a byte is waiting, reads it into
-    ; the byte variable and returns with carry set. Otherwise returns
-    ; with carry clear.
+    ; Checks the RDRF status bit. If a byte is waiting, reads it and
+    ; returns with carry set. Otherwise returns with carry clear.
     ;
     ; Out:
     ;   C = 1 if byte received, 0 if buffer empty
-    ;   byte = received data (valid only when C=1)
-    ;   A = clobbered
+    ;   A = received data (valid only when C=1)
 
     .proc {{ symbol("read") }}
         clc
@@ -311,7 +306,6 @@
         beq @done
 
         lda {{ P }}_DATA
-        sta {{ symbol("byte") }}
         sec
     @done:
         rts
@@ -321,13 +315,11 @@
     ; Check whether receive data is available.
     ;
     ; Out:
-    ;   byte = non-zero if data available, zero if not
-    ;   A = clobbered
+    ;   A = non-zero if data available, zero if not
 
     .proc {{ symbol("check_rx") }}
         lda {{ P }}_STATUS
         and #{{ P }}_SR_RDRF
-        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -335,28 +327,24 @@
     ; Check whether the transmitter is ready.
     ;
     ; The W65C51N TDRE bit is broken, so we always report ready.
-    ; TX timing is handled by the timed delay in _write.
+    ; TX timing is handled by the timed delay in write.
     ;
     ; Out:
-    ;   byte = 1 (always ready)
-    ;   A = clobbered
+    ;   A = 1 (always ready)
 
     .proc {{ symbol("check_tx") }}
         lda #1
-        sta {{ symbol("byte") }}
         rts
     .endproc
 
     ; =====================================================================
-    ; Load the ACIA status register into the byte variable.
+    ; Load the ACIA status register.
     ;
     ; Out:
-    ;   byte = status register contents
-    ;   A = clobbered
+    ;   A = status register contents
 
     .proc {{ symbol("load_status") }}
         lda {{ P }}_STATUS
-        sta {{ symbol("byte") }}
         rts
     .endproc
 
@@ -367,13 +355,12 @@
     ; After writing, delays for one character time to work around the
     ; W65C51N TDRE bug (the shift register must drain before the next write).
     ;
-    ; In (zero page):
-    ;   byte = data byte to transmit
+    ; In:
+    ;   A = data byte to transmit
     ; Out:
     ;   A = clobbered
 
     .proc {{ symbol("write") }}
-        lda {{ symbol("byte") }}
         sta {{ P }}_DATA
         jsr {{ symbol("tx_delay") }}
         rts

@@ -89,7 +89,6 @@
     NEXTCHAR:
         jsr CONSOLE::read      ; Wait for a character.
         bcc NEXTCHAR           ; No character read? Try again.
-        lda CONSOLE::byte      ; Get received byte.
         cmp #$7F               ; DEL? (backspace on many terminals)
         bne @not_del
         lda #$08               ; Normalize to BS.
@@ -100,6 +99,7 @@
     @upper:
         sta IN,y               ; Add to text buffer.
         jsr ECHO               ; Display character.
+        lda IN,y               ; Reload character (ECHO clobbers A).
         cmp #$0D               ; CR?
         bne NOTCR              ; No.
 
@@ -235,6 +235,7 @@
 
     ; Output the character in A to the serial console.
     ECHO:
-        sta CONSOLE::byte
+        phx
         jsr CONSOLE::write_terminal
+        plx
         rts

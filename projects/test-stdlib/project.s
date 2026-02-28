@@ -1,12 +1,13 @@
 .include "breadbox.inc"
 .include "stdlib/math/divmod16.inc"
+.include "stdlib/io/print.inc"
 
 .export main
 
 message: .asciiz "stdlib tester"
 
 .proc main
-    PRINT LCD, message
+    PRINT LCD::write, message
     DELAY_MS 300
     DELAY_MS 300
 
@@ -20,7 +21,6 @@ message: .asciiz "stdlib tester"
     lda divmod16::remainder
     clc
     adc #'0'
-    sta LCD::byte
     jsr LCD::write
 
     HALT

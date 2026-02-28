@@ -38,20 +38,28 @@ class DataSettings:
 @dataclass(kw_only=True)
 class LcdHd44780Device(Device):
     """
-    HD44780 LCD display controller.
+    HD44780 LCD controller.
 
     Manages sub-devices for control pins (CTRL group for RS+RWB, EN pin)
     and data bus (DATA). Supports both 4-bit and 8-bit data bus modes.
     """
 
     mode: str
+    width: int = 16
+    height: int = 2
+    characters: str = "5x8"
     rs_pin: str
     rwb_pin: str
 
     def __post_init__(self) -> None:
         super().__post_init__()
+        self.characters = self.characters.lower().replace(" ", "")
+        if self.characters not in ("5x8", "5x10"):
+            raise ValueError(f"Invalid character_set {self.characters!r} (expected '5x8' or '5x10')")
+
         if self.mode not in ("4bit", "8bit"):
             raise ValueError(f"Invalid mode {self.mode!r} (expected '4bit' or '8bit')")
+
         self.rs_pin = self.rs_pin.upper()
         self.rwb_pin = self.rwb_pin.upper()
 
@@ -102,9 +110,9 @@ class LcdHd44780Device(Device):
         Look up a child component by its ID.
         """
         for d in self.children:
-            if str(d.id) == name:
+            if isinstance(d, Device) and str(d.id) == name:
                 return d
-        raise ValueError(f"Child component {name!r} not found on {self.id!r}")
+        raise ValueError(f"Child device {name!r} not found on {self.id!r}")
 
     def validate_pins(self) -> None:
         """
@@ -112,6 +120,8 @@ class LcdHd44780Device(Device):
         """
         seen: set[tuple[str, str]] = set()
         for sub in self.children:
+            if not isinstance(sub, Device):
+                continue
             bus = getattr(sub, "bus", None)
             if bus is None:
                 continue

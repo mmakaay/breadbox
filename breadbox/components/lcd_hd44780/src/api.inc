@@ -5,14 +5,13 @@
 
 .scope {{ symbol_prefix }}
 
-    .importzp {{ alias("byte") }}
     .importzp {{ alias("ptr") }}
 
     .import {{ alias("init") }}
     .import {{ alias("write_cmnd") }}
     .import {{ alias("write") }}
+    .import {{ alias("print") }}
     .import {{ alias("clr") }}
     .import {{ alias("home") }}
-    .import {{ alias("print") }}
 
 .endscope

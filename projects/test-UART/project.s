@@ -18,6 +18,7 @@
 ; ----------------------------------------------------------------------------
 
 .include "breadbox.inc"
+.include "stdlib/io/print.inc"
 
 .export main
 
@@ -27,6 +28,7 @@ CTRL_D = $04
 
     cursor:     .res 1          ; LCD line 1 cursor position (0-15)
     debug_mode: .res 1          ; 0 = normal, 1 = debug
+    rxbyte:     .res 1          ; Last received byte
 
 .segment "CODE"
 
@@ -48,9 +50,8 @@ CTRL_D = $04
         ; Try to read a byte from the receive buffer.
         jsr CONSOLE::read
         bcc @loop
+        sta rxbyte               ; Save received byte.
 
-        ; Check for CTRL+D toggle.
-        lda CONSOLE::byte
         cmp #CTRL_D
         beq @toggle
 
@@ -66,13 +67,13 @@ CTRL_D = $04
 
     @display:
         jsr set_cursor_line1
-        lda CONSOLE::byte
-        sta DISPLAY::byte
+        lda rxbyte
         jsr DISPLAY::write
         inc cursor
 
     @echo:
         ; Echo byte back via UART transmitter.
+        lda rxbyte
         jsr CONSOLE::write_terminal
         jmp @loop
 
@@ -100,9 +101,9 @@ CTRL_D = $04
     ; Display the normal mode screen (title + hint).
     .proc show_normal_screen
         jsr DISPLAY::clr
-        PRINT DISPLAY, msg_title
+        PRINT DISPLAY::write, msg_title
         jsr set_cursor_line2
-        PRINT DISPLAY, msg_hint
+        PRINT DISPLAY::write, msg_hint
         rts
     .endproc
 
@@ -112,16 +113,13 @@ CTRL_D = $04
 
         ; Display "S:" prefix.
         lda #'S'
-        sta DISPLAY::byte
         jsr DISPLAY::write
         lda #':'
-        sta DISPLAY::byte
         jsr DISPLAY::write
 
         ; Display 8 status bits, MSB first.
         ; Bit meaning: IRQ DSR DCD TXE RXF OVR FRM PAR
-        jsr CONSOLE::load_status
-        lda CONSOLE::byte
+        jsr CONSOLE::load_status ; A = status byte
         ldx #8
     @loop:
         ; Rotate MSB into carry, keeping all bits for next iteration.
@@ -129,7 +127,6 @@ CTRL_D = $04
         pha
         lda #'0'
         adc #0                   ; '0' + carry = '0' or '1'
-        sta DISPLAY::byte
         jsr DISPLAY::write
         pla
         dex
@@ -143,7 +140,6 @@ CTRL_D = $04
         pha
         lda cursor
         ora #%10000000           ; Set DDRAM address command (bit 7)
-        sta DISPLAY::byte
         jsr DISPLAY::write_cmnd
         pla
         rts
@@ -153,7 +149,6 @@ CTRL_D = $04
     .proc set_cursor_line2
         pha
         lda #$c0                 ; DDRAM address = $40 (line 2)
-        sta DISPLAY::byte
         jsr DISPLAY::write_cmnd
         pla
         rts
@@ -164,10 +159,11 @@ CTRL_D = $04
         pha
         jsr DISPLAY::home
         lda #' '
-        sta DISPLAY::byte
         ldx #16
     @loop:
+        pha                      ; save space char (write clobbers A)
         jsr DISPLAY::write
+        pla
         dex
         bne @loop
         CLR_BYTE cursor
