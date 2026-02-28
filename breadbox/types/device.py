@@ -29,3 +29,12 @@ class Device(Component):
         Override in bus device subclasses to check for
         pin conflicts, etc. The default implementation is a no-op.
         """
+
+    def _sub(self, name: str) -> Device:
+        """
+        Look up a child device by its ID.
+        """
+        for d in self.children:
+            if isinstance(d, Device) and str(d.id) == name:
+                return d
+        raise ValueError(f"Child device {name!r} not found on {self.id!r}")
