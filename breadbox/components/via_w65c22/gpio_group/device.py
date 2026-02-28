@@ -35,3 +35,24 @@ class ViaW65c22GpioGroupDevice(Device):
         True when this group is the sole device on its VIA port.
         """
         return self.bus_device.is_port_exclusive(self)
+
+    def pin_bit(self, pin_name: str) -> int:
+        """
+        Bitmask for a single pin within this group's port register.
+        """
+        port_pins = self.bus_device.get_port(str(self.port))
+        try:
+            return 1 << port_pins.index(pin_name.upper())
+        except ValueError:
+            raise ValueError(
+                f"Pin {pin_name!r} is not part of group {self.id!r}"
+                f" (available: {', '.join(str(p) for p in self.pins)})"
+            ) from None
+
+    @cached_property
+    def pin_bitmasks(self) -> list[int]:
+        """
+        Bitmask for each pin, in the same order as self.pins.
+        """
+        port_pins = self.bus_device.get_port(str(self.port))
+        return [1 << port_pins.index(str(p)) for p in self.pins]

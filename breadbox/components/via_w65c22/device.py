@@ -103,10 +103,16 @@ class ViaW65c22Device(Device):
     @staticmethod
     def resolve_pins(pin_names: list[str]) -> tuple[str, int]:
         """
-        Validate that all pins belong to the same port.
-
-        Returns (port_name, bitmask) derived from the pin positions.
+        Validate that all pins belong to the same port and are unique.
         """
+        normalized_names = [p.upper() for p in pin_names]
+        if len(set(normalized_names)) != len(normalized_names):
+            seen: set[str] = set()
+            for p in normalized_names:
+                if p in seen:
+                    raise ValueError(f"Duplicate pin {p!r} in pin list")
+                seen.add(p)
+
         ports = set()
         for pin in pin_names:
             normalized = pin.upper()

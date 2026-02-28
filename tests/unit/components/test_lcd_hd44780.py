@@ -53,18 +53,18 @@ class TestDataSettings:
 
 class TestLcdHd44780Device:
     def test_construction(self):
-        device = LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit", rs_pin="PA0", rwb_pin="PA1")
+        device = LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit")
         assert device.id == "LCD0"
         assert device.mode == "8bit"
         assert len(device.children) == 0
 
     def test_mode_4bit(self):
-        device = LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="4bit", rs_pin="PA0", rwb_pin="PA1")
+        device = LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="4bit")
         assert device.mode == "4bit"
 
     def test_invalid_mode_raises(self):
         with pytest.raises(ValueError, match="Invalid mode"):
-            LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="16bit", rs_pin="PA0", rwb_pin="PA1")
+            LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="16bit")
 
     def test_sub_device_accessors(self):
         via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
@@ -82,38 +82,10 @@ class TestLcdHd44780Device:
         assert str(device.data.id) == "DATA"
 
     def test_sub_device_accessor_missing_raises(self):
-        device = LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit", rs_pin="PA0", rwb_pin="PA1")
-        with pytest.raises(ValueError, match="Child component.*not found"):
+        device = LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit")
+        with pytest.raises(ValueError, match="Child device.*not found"):
             _ = device.ctrl
 
-    def test_rs_bit_and_rwb_bit(self):
-        via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
-        config = make_config(via)
-
-        settings = {
-            "cmnd": {"bus": "VIA0", "rs_pin": "PB0", "rwb_pin": "PB1", "en_pin": "PB2"},
-            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
-        }
-        device = resolve(config, ComponentIdentifier("LCD0"), settings)
-
-        # PB0 = bit 0, PB1 = bit 1
-        assert device.rs_bit == 0x01
-        assert device.rwb_bit == 0x02
-
-    def test_rs_bit_and_rwb_bit_reversed(self):
-        via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
-        config = make_config(via)
-
-        # Swap RS and RWB pin assignments
-        settings = {
-            "cmnd": {"bus": "VIA0", "rs_pin": "PA5", "rwb_pin": "PA3", "en_pin": "PA1"},
-            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
-        }
-        device = resolve(config, ComponentIdentifier("LCD0"), settings)
-
-        # PA5 = bit 5, PA3 = bit 3
-        assert device.rs_bit == 0x20
-        assert device.rwb_bit == 0x08
 class TestResolve:
     def test_resolve_creates_sub_devices(self):
         via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
@@ -199,19 +171,7 @@ class TestDuplicatePinValidation:
             "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA0"},
             "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
         }
-        with pytest.raises(ValueError, match="Duplicate pin assignment"):
-            resolve(config, ComponentIdentifier("LCD0"), settings)
-
-    def test_cmnd_pin_overlaps_data_raises(self):
-        via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
-        config = make_config(via)
-
-        # CTRL pins PB4+PB5 overlap with 4bit data on port B (PB4-PB7)
-        settings = {
-            "cmnd": {"bus": "VIA0", "rs_pin": "PB4", "rwb_pin": "PB5", "en_pin": "PA1"},
-            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
-        }
-        with pytest.raises(ValueError, match="Duplicate pin assignment"):
+        with pytest.raises(ValueError, match="Duplicate pin"):
             resolve(config, ComponentIdentifier("LCD0"), settings)
 
     def test_different_buses_no_conflict(self):

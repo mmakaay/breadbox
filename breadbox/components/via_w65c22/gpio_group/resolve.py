@@ -19,10 +19,11 @@ def resolve(
 
     if has_pins and not has_port_bits:
         # pins config: derive port + bits from pin names via the bus device.
+        # Pin ordering is preserved as given by the caller — consumers may
+        # assign semantic meaning to positions (e.g. LCD: [RS, RWB]).
         port, bitmask = bus_device.resolve_pins(device_settings["pins"])
         bits = Bits(bitmask)
-        pins_for_port = bus_device.get_port(port)
-        pins = [pins_for_port[i] for i in bits.positions]
+        pins = [p.upper() for p in device_settings["pins"]]
 
         device_settings["pins"] = pins
         device_settings["bits"] = bits

@@ -6,6 +6,11 @@
 {% set MASK = bits | int %}
 {% set INV_MASK = 255 - MASK %}
 {% set BIDIR = (direction == "both") %}
+
+; Per-pin bitmask constants (named by pin, preserving caller's order).
+{% for bitmask in pin_bitmasks %}
+{{ symbol_prefix }}_BIT_{{ pins[loop.index0] }} = {{ bitmask | hex }}
+{% endfor %}
 {% if direction in ("out", "both") %}
 
 ; Import tmp variable when included by external files.

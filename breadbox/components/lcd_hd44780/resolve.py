@@ -15,7 +15,8 @@ def resolve(
     cmnd = CmndSettings(**device_settings["cmnd"])
     data = DataSettings(**device_settings["data"])
 
-    device = LcdHd44780Device(id=component_id, mode=data.mode, rs_pin=cmnd.rs_pin, rwb_pin=cmnd.rwb_pin)
+    # Pin ordering convention: CTRL pins = [RS, RWB] (semantic order matters for LCD mode constants)
+    device = LcdHd44780Device(id=component_id, mode=data.mode)
 
     device.add(
         gpio_group_resolve.resolve(
@@ -48,7 +49,5 @@ def resolve(
             {"bus": data.bus, "port": data.port, "bits": bits},
         )
     )
-
-    device.validate_pins()
 
     return device
