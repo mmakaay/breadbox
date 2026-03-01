@@ -61,9 +61,9 @@ class CodeGenerator:
         """
         Generate all assembly output from the resolved config.
         """
+        self._process_project_sources()
         self._prepare_build_dir()
         self._process_stdlib()
-        self._process_project_sources()
         for component in self.breadbox.config.components.values():
             if component.parent is None:
                 component.accept(self)
@@ -112,7 +112,6 @@ class CodeGenerator:
             context = self._build_stdlib_context(src_file.stem)
             template = env.get_template(str(relative))
             rendered = template.render(context)
-            console.print(f"  Create: {output_path}")
             self._write_generated_output(output_path, rendered)
 
     def _process_project_sources(self) -> None:
@@ -249,14 +248,12 @@ class CodeGenerator:
             if src_file.suffix == ".s":
                 rendered = self._inject_exports(rendered, context)
             relative_path = component.component_path / src_file.name
-            console.print(f"  Create: {relative_path}")
             self._write_generated_output(relative_path, rendered)
 
         # Phase 2: auto-generate api.inc from collected metadata.
         api_inc = self._generate_api_inc(component, context)
         if api_inc is not None:
             relative_path = component.component_path / "api.inc"
-            console.print(f"  Create: {relative_path}")
             self._write_generated_output(relative_path, api_inc)
             self._component_includes.append(relative_path)
         elif (src_dir / "api.inc").is_file():
@@ -264,7 +261,6 @@ class CodeGenerator:
             template = env.get_template("api.inc")
             rendered = template.render(context)
             relative_path = component.component_path / "api.inc"
-            console.print(f"  Create: {relative_path}")
             self._write_generated_output(relative_path, rendered)
             self._component_includes.append(relative_path)
 
@@ -357,6 +353,7 @@ class CodeGenerator:
         if relative_path.suffix == ".inc":
             content = self._wrap_include_guard(content, relative_path)
         dest = self.breadbox.generated_dir / relative_path
+        console.print(f"  Create: {dest}")
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_text(content)
 

@@ -1,16 +1,14 @@
 ; GPIO pin: {{ component_id }} ({{ pin }} on {{ bus_device.id }}, port {{ port }})
-;
-; Subroutine wrappers for {{ component_id }} macros.
-; Call via JSR, e.g. `jsr {{ symbol_prefix }}::turn_on`.
 
 .include "hardware.inc"
 .include "{{ bus_device.component_path }}/registers.inc"
-.include "{{ component_path }}/macros.inc"
 
 {% set PORT_REG = bus_device.id ~ "_PORT" ~ port %}
 {% set DDR_REG = bus_device.id ~ "_DDR" ~ port %}
 {% set MASK = bitmask %}
 {% set INV_MASK = 255 - bitmask %}
+{% set BIDIR = (direction == "both") %}
+
 .segment "KERNALROM"
 {% if direction in ("out", "both") or default is not none %}
 
@@ -55,33 +53,91 @@
     ; =====================================================================
     ; Set {{ component_id }} output high.
     ;
+{% if BIDIR %}
+    ; Switches DDR to output before writing.
+    ;
+{% endif %}
     ; Out:
     ;   A = clobbered
 
     .proc {{ api_def("turn_on") }}
-        {{ symbol_prefix }}_on
+{% if exclusive_port %}
+{% if BIDIR %}
+        lda #{{ MASK | hex }}
+        sta {{ DDR_REG }}
+        sta {{ PORT_REG }}
+{% else %}
+        lda #{{ MASK | hex }}
+        sta {{ PORT_REG }}
+{% endif %}
+{% else %}
+{% if BIDIR %}
+        lda {{ DDR_REG }}
+        ora #{{ MASK | hex }}
+        sta {{ DDR_REG }}
+{% endif %}
+        lda {{ PORT_REG }}
+        ora #{{ MASK | hex }}
+        sta {{ PORT_REG }}
+{% endif %}
         rts
     .endproc
 
     ; =====================================================================
     ; Set {{ component_id }} output low.
     ;
+{% if BIDIR %}
+    ; Switches DDR to output before writing.
+    ;
+{% endif %}
     ; Out:
     ;   A = clobbered
 
     .proc {{ api_def("turn_off") }}
-        {{ symbol_prefix }}_off
+{% if exclusive_port %}
+{% if BIDIR %}
+        lda #{{ MASK | hex }}
+        sta {{ DDR_REG }}
+{% endif %}
+        lda #$00
+        sta {{ PORT_REG }}
+{% else %}
+{% if BIDIR %}
+        lda {{ DDR_REG }}
+        ora #{{ MASK | hex }}
+        sta {{ DDR_REG }}
+{% endif %}
+        lda {{ PORT_REG }}
+        and #{{ INV_MASK | hex }}
+        sta {{ PORT_REG }}
+{% endif %}
         rts
     .endproc
 
     ; =====================================================================
     ; Toggle {{ component_id }} output.
     ;
+{% if BIDIR %}
+    ; Switches DDR to output before writing.
+    ;
+{% endif %}
     ; Out:
     ;   A = clobbered
 
     .proc {{ api_def("toggle") }}
-        {{ symbol_prefix }}_toggle
+{% if BIDIR %}
+{% if exclusive_port %}
+        lda #{{ MASK | hex }}
+        sta {{ DDR_REG }}
+{% else %}
+        lda {{ DDR_REG }}
+        ora #{{ MASK | hex }}
+        sta {{ DDR_REG }}
+{% endif %}
+{% endif %}
+        lda {{ PORT_REG }}
+        eor #{{ MASK | hex }}
+        sta {{ PORT_REG }}
         rts
     .endproc
 {% endif %}
@@ -90,11 +146,26 @@
     ; =====================================================================
     ; Read {{ component_id }} input state.
     ;
+{% if BIDIR %}
+    ; Switches DDR to input before reading.
+    ;
+{% endif %}
     ; Out:
     ;   A = pin state (bit {{ pin[-1] }}, masked)
 
     .proc {{ api_def("read") }}
-        {{ symbol_prefix }}_read
+{% if BIDIR %}
+{% if exclusive_port %}
+        lda #$00
+        sta {{ DDR_REG }}
+{% else %}
+        lda {{ DDR_REG }}
+        and #{{ INV_MASK | hex }}
+        sta {{ DDR_REG }}
+{% endif %}
+{% endif %}
+        lda {{ PORT_REG }}
+        and #{{ MASK | hex }}
         rts
     .endproc
 {% endif %}
