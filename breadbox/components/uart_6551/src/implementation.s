@@ -19,10 +19,10 @@
 
 .include "hardware.inc"
 .include "CORE/delay.inc"
-.include "{{ component_path }}/constants.inc"
 .include "CORE/macros.inc"
+.include "{{ component_path }}/constants.inc"
 {% if pin_rts %}
-.include "{{ pin_rts.component_path }}/macros.inc"
+.include "{{ pin_rts.component_path }}/api.inc"
 {% endif %}
 
 ; =========================================================================

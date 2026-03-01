@@ -7,6 +7,7 @@
 {% endif %}
 
 {% set P = symbol_prefix %}
+{% if pin_rts %}{% set RTS_P = pin_rts.symbol_prefix %}{% endif %}
 
 {% if irq == "on" %}
     ; CMD register presets for TX IRQ control.
@@ -63,7 +64,7 @@
 {% if pin_rts %}
 
         ; Assert RTS: active low = ready to receive.
-        {{ P }}_PIN_RTS_off
+        jsr {{ RTS_P }}::turn_off
 {% endif %}
 
         ; CTRL: 8N1, internal baud rate generator.
@@ -187,7 +188,7 @@
 
         lda #1
         sta {{ var("rx_off") }}
-        {{ P }}_PIN_RTS_on
+        jsr {{ RTS_P }}::turn_on
 
     @done:
         rts
@@ -211,7 +212,7 @@
         sei
         lda #0
         sta {{ var("rx_off") }}
-        {{ P }}_PIN_RTS_off
+        jsr {{ RTS_P }}::turn_off
         cli
 
     @done:
@@ -357,7 +358,7 @@
 {% if pin_rts %}
 
         ; Assert RTS: active low = ready to receive.
-        {{ P }}_PIN_RTS_off
+        jsr {{ RTS_P }}::turn_off
 {% endif %}
 
         ; CTRL: 8N1, internal baud rate generator.
