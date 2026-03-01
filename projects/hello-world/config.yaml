@@ -1,4 +1,4 @@
-CORE: 
+CORE:
   cpu: "65c02"
   clock_mhz: 1.000
 

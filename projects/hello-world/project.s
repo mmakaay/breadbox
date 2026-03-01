@@ -37,7 +37,6 @@ greeting_message: .asciiz "!!dlroW ,olleH"
 
 .endproc
 
-
 .proc _delay
     ldx #5
 @wait1:
@@ -46,4 +45,3 @@ greeting_message: .asciiz "!!dlroW ,olleH"
     bne @wait1
     rts
 .endproc
-
