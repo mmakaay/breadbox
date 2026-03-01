@@ -22,6 +22,28 @@ greeting_message: .asciiz "!!dlroW ,olleH"
     ; text will eventually show up in reverse on the screen.
     PRINT LCD::write, greeting_message
 
-    HALT
+    ; Blink the message on the LCD.
+    ; The display_off command will only blank the screen. The backlight
+    ; is not controlled by the HD44780, and would require a separate power
+    ; circuit to be driven using a GPIO pin for example.
+    ; Without such circuit, the backlight stays on, and the code from below
+    ; results in <blink> re-invented.
+@loop:
+    jsr _delay
+    jsr LCD::display_off
+    jsr _delay
+    jsr LCD::display_on
+    jmp @loop
+
+.endproc
+
+
+.proc _delay
+    ldx #5
+@wait1:
+    DELAY_MS 100
+    dex
+    bne @wait1
+    rts
 .endproc
 

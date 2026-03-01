@@ -29,10 +29,8 @@
 ;   us = delay duration in microseconds (compile-time constant)
 
 .macro DELAY_US us
-    .local ITERATIONS
-    ITERATIONS = (us * (CPU_CLOCK / 1000)) / 5000
-    DELAY ITERATIONS
- .endmacro
+    DELAY ((us) * (CPU_CLOCK / 1000)) / 5000
+.endmacro
 
 ; =========================================================================
 ; Compile-time millisecond delay.
@@ -44,7 +42,5 @@
 ;   ms = delay duration in milliseconds (compile-time constant)
 
 .macro DELAY_MS ms
-    .local US
-    US = ms * 1000
-    DELAY_US US
+    DELAY_US (ms) * 1000
 .endmacro
