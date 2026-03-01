@@ -314,12 +314,19 @@ class CodeGenerator:
             alias = alias or name
             return f"{symbol(name)}\n    {alias} = {symbol(name)}"
 
+        def constant(name: str) -> str:
+            """
+            Generate a public constant name: {symbol_prefix}_{name}.
+            """
+            return f"{P}_{name}"
+
         context: dict = {
             "component_id": str(component.id),
             "symbol_prefix": P,
             "component_type": component.component_type,
             "symbol": symbol,
             "alias": alias,
+            "constant": constant,
         }
         for f in dataclasses.fields(component):
             if f.name not in component._internal_fields:

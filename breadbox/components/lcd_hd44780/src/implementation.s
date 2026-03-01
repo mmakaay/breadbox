@@ -24,11 +24,11 @@
 {% set RS_PIN = ctrl.pins[0] %}
 {% set RWB_PIN = ctrl.pins[1] %}
 
-;                                                      RS RWB
-{{ P }}_CTRL_CMD_WR  = $00                            ; 0  0  write command
-{{ P }}_CTRL_CMD_RD  = {{ CTRL_P }}_BIT_{{ RWB_PIN }}           ; 0  1  read status
-{{ P }}_CTRL_DATA_WR = {{ CTRL_P }}_BIT_{{ RS_PIN }}            ; 1  0  write data
-{{ P }}_CTRL_DATA_RD = {{ CTRL_P }}_BIT_{{ RS_PIN }} | {{ CTRL_P }}_BIT_{{ RWB_PIN }}  ; 1  1  read data
+;                                                                                       RS RWB
+{{ constant("CTRL_CMD_WR") }}  = $00                                                             ; 0  0  write command
+{{ constant("CTRL_CMD_RD") }}  = {{ CTRL_P }}_BIT_{{ RWB_PIN }}                                  ; 0  1  read status
+{{ constant("CTRL_DATA_WR") }} = {{ CTRL_P }}_BIT_{{ RS_PIN }}                                   ; 1  0  write data
+{{ constant("CTRL_DATA_RD") }} = {{ CTRL_P }}_BIT_{{ RS_PIN }} | {{ CTRL_P }}_BIT_{{ RWB_PIN }}  ; 1  1  read data
 
 .exportzp {{ symbol("ptr") }}
 
@@ -174,17 +174,17 @@
     ;   A = clobbered
 
     .proc {{ symbol("configure") }}
-        lda #{{ P }}_CMD_FUNCSET
+        lda #{{ constant("CMD_FUNCSET") }}
         sta {{ symbol("tmp") }}
         jsr {{ symbol("wait_ready") }}
         jsr {{ symbol("write_cmnd_raw") }}
 
-        lda #{{ P }}_CMD_DISPLAY_ON
+        lda #{{ constant("CMD_DISPLAY_ON") }}
         sta {{ symbol("tmp") }}
         jsr {{ symbol("wait_ready") }}
         jsr {{ symbol("write_cmnd_raw") }}
 
-        lda #{{ P }}_CMD_ENTRYMODE
+        lda #{{ constant("CMD_ENTRYMODE") }}
         sta {{ symbol("tmp") }}
         jsr {{ symbol("wait_ready") }}
         jsr {{ symbol("write_cmnd_raw")}}
@@ -204,7 +204,7 @@
     ;   A = clobbered
 
     .proc {{ symbol("write_cmnd_raw") }}
-        {{ CTRL_P }}_write {{ P }}_CTRL_CMD_WR
+        {{ CTRL_P }}_write {{ constant("CTRL_CMD_WR") }}
 {% if IS_4BIT %}
         jsr {{ symbol("write_nibbles") }}
 {% else %}
@@ -230,7 +230,7 @@
         {{ DATA_P }}_set_input
 
         ; Set control: RS=0 (status), RWB=1 (read).
-        {{ CTRL_P }}_write {{ P }}_CTRL_CMD_RD
+        {{ CTRL_P }}_write {{ constant("CTRL_CMD_RD") }}
 
         ; Pulse EN high and read the data port.
         {{ P }}_PIN_EN_on
@@ -247,11 +247,11 @@
         {{ DATA_P }}_set_output
 
         ; Restore control to write mode.
-        {{ CTRL_P }}_write {{ P }}_CTRL_CMD_WR
+        {{ CTRL_P }}_write {{ constant("CTRL_CMD_WR") }}
 
         ; Check busy flag.
         pla
-        and #{{ P }}_BUSY_FLAG
+        and #{{ constant("BUSY_FLAG") }}
         bne @loop
 
         rts
@@ -276,7 +276,7 @@
 
         ; Set control pins low (EN=0, CTRL=CMD_WR).
         {{ P }}_PIN_EN_off
-        {{ CTRL_P }}_write {{ P }}_CTRL_CMD_WR
+        {{ CTRL_P }}_write {{ constant("CTRL_CMD_WR") }}
 
         ; Power-up: force LCD into known 8-bit state.
         jsr {{ symbol("power_up") }}
@@ -290,7 +290,7 @@
         jsr {{ symbol("configure") }}
 
         ; Clear screen.
-        lda #{{ P }}_CMD_CLEAR
+        lda #{{ constant("CMD_CLEAR") }}
         sta {{ symbol("tmp") }}
         jsr {{ symbol("wait_ready") }}
         jsr {{ symbol("write_cmnd_raw") }}
@@ -330,7 +330,7 @@
         sta {{ symbol("tmp") }}
         jsr {{ symbol("wait_ready") }}
         ; RS=1 (data register), RWB=0 (write).
-        {{ CTRL_P }}_write {{ P }}_CTRL_DATA_WR
+        {{ CTRL_P }}_write {{ constant("CTRL_DATA_WR") }}
 
 {% if IS_4BIT %}
         jsr {{ symbol("write_nibbles") }}
@@ -349,7 +349,7 @@
     ;   A = clobbered
 
     .proc {{ symbol("clr") }}
-        lda #{{ P }}_CMD_CLEAR
+        lda #{{ constant("CMD_CLEAR") }}
         jsr {{ symbol("write_cmnd") }}
         rts
     .endproc
@@ -361,7 +361,7 @@
     ;   A = clobbered
 
     .proc {{ symbol("home") }}
-        lda #{{ P }}_CMD_HOME
+        lda #{{ constant("CMD_HOME") }}
         jsr {{ symbol("write_cmnd") }}
         rts
     .endproc

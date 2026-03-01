@@ -58,7 +58,7 @@
         sta {{ symbol("rx_w_ptr") }}
         sta {{ symbol("rx_pending") }}
         sta {{ symbol("rx_off") }}
-        lda {{ P }}_STATUS
+        lda {{ constant("STATUS") }}
         sta {{ symbol("status") }}
 {% if pin_rts %}
 
@@ -67,13 +67,13 @@
 {% endif %}
 
         ; CTRL: 8N1, internal baud rate generator.
-        lda #({{ P }}_CTRL_8BIT | {{ P }}_CTRL_1STOP | {{ P }}_CTRL_INTCLK | {{ P }}_CTRL_BAUD)
-        sta {{ P }}_CTRL
+        lda #({{ constant("CTRL_8BIT") }} | {{ constant("CTRL_1STOP") }} | {{ constant("CTRL_INTCLK") }} | {{ constant("CTRL_BAUD") }})
+        sta {{ constant("CTRL") }}
 
         ; CMD: no parity, no echo, TX IRQ disabled (/RTS asserted), DTR on.
         ;      RX IRQ enabled.
-        lda #({{ P }}_CMD_TIC2 | {{ P }}_CMD_DTR)
-        sta {{ P }}_CMD
+        lda #({{ constant("CMD_TIC2") }} | {{ constant("CMD_DTR") }})
+        sta {{ constant("CMD") }}
 
         ; Enable CPU interrupts. The IRQ handler is registered at link time
         ; via .interruptor and dispatched by the core interruptor table.
@@ -93,9 +93,9 @@
     ; Register saving and RTI are handled by the core dispatcher.
 
     .proc {{ symbol("irq_handler") }}
-        lda {{ P }}_STATUS
+        lda {{ constant("STATUS") }}
         sta {{ symbol("status") }}
-        and #{{ P }}_SR_IRQ
+        and #{{ constant("SR_IRQ") }}
         beq @done
         lda {{ symbol("status") }}
         jsr {{ symbol("irq_handler_rx") }}
@@ -115,10 +115,10 @@
     ;   A = status register value (from irq_handler)
 
     .proc {{ symbol("irq_handler_rx") }}
-        and #{{ P }}_SR_RDRF
+        and #{{ constant("SR_RDRF") }}
         beq @done
 
-        lda {{ P }}_DATA
+        lda {{ constant("DATA") }}
         ldx {{ symbol("rx_w_ptr") }}
         sta {{ symbol("rx_buffer") }},X
         inc {{ symbol("rx_w_ptr") }}
@@ -277,13 +277,13 @@
 {% endif %}
 
         ; CTRL: 8N1, internal baud rate generator.
-        lda #({{ P }}_CTRL_8BIT | {{ P }}_CTRL_1STOP | {{ P }}_CTRL_INTCLK | {{ P }}_CTRL_BAUD)
-        sta {{ P }}_CTRL
+        lda #({{ constant("CTRL_8BIT") }} | {{ constant("CTRL_1STOP") }} | {{ constant("CTRL_INTCLK") }} | {{ constant("CTRL_BAUD") }})
+        sta {{ constant("CTRL") }}
 
         ; CMD: no parity, no echo, TX IRQ disabled (/RTS asserted), DTR on.
         ;      RX IRQ disabled for polling mode.
-        lda #({{ P }}_CMD_TIC2 | {{ P }}_CMD_DTR | {{ P }}_CMD_IRQOFF)
-        sta {{ P }}_CMD
+        lda #({{ constant("CMD_TIC2") }} | {{ constant("CMD_DTR") }} | {{ constant("CMD_IRQOFF") }})
+        sta {{ constant("CMD") }}
 
         rts
     .endproc
@@ -301,11 +301,11 @@
 
     .proc {{ symbol("read") }}
         clc
-        lda {{ P }}_STATUS
-        and #{{ P }}_SR_RDRF
+        lda {{ constant("STATUS") }}
+        and #{{ constant("SR_RDRF") }}
         beq @done
 
-        lda {{ P }}_DATA
+        lda {{ constant("DATA") }}
         sec
     @done:
         rts
@@ -318,8 +318,8 @@
     ;   A = non-zero if data available, zero if not
 
     .proc {{ symbol("check_rx") }}
-        lda {{ P }}_STATUS
-        and #{{ P }}_SR_RDRF
+        lda {{ constant("STATUS") }}
+        and #{{ constant("SR_RDRF") }}
         rts
     .endproc
 
@@ -344,7 +344,7 @@
     ;   A = status register contents
 
     .proc {{ symbol("load_status") }}
-        lda {{ P }}_STATUS
+        lda {{ constant("STATUS") }}
         rts
     .endproc
 
@@ -361,7 +361,7 @@
     ;   A = clobbered
 
     .proc {{ symbol("write") }}
-        sta {{ P }}_DATA
+        sta {{ constant("DATA") }}
         jsr {{ symbol("tx_delay") }}
         rts
     .endproc

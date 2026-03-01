@@ -7,33 +7,33 @@
 ; HD44780 command constants
 ; =========================================================================
 
-{{ P }}_CMD_CLEAR      = $01  ; Clear display, set DDRAM address to 0
-{{ P }}_CMD_HOME       = $02  ; Return cursor to home position
-{{ P }}_CMD_ENTRYMODE  = $06  ; Increment cursor, no display shift
-{{ P }}_CMD_DISPLAY_ON = $0C  ; Display on, cursor off, blink off
+{{ constant("CMD_CLEAR") }}      = $01  ; Clear display, set DDRAM address to 0
+{{ constant("CMD_HOME") }}       = $02  ; Return cursor to home position
+{{ constant("CMD_ENTRYMODE") }}  = $06  ; Increment cursor, no display shift
+{{ constant("CMD_DISPLAY_ON") }} = $0C  ; Display on, cursor off, blink off
 {% if mode == "4bit" %}
-{{ P }}_CMD_FUNCSET    = $28  ; 4-bit mode, 2 lines, 5x8 font
+{{ constant("CMD_FUNCSET") }}    = $28  ; 4-bit mode, 2 lines, 5x8 font
 {% else %}
-{{ P }}_CMD_FUNCSET    = $38  ; 8-bit mode, 2 lines, 5x8 font
+{{ constant("CMD_FUNCSET") }}    = $38  ; 8-bit mode, 2 lines, 5x8 font
 {% endif %}
-{{ P }}_CMD_SETDDRAM   = $80  ; Set DDRAM address (OR with address)
-{{ P }}_CMD_SETCGRAM   = $40  ; Set CGRAM address (OR with address)
+{{ constant("CMD_SETDDRAM") }}   = $80  ; Set DDRAM address (OR with address)
+{{ constant("CMD_SETCGRAM") }}   = $40  ; Set CGRAM address (OR with address)
 
-{{ P }}_BUSY_FLAG      = $80  ; Busy flag mask (bit 7)
+{{ constant("BUSY_FLAG") }}      = $80  ; Busy flag mask (bit 7)
 
-{{ P }}_LINE1          = $00  ; DDRAM address for line 1
-{{ P }}_LINE2          = $40  ; DDRAM address for line 2
+{{ constant("LINE1") }}          = $00  ; DDRAM address for line 1
+{{ constant("LINE2") }}          = $40  ; DDRAM address for line 2
 
 ; =========================================================================
 ; Set cursor position to the beginning of a display line.
 ;
 ; In:
-;   line = line address constant ({{ P }}_LINE1 or {{ P }}_LINE2)
+;   line = line address constant ({{ constant("LINE1") }} or {{ constant("LINE2") }})
 ; Out:
 ;   A = clobbered
 
 .macro {{ P }}_goto line
-    lda #({{ P }}_CMD_SETDDRAM | line)
+    lda #({{ constant("CMD_SETDDRAM") }} | line)
     jsr {{ P }}::write_cmnd
 .endmacro
 

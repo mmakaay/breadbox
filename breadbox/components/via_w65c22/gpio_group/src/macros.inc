@@ -9,7 +9,7 @@
 
 ; Per-pin bitmask constants (named by pin, preserving caller's order).
 {% for bitmask in pin_bitmasks %}
-{{ symbol_prefix }}_BIT_{{ pins[loop.index0] }} = {{ bitmask | hex }}
+{{ constant("BIT_" ~ pins[loop.index0]) }} = {{ bitmask | hex }}
 {% endfor %}
 {% if direction in ("out", "both") %}
 

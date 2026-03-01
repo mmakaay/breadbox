@@ -45,7 +45,7 @@
     ;   A = clobbered
 
     .proc {{ symbol("soft_reset") }}
-        sta {{ P }}_STATUS
+        sta {{ constant("STATUS") }}
         DELAY_MS 100
         rts
     .endproc
