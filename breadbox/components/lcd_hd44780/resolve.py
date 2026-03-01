@@ -16,7 +16,13 @@ def resolve(
     data = DataSettings(**device_settings["data"])
 
     # Pin ordering convention: CTRL pins = [RS, RWB] (semantic order matters for LCD mode constants)
-    device = LcdHd44780Device(id=component_id, mode=data.mode)
+    device = LcdHd44780Device(
+        id=component_id,
+        mode=data.mode,
+        width=device_settings.get("width", 16),
+        height=device_settings.get("height", 2),
+        characters=device_settings.get("characters", "5x8"),
+    )
 
     device.add(
         gpio_group_resolve.resolve(

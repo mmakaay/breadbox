@@ -56,8 +56,11 @@ class LcdHd44780Device(Device):
         if self.mode not in ("4bit", "8bit"):
             raise ValueError(f"Invalid mode {self.mode!r} (expected '4bit' or '8bit')")
 
-        if self.width < 1 or self.height < 1:
-            raise ValueError(f"Invalid dimensions {self.width}x{self.height} (width and height must be >= 1)")
+        if self.height not in (1, 2, 4):
+            raise ValueError(f"Invalid height {self.height} (expected 1, 2 or 4)")
+
+        if self.width < 1:
+            raise ValueError(f"Invalid width {self.width} (must be >= 1)")
 
         byte_size = self.width * self.height
         if byte_size > 80:
@@ -83,3 +86,30 @@ class LcdHd44780Device(Device):
         The DATA bus sub-device (gpio_group).
         """
         return self._sub("DATA")
+
+    @cached_property
+    def funcset_value(self) -> int:
+        """
+        "Function Set" command byte, computed from mode/height/characters.
+
+        This is an init-only command (cannot be changed after power-up).
+        """
+        val = 0x20  # CMD_FUNCSET base
+        if self.mode == "8bit":
+            val |= 0x10  # DL: 8-bit data bus
+        if self.height >= 2:
+            val |= 0x08  # N: multi-line mode (2+ rows)
+        if self.characters == "5x10":
+            val |= 0x04  # F: 5x10 font
+        return val
+
+    @cached_property
+    def row_offsets(self) -> list[int]:
+        """
+        DDRAM start addresses for each display row.
+
+        The HD44780 maps two logical lines at $00 and $40. Four-row
+        displays wrap into the continuation area of each logical line.
+        """
+        base = [0x00, 0x40, self.width, 0x40 + self.width]
+        return base[: self.height]

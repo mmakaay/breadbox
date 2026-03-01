@@ -6,7 +6,7 @@ VIA:
   component: via_w65c22
   address: $6000
 
-THE_DISPLAY:
+LCD:
   component: lcd_hd44780
   cmnd:
     bus: VIA

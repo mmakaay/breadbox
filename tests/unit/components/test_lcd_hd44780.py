@@ -90,11 +90,15 @@ class TestLcdHd44780Device:
         assert device.width * device.height == 80
 
     def test_zero_width_raises(self):
-        with pytest.raises(ValueError, match="width and height must be >= 1"):
+        with pytest.raises(ValueError, match="Invalid width 0"):
             LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit", width=0)
 
+    def test_invalid_height_raises(self):
+        with pytest.raises(ValueError, match="Invalid height 3"):
+            LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit", height=3)
+
     def test_zero_height_raises(self):
-        with pytest.raises(ValueError, match="width and height must be >= 1"):
+        with pytest.raises(ValueError, match="Invalid height 0"):
             LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit", height=0)
 
     def test_mode_4bit(self):

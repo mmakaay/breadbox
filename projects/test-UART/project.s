@@ -66,7 +66,9 @@ CTRL_D = $04
         jsr clear_line1
 
     @display:
-        jsr set_cursor_line1
+        ldx cursor
+        ldy #0
+        jsr DISPLAY::cursor_move
         lda rxbyte
         jsr DISPLAY::write
         inc cursor
@@ -102,14 +104,18 @@ CTRL_D = $04
     .proc show_normal_screen
         jsr DISPLAY::clr
         PRINT DISPLAY::write, msg_title
-        jsr set_cursor_line2
+        ldx #0
+        ldy #1
+        jsr DISPLAY::cursor_move
         PRINT DISPLAY::write, msg_hint
         rts
     .endproc
 
     ; Show the UART status register bits on LCD line 2.
     .proc show_status
-        jsr set_cursor_line2
+        ldx #0
+        ldy #1
+        jsr DISPLAY::cursor_move
 
         ; Display "S:" prefix.
         lda #'S'
@@ -135,38 +141,15 @@ CTRL_D = $04
         rts
     .endproc
 
-    ; Move LCD cursor to current position on line 1.
-    .proc set_cursor_line1
-        pha
-        lda cursor
-        ora #%10000000           ; Set DDRAM address command (bit 7)
-        jsr DISPLAY::write_cmnd
-        pla
-        rts
-    .endproc
-
-    ; Move LCD cursor to start of line 2.
-    .proc set_cursor_line2
-        pha
-        lda #$c0                 ; DDRAM address = $40 (line 2)
-        jsr DISPLAY::write_cmnd
-        pla
-        rts
-    .endproc
-
     ; Clear LCD line 1: write spaces and reset cursor to start.
     .proc clear_line1
-        pha
         jsr DISPLAY::home
-        lda #' '
         ldx #16
     @loop:
-        pha                      ; save space char (write clobbers A)
+        lda #' '
         jsr DISPLAY::write
-        pla
         dex
         bne @loop
         CLR_BYTE cursor
-        pla
         rts
     .endproc

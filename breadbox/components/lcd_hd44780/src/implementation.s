@@ -1,4 +1,4 @@
-; HD44780 LCD: {{ component_id }} ({{ mode }} mode)
+; HD44780 LCD: {{ component_id }} ({{ mode }} mode, {{ width }}x{{ height }}, {{ characters }})
 ;
 ; Control: {{ ctrl.component_path }} (RS+RWB), {{ pin_en.component_path }} (EN)
 ; Data bus: {{ data.component_path }}
@@ -28,10 +28,27 @@
 {{ constant("CTRL_DATA_WR") }} = {{ RS_BIT | bin }}                        ; 1  0  write data
 {{ constant("CTRL_DATA_RD") }} = {{ RS_BIT | bin }} | {{ RWB_BIT | bin }}  ; 1  1  read data
 
+; =========================================================================
+; Shadow registers for composite commands.
+;
+; The HD44780 command registers are write-only. Shadow copies in RAM track
+; the current state so individual bits can be modified without affecting
+; unrelated settings in the same register.
+; =========================================================================
+
+.segment "KERNALRAM"
+
+{{ var("shadow_display") }}: .res 1   ; Display Control bits (D, C, B)
+{{ var("shadow_entry") }}:   .res 1   ; Entry Mode Set bits (I/D, S)
+
 .segment "KERNALROM"
 
-    ; =========================================================================
-    ; Private: pulse EN high then low.
+; =========================================================================
+; Private helpers
+; =========================================================================
+
+    ; -----------------------------------------------------------------
+    ; Pulse EN high then low.
     ;
     ; The GPIO subroutines include sufficient instruction cycles for the
     ; HD44780's minimum EN pulse width (450ns). At 1 MHz each instruction
@@ -47,8 +64,8 @@
     .endproc
 
 {% if IS_4BIT %}
-    ; =========================================================================
-    ; Private: write a byte as two nibbles to the 4-bit data bus.
+    ; -----------------------------------------------------------------
+    ; Write a byte as two nibbles to the 4-bit data bus.
     ;
     ; The register select (RS) must already be configured by the caller.
     ; Sends the high nibble first, then the low nibble, with EN pulses.
@@ -77,12 +94,12 @@
     .endproc
 
 {% endif %}
-    ; =========================================================================
-    ; Private: write a raw byte to the data bus (used during init only).
+    ; -----------------------------------------------------------------
+    ; Write a raw byte to the data bus (used during init only).
     ;
-    ; During the power-up sequence the LCD is in 8-bit mode regardless of the
-    ; target configuration. This writes data and pulses EN, without checking
-    ; the busy flag.
+    ; During the power-up sequence the LCD is in 8-bit mode regardless of
+    ; the target configuration. This writes data and pulses EN, without
+    ; checking the busy flag.
     ;
     ; In:
     ;   A = byte to write
@@ -95,10 +112,10 @@
         rts
     .endproc
 
-    ; =========================================================================
-    ; Private: power up sequence — force LCD into {{ mode }} mode.
+    ; -----------------------------------------------------------------
+    ; Power up sequence — force LCD into {{ mode }} mode.
     ;
-    ; Executes the intialization procedure as described in the data sheet.
+    ; Executes the initialization procedure as described in the datasheet.
     ;
     ; Out:
     ;   A = clobbered
@@ -133,42 +150,13 @@
         rts
     .endproc
 
-    ; =========================================================================
-    ; Private: configure display parameters.
-    ;
-    ; Sends Function Set, Display On, and Entry Mode Set commands.
-    ; Must be called after the LCD is in the correct bus mode.
-    ;
-    ; Out:
-    ;   A = clobbered
-
-    .proc {{ my_def("configure") }}
-        jsr {{ my("wait_ready") }}
-        {% if IS_4BIT %}
-        lda #CMD_FUNCSET_4BIT
-{% else %}
-        lda #CMD_FUNCSET_8BIT
-{% endif %}
-        jsr {{ my("write_cmnd_raw") }}
-
-        jsr {{ my("wait_ready") }}
-        lda #CMD_DISPLAY_ON
-        jsr {{ my("write_cmnd_raw") }}
-
-        jsr {{ my("wait_ready") }}
-        lda #CMD_ENTRYMODE
-        jsr {{ my("write_cmnd_raw")}}
-
-        rts
-    .endproc
-
-    ; =========================================================================
-    ; Private: write command byte without busy-flag check.
+    ; -----------------------------------------------------------------
+    ; Write command byte without busy-flag check.
     ;
     ; Sets RS=0 (command), RWB=0 (write), writes data, pulses EN.
     ; Used internally — public API should use write_cmnd which polls BF.
     ;
-    ; In :
+    ; In:
     ;   A = command byte to write
     ; Out:
     ;   A = clobbered
@@ -187,8 +175,8 @@
         rts
     .endproc
 
-    ; =========================================================================
-    ; Private: poll busy flag until the LCD is ready.
+    ; -----------------------------------------------------------------
+    ; Poll busy flag until the LCD is ready.
     ;
     ; Reads the busy flag (D7) by switching the data bus to input,
     ; setting RWB=1 (read mode), and pulsing EN. Loops until BF=0.
@@ -231,6 +219,43 @@
         rts
     .endproc
 
+    ; -----------------------------------------------------------------
+    ; Send Display Control command from shadow register.
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ my_def("send_display") }}
+        jsr {{ my("wait_ready") }}
+        lda {{ var("shadow_display") }}
+        ora #CMD_DISPLAY
+        jsr {{ my("write_cmnd_raw") }}
+        rts
+    .endproc
+
+    ; -----------------------------------------------------------------
+    ; Send Entry Mode Set command from shadow register.
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ my_def("send_entry") }}
+        jsr {{ my("wait_ready") }}
+        lda {{ var("shadow_entry") }}
+        ora #CMD_ENTRYMODE
+        jsr {{ my("write_cmnd_raw") }}
+        rts
+    .endproc
+
+; =========================================================================
+; DDRAM row offset table ({{ height }} rows, {{ width }} columns)
+; =========================================================================
+
+{{ my("row_offsets") }}:
+{% for offset in row_offsets %}
+    .byte {{ offset | hex }}
+{% endfor %}
+
 ; =========================================================================
 ; Public API
 ; =========================================================================
@@ -239,7 +264,8 @@
     ; Initialize the LCD display.
     ;
     ; Performs the full power-up sequence, configures the display mode,
-    ; and clears the screen. Called automatically via .constructor.
+    ; initializes shadow registers, and clears the screen.
+    ; Called automatically via .constructor.
     ;
     ; Out:
     ;   A, X, Y = clobbered
@@ -253,11 +279,23 @@
         lda #{{ constant("CTRL_CMD_WR") }}
         jsr {{ CTRL_P }}::write_a
 
-        ; Power-up, set the device to the correct bit mode.
+        ; Power-up, set the device to the correct bus mode.
         jsr {{ my("power_up") }}
 
-        ; Configure display parameters.
-        jsr {{ my("configure") }}
+        ; Function Set (init only, computed from config).
+        jsr {{ my("wait_ready") }}
+        lda #{{ funcset_value | hex }}
+        jsr {{ my("write_cmnd_raw") }}
+
+        ; Initialize display shadow: display on, cursor off, blink off.
+        lda #BIT_DISPLAY_ON
+        sta {{ var("shadow_display") }}
+        jsr {{ my("send_display") }}
+
+        ; Initialize entry mode shadow: increment, no shift.
+        lda #BIT_ENTRY_INC
+        sta {{ var("shadow_entry") }}
+        jsr {{ my("send_entry") }}
 
         ; Clear screen.
         jsr {{ my("wait_ready") }}
@@ -332,6 +370,245 @@
 
     .proc {{ api_def("home") }}
         lda #CMD_HOME
+        jsr {{ api("write_cmnd") }}
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Set cursor position by column and row.
+    ;
+    ; In:
+    ;   X = column (0-based)
+    ;   Y = row (0-based)
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("cursor_move") }}
+        txa
+        clc
+        adc {{ my("row_offsets") }},y
+        ora #CMD_SETDDRAM
+        jsr {{ api("write_cmnd") }}
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Set CGRAM address for custom character definition.
+    ;
+    ; After this call, subsequent write() calls store data into CGRAM.
+    ; Use cursor_move() to return to DDRAM when done.
+    ;
+    ; In:
+    ;   A = CGRAM address (6-bit, $00-$3F)
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("set_cgram_addr") }}
+        and #$3F
+        ora #CMD_SETCGRAM
+        jsr {{ api("write_cmnd") }}
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Get the display dimensions.
+    ;
+    ; Out:
+    ;   X = width (columns)
+    ;   Y = height (rows)
+
+    .proc {{ api_def("get_size") }}
+        ldx #{{ width }}
+        ldy #{{ height }}
+        rts
+    .endproc
+
+; =========================================================================
+; Display Control (shadow-based)
+; =========================================================================
+
+    ; =====================================================================
+    ; Turn the display on (show DDRAM contents).
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("display_on") }}
+        lda {{ var("shadow_display") }}
+        ora #BIT_DISPLAY_ON
+        sta {{ var("shadow_display") }}
+        jmp {{ my("send_display") }}
+    .endproc
+
+    ; =====================================================================
+    ; Turn the display off (blank, DDRAM contents preserved).
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("display_off") }}
+        lda {{ var("shadow_display") }}
+        and #<~BIT_DISPLAY_ON
+        sta {{ var("shadow_display") }}
+        jmp {{ my("send_display") }}
+    .endproc
+
+    ; =====================================================================
+    ; Show the cursor (underline at current position).
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("cursor_on") }}
+        lda {{ var("shadow_display") }}
+        ora #BIT_CURSOR_ON
+        sta {{ var("shadow_display") }}
+        jmp {{ my("send_display") }}
+    .endproc
+
+    ; =====================================================================
+    ; Hide the cursor.
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("cursor_off") }}
+        lda {{ var("shadow_display") }}
+        and #<~BIT_CURSOR_ON
+        sta {{ var("shadow_display") }}
+        jmp {{ my("send_display") }}
+    .endproc
+
+    ; =====================================================================
+    ; Enable cursor blink (alternating block).
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("blink_on") }}
+        lda {{ var("shadow_display") }}
+        ora #BIT_BLINK_ON
+        sta {{ var("shadow_display") }}
+        jmp {{ my("send_display") }}
+    .endproc
+
+    ; =====================================================================
+    ; Disable cursor blink.
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("blink_off") }}
+        lda {{ var("shadow_display") }}
+        and #<~BIT_BLINK_ON
+        sta {{ var("shadow_display") }}
+        jmp {{ my("send_display") }}
+    .endproc
+
+; =========================================================================
+; Entry Mode (shadow-based)
+; =========================================================================
+
+    ; =====================================================================
+    ; Set cursor direction to left-to-right (increment address after write).
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("left_to_right") }}
+        lda {{ var("shadow_entry") }}
+        ora #BIT_ENTRY_INC
+        sta {{ var("shadow_entry") }}
+        jmp {{ my("send_entry") }}
+    .endproc
+
+    ; =====================================================================
+    ; Set cursor direction to right-to-left (decrement address after write).
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("right_to_left") }}
+        lda {{ var("shadow_entry") }}
+        and #<~BIT_ENTRY_INC
+        sta {{ var("shadow_entry") }}
+        jmp {{ my("send_entry") }}
+    .endproc
+
+    ; =====================================================================
+    ; Enable auto-shift (display shifts horizontally on each write).
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("auto_shift_on") }}
+        lda {{ var("shadow_entry") }}
+        ora #BIT_ENTRY_SHIFT
+        sta {{ var("shadow_entry") }}
+        jmp {{ my("send_entry") }}
+    .endproc
+
+    ; =====================================================================
+    ; Disable auto-shift.
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("auto_shift_off") }}
+        lda {{ var("shadow_entry") }}
+        and #<~BIT_ENTRY_SHIFT
+        sta {{ var("shadow_entry") }}
+        jmp {{ my("send_entry") }}
+    .endproc
+
+; =========================================================================
+; Cursor/Display Shift (stateless one-shot commands)
+; =========================================================================
+
+    ; =====================================================================
+    ; Move the cursor one position to the left.
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("cursor_left") }}
+        lda #CMD_SHIFT
+        jsr {{ api("write_cmnd") }}
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Move the cursor one position to the right.
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("cursor_right") }}
+        lda #CMD_SHIFT | BIT_SHIFT_RIGHT
+        jsr {{ api("write_cmnd") }}
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Shift the entire display one position to the left.
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("shift_left") }}
+        lda #CMD_SHIFT | BIT_SHIFT_DISPLAY
+        jsr {{ api("write_cmnd") }}
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Shift the entire display one position to the right.
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("shift_right") }}
+        lda #CMD_SHIFT | BIT_SHIFT_DISPLAY | BIT_SHIFT_RIGHT
         jsr {{ api("write_cmnd") }}
         rts
     .endproc
