@@ -168,12 +168,12 @@
     ;   A = clobbered
 
 {% if exclusive_port %}
-    .proc {{ api_def("write_a") }}
+    .proc {{ api_def("write") }}
         sta {{ PORT_REG }}
         rts
     .endproc
 {% else %}
-    .proc {{ api_def("write_a") }}
+    .proc {{ api_def("write") }}
         and #{{ MASK | bin }}
         sta {{ var("tmp") }}
         lda {{ PORT_REG }}

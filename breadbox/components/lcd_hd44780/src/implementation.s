@@ -78,7 +78,7 @@
     .proc {{ my_def("write_nibbles") }}
         ; High nibble: upper 4 bits are already in position.
         pha
-        jsr {{ DATA_P }}::write_a
+        jsr {{ DATA_P }}::write
         jsr {{ my("pulse_en") }}
 
         ; Low nibble: shift lower 4 bits into upper position.
@@ -87,7 +87,7 @@
         asl
         asl
         asl
-        jsr {{ DATA_P }}::write_a
+        jsr {{ DATA_P }}::write
         jsr {{ my("pulse_en") }}
 
         rts
@@ -107,7 +107,7 @@
     ;   A = clobbered
 
     .proc {{ my_def("write_init") }}
-        jsr {{ DATA_P }}::write_a
+        jsr {{ DATA_P }}::write
         jsr {{ my("pulse_en") }}
         rts
     .endproc
@@ -164,12 +164,12 @@
     .proc {{ my_def("write_cmnd_raw") }}
         pha
         lda #{{ constant("CTRL_CMD_WR") }}
-        jsr {{ CTRL_P }}::write_a
+        jsr {{ CTRL_P }}::write
         pla
 {% if IS_4BIT %}
         jsr {{ my("write_nibbles") }}
 {% else %}
-        jsr {{ DATA_P }}::write_a
+        jsr {{ DATA_P }}::write
         jsr {{ my("pulse_en") }}
 {% endif %}
         rts
@@ -191,7 +191,7 @@
 
         ; Set control: RS=0 (status), RWB=1 (read).
         lda #{{ constant("CTRL_CMD_RD") }}
-        jsr {{ CTRL_P }}::write_a
+        jsr {{ CTRL_P }}::write
 
         ; Pulse EN high and read the data port.
         jsr {{ EN_P }}::turn_on
@@ -209,7 +209,7 @@
 
         ; Restore control to write mode.
         lda #{{ constant("CTRL_CMD_WR") }}
-        jsr {{ CTRL_P }}::write_a
+        jsr {{ CTRL_P }}::write
 
         ; Check busy flag.
         pla
@@ -277,7 +277,7 @@
         ; Set control pins low (EN=0, CTRL=CMD_WR).
         jsr {{ EN_P }}::turn_off
         lda #{{ constant("CTRL_CMD_WR") }}
-        jsr {{ CTRL_P }}::write_a
+        jsr {{ CTRL_P }}::write
 
         ; Power-up, set the device to the correct bus mode.
         jsr {{ my("power_up") }}
@@ -339,12 +339,12 @@
         jsr {{ my("wait_ready") }}
         ; RS=1 (data register), RWB=0 (write).
         lda #{{ constant("CTRL_DATA_WR") }}
-        jsr {{ CTRL_P }}::write_a
+        jsr {{ CTRL_P }}::write
         pla
 {% if IS_4BIT %}
         jsr {{ my("write_nibbles") }}
 {% else %}
-        jsr {{ DATA_P }}::write_a
+        jsr {{ DATA_P }}::write
         jsr {{ my("pulse_en") }}
 {% endif %}
         rts
