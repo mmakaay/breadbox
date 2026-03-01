@@ -4,6 +4,7 @@
 ; Call via JSR, e.g. `jsr {{ symbol_prefix }}::turn_on`.
 
 .include "hardware.inc"
+.include "{{ bus_device.component_path }}/registers.inc"
 .include "{{ component_path }}/macros.inc"
 
 {% set PORT_REG = bus_device.id ~ "_PORT" ~ port %}

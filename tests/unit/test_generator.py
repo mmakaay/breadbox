@@ -344,7 +344,7 @@ class TestHardwareInc:
         generator = CodeGenerator(project)
         generator.generate()
 
-        content = (output_dir / "hardware.inc").read_text()
+        content = (output_dir / "VIA" / "registers.inc").read_text()
         assert "VIA_BASE = $6000" in content
 
     def test_via_base_address_custom(self, tmp_path):
@@ -353,7 +353,7 @@ class TestHardwareInc:
         generator = CodeGenerator(project)
         generator.generate()
 
-        content = (output_dir / "hardware.inc").read_text()
+        content = (output_dir / "VIA" / "registers.inc").read_text()
         assert "VIA_BASE = $7000" in content
 
     def test_via_registers(self, tmp_path):
@@ -362,7 +362,7 @@ class TestHardwareInc:
         generator = CodeGenerator(project)
         generator.generate()
 
-        content = (output_dir / "hardware.inc").read_text()
+        content = (output_dir / "VIA" / "registers.inc").read_text()
         assert "VIA_PORTB = VIA_BASE + $00" in content
         assert "VIA_PORTA = VIA_BASE + $01" in content
         assert "VIA_DDRB = VIA_BASE + $02" in content
@@ -376,7 +376,7 @@ class TestHardwareInc:
         generator = CodeGenerator(project)
         generator.generate()
 
-        content = (output_dir / "hardware.inc").read_text()
+        content = (output_dir / "VIA" / "registers.inc").read_text()
         for name, offset in REGISTERS:
             expected = f"VIA_{name} = VIA_BASE + ${offset:02X}"
             assert expected in content, f"Missing register: {expected}"

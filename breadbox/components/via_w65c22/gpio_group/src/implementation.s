@@ -12,6 +12,7 @@
 {{ var("tmp") }}: .res 1                   ; Internal temporary for read-modify-write
 
 .include "hardware.inc"
+.include "{{ bus_device.component_path }}/registers.inc"
 .include "{{ component_path }}/macros.inc"
 
 .segment "KERNALROM"

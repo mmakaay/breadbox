@@ -1,5 +1,6 @@
 import dataclasses
 from dataclasses import dataclass
+from functools import cached_property
 from typing import Self
 
 from breadbox.types.address16 import Address16
@@ -41,7 +42,7 @@ class ViaW65c22Device(Device):
         super().__post_init__()
         self._internal_fields.add("_bus_clients")
 
-    @property
+    @cached_property
     def registers(self) -> list[tuple[str, int]]:
         return REGISTERS
 
