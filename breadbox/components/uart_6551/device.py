@@ -26,6 +26,9 @@ BAUD_RATES: dict[int, int] = {
     9600: 0x0E,
     19200: 0x0F,
 }
+"""
+Mapping of the configuration `baudrate` value to the driver value to use.
+"""
 
 
 @dataclass(kw_only=True)

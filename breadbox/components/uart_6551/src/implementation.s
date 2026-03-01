@@ -26,14 +26,6 @@
 .include "{{ pin_rts.component_path }}/macros.inc"
 {% endif %}
 
-.export {{ symbol("init") }}
-.export {{ symbol("read") }}
-.export {{ symbol("write") }}
-.export {{ symbol("write_terminal") }}
-.export {{ symbol("load_status") }}
-.export {{ symbol("check_rx") }}
-.export {{ symbol("check_tx") }}
-
 .segment "KERNALROM"
 
     ; =====================================================================
@@ -44,7 +36,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("soft_reset") }}
+    .proc {{ my_def("soft_reset") }}
         sta {{ constant("STATUS") }}
         DELAY_MS 100
         rts
@@ -70,13 +62,13 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("write_terminal") }}
+    .proc {{ api_def("write_terminal") }}
         cmp #$0d
         bne @raw
 
         ; Send CR first, then queue LF.
-        jsr {{ symbol("write") }}
+        jsr {{ api("write") }}
         lda #$0a
     @raw:
-        jmp {{ symbol("write") }}
+        jmp {{ api("write") }}
     .endproc

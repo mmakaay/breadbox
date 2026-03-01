@@ -536,16 +536,18 @@ class TestHexFilter:
 
 
 class TestBuildContext:
-    def test_core_device_context(self):
+    def test_core_device_context(self, tmp_path):
         core = CoreDevice(id=ComponentIdentifier("CORE"), cpu="65c02", clock_mhz=1.0)
-        context = CodeGenerator._build_context(core)
+        generator = CodeGenerator(make_project(tmp_path, make_config()))
+        context = generator._build_context(core)
         assert context["component_id"] == "CORE"
         assert context["component_type"] == "core"
         assert context["cpu"] == "65c02"
         assert context["clock_mhz"] == 1.0
 
-    def test_excludes_internal_fields(self):
+    def test_excludes_internal_fields(self, tmp_path):
         core = CoreDevice(id=ComponentIdentifier("CORE"), cpu="65c02", clock_mhz=1.0)
-        context = CodeGenerator._build_context(core)
+        generator = CodeGenerator(make_project(tmp_path, make_config()))
+        context = generator._build_context(core)
         assert "id" not in context
         assert "parent" not in context

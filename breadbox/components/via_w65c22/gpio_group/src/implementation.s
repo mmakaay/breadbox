@@ -4,30 +4,13 @@
 ; Subroutine wrappers for {{ component_id }} macros.
 ; Call via JSR, e.g. `jsr {{ symbol_prefix }}::turn_on`.
 
-.exportzp {{ symbol("tmp") }}
-
-{% if direction in ("out", "both") %}
-.export {{ symbol("turn_on") }}
-.export {{ symbol("turn_off") }}
-.export {{ symbol("toggle") }}
-.export {{ symbol("write_a") }}
-{% endif %}
-
-{% if direction in ("in", "both") %}
-.export {{ symbol("read") }}
-.export {{ symbol("read_port") }}
-{% endif %}
-
-{% if direction == "both" %}
-.export {{ symbol("set_output") }}
-.export {{ symbol("set_input") }}
-{% endif %}
+.exportzp {{ var("tmp") }}
 
 {% set P = symbol_prefix %}
 
 .segment "ZEROPAGE" : zeropage
 
-{{ symbol("tmp") }}: .res 1                   ; Internal temporary for read-modify-write
+{{ var("tmp") }}: .res 1                   ; Internal temporary for read-modify-write
 
 .include "hardware.inc"
 .include "{{ component_path }}/macros.inc"
@@ -43,7 +26,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("init") }}
+    .proc {{ my_def("init") }}
 {% if exclusive_port %}
         lda #{{ bits | hex }}
         sta {{ bus_device.id }}_DDR{{ port }}
@@ -69,7 +52,7 @@
 {% endif %}
         rts
     .endproc
-    .constructor {{ symbol("init") }}, 16
+    .constructor {{ my("init") }}, 16
 {% endif %}
 {% if direction in ("out", "both") %}
 
@@ -79,7 +62,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("turn_on") }}
+    .proc {{ api_def("turn_on") }}
         {{ P }}_on
         rts
     .endproc
@@ -90,7 +73,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("turn_off") }}
+    .proc {{ api_def("turn_off") }}
         {{ P }}_off
         rts
     .endproc
@@ -101,7 +84,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("toggle") }}
+    .proc {{ api_def("toggle") }}
         {{ P }}_toggle
         rts
     .endproc
@@ -114,7 +97,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("write_a") }}
+    .proc {{ api_def("write_a") }}
         {{ P }}_write_a
         rts
     .endproc
@@ -127,7 +110,7 @@
     ; Out:
     ;   A = group state (masked to {{ bits | hex }})
 
-    .proc {{ symbol("read") }}
+    .proc {{ api_def("read") }}
         {{ P }}_read
         rts
     .endproc
@@ -138,7 +121,7 @@
     ; Out:
     ;   A = group state (masked to {{ bits | hex }})
 
-    .proc {{ symbol("read_port") }}
+    .proc {{ api_def("read_port") }}
         {{ P }}_read_port
         rts
     .endproc
@@ -151,7 +134,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("set_output") }}
+    .proc {{ api_def("set_output") }}
         {{ P }}_set_output
         rts
     .endproc
@@ -162,7 +145,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("set_input") }}
+    .proc {{ api_def("set_input") }}
         {{ P }}_set_input
         rts
     .endproc

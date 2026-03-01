@@ -30,19 +30,10 @@
 {{ constant("CTRL_DATA_WR") }} = {{ CTRL_P }}_BIT_{{ RS_PIN }}                                   ; 1  0  write data
 {{ constant("CTRL_DATA_RD") }} = {{ CTRL_P }}_BIT_{{ RS_PIN }} | {{ CTRL_P }}_BIT_{{ RWB_PIN }}  ; 1  1  read data
 
-.exportzp {{ symbol("ptr") }}
-
-.export {{ symbol("init") }}
-.export {{ symbol("write_cmnd") }}
-.export {{ symbol("write") }}
-.export {{ symbol("clr") }}
-.export {{ symbol("home") }}
-.export {{ symbol("print") }}
-
 .segment "ZEROPAGE" : zeropage
 
-    {{ symbol("ptr") }}:  .res 2            ; Pointer for string printing
-    {{ symbol("tmp") }}:  .res 1            ; Internal temporary
+    {{ zp_def("ptr") }}:  .res 2            ; Pointer for string printing
+    {{ var("tmp") }}:  .res 1            ; Internal temporary
 
 .segment "KERNALROM"
 
@@ -56,7 +47,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("pulse_en") }}
+    .proc {{ my_def("pulse_en") }}
         {{ P }}_PIN_EN_on
         {{ P }}_PIN_EN_off
         rts
@@ -70,25 +61,25 @@
     ; Sends the high nibble first, then the low nibble, with EN pulses.
     ;
     ; In (zero page):
-    ;   {{ symbol("tmp") }} = byte to send
+    ;   {{ var("tmp") }} = byte to send
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("write_nibbles") }}
+    .proc {{ my_def("write_nibbles") }}
         ; High nibble: upper 4 bits are already in position.
-        lda {{ symbol("tmp") }}
+        lda {{ var("tmp") }}
         and #$F0
         {{ DATA_P }}_write_a
-        jsr {{ symbol("pulse_en") }}
+        jsr {{ my("pulse_en") }}
 
         ; Low nibble: shift lower 4 bits into upper position.
-        lda {{ symbol("tmp") }}
+        lda {{ var("tmp") }}
         asl
         asl
         asl
         asl
         {{ DATA_P }}_write_a
-        jsr {{ symbol("pulse_en") }}
+        jsr {{ my("pulse_en") }}
 
         rts
     .endproc
@@ -102,14 +93,14 @@
     ; the busy flag.
     ;
     ; In (zero page):
-    ;   {{ symbol("tmp") }} = byte to write
+    ;   {{ var("tmp") }} = byte to write
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("write_init") }}
-        lda {{ symbol("tmp") }}
+    .proc {{ my_def("write_init") }}
+        lda {{ var("tmp") }}
         {{ DATA_P }}_write_a
-        jsr {{ symbol("pulse_en") }}
+        jsr {{ my("pulse_en") }}
         rts
     .endproc
 
@@ -122,24 +113,24 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("power_up") }}
+    .proc {{ my_def("power_up") }}
         ; Wait >15 ms after Vcc rises before sending any commands.
         DELAY_MS 20
 
         ; Function Set for turning on 8-bit mode.
         lda #$30
-        sta {{ symbol("tmp") }}
+        sta {{ var("tmp") }}
 
         ; 1st Function Set — wait >4.1 ms afterward.
-        jsr {{ symbol("write_init") }}
+        jsr {{ my("write_init") }}
         DELAY_MS 5
 
         ; 2nd Function Set — wait >100 µs afterward.
-        jsr {{ symbol("write_init") }}
+        jsr {{ my("write_init") }}
         DELAY_US 200
 
         ; 3rd Function Set — LCD is now reliably in 8-bit mode.
-        jsr {{ symbol("write_init") }}
+        jsr {{ my("write_init") }}
         DELAY_US 200
 
         rts
@@ -155,10 +146,10 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("enable_4bit") }}
+    .proc {{ my_def("enable_4bit") }}
         lda #$20
-        sta {{ symbol("tmp") }}
-        jsr {{ symbol("write_init") }}
+        sta {{ var("tmp") }}
+        jsr {{ my("write_init") }}
         DELAY_US 200
         rts
     .endproc
@@ -173,21 +164,21 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("configure") }}
+    .proc {{ my_def("configure") }}
         lda #{{ constant("CMD_FUNCSET") }}
-        sta {{ symbol("tmp") }}
-        jsr {{ symbol("wait_ready") }}
-        jsr {{ symbol("write_cmnd_raw") }}
+        sta {{ var("tmp") }}
+        jsr {{ my("wait_ready") }}
+        jsr {{ my("write_cmnd_raw") }}
 
         lda #{{ constant("CMD_DISPLAY_ON") }}
-        sta {{ symbol("tmp") }}
-        jsr {{ symbol("wait_ready") }}
-        jsr {{ symbol("write_cmnd_raw") }}
+        sta {{ var("tmp") }}
+        jsr {{ my("wait_ready") }}
+        jsr {{ my("write_cmnd_raw") }}
 
         lda #{{ constant("CMD_ENTRYMODE") }}
-        sta {{ symbol("tmp") }}
-        jsr {{ symbol("wait_ready") }}
-        jsr {{ symbol("write_cmnd_raw")}}
+        sta {{ var("tmp") }}
+        jsr {{ my("wait_ready") }}
+        jsr {{ my("write_cmnd_raw")}}
 
         rts
     .endproc
@@ -199,18 +190,18 @@
     ; Used internally — public API should use write_cmnd which polls BF.
     ;
     ; In (zero page):
-    ;   {{ symbol("tmp") }} = command byte to write
+    ;   {{ var("tmp") }} = command byte to write
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("write_cmnd_raw") }}
+    .proc {{ my_def("write_cmnd_raw") }}
         {{ CTRL_P }}_write {{ constant("CTRL_CMD_WR") }}
 {% if IS_4BIT %}
-        jsr {{ symbol("write_nibbles") }}
+        jsr {{ my("write_nibbles") }}
 {% else %}
-        lda {{ symbol("tmp") }}
+        lda {{ var("tmp") }}
         {{ DATA_P }}_write_a
-        jsr {{ symbol("pulse_en") }}
+        jsr {{ my("pulse_en") }}
 {% endif %}
         rts
     .endproc
@@ -224,7 +215,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("wait_ready") }}
+    .proc {{ my_def("wait_ready") }}
     @loop:
         ; Switch data pins to input.
         {{ DATA_P }}_set_input
@@ -240,7 +231,7 @@
 
 {% if IS_4BIT %}
         ; Clock out the low nibble (ignored).
-        jsr {{ symbol("pulse_en") }}
+        jsr {{ my("pulse_en") }}
 {% endif %}
 
         ; Restore data pins to output.
@@ -270,7 +261,7 @@
     ; Out:
     ;   A, X, Y = clobbered
 
-    .proc {{ symbol("init") }}
+    .proc {{ api_def("init") }}
         ; Set data pins to output.
         {{ DATA_P }}_set_output
 
@@ -279,25 +270,25 @@
         {{ CTRL_P }}_write {{ constant("CTRL_CMD_WR") }}
 
         ; Power-up: force LCD into known 8-bit state.
-        jsr {{ symbol("power_up") }}
+        jsr {{ my("power_up") }}
 
 {% if IS_4BIT %}
         ; Switch to 4-bit mode.
-        jsr {{ symbol("enable_4bit") }}
+        jsr {{ my("enable_4bit") }}
 {% endif %}
 
         ; Configure display parameters.
-        jsr {{ symbol("configure") }}
+        jsr {{ my("configure") }}
 
         ; Clear screen.
         lda #{{ constant("CMD_CLEAR") }}
-        sta {{ symbol("tmp") }}
-        jsr {{ symbol("wait_ready") }}
-        jsr {{ symbol("write_cmnd_raw") }}
+        sta {{ var("tmp") }}
+        jsr {{ my("wait_ready") }}
+        jsr {{ my("write_cmnd_raw") }}
 
         rts
     .endproc
-    .constructor {{ symbol("init") }}
+    .constructor {{ my("init") }}
 
     ; =====================================================================
     ; Write a command byte to the LCD.
@@ -309,10 +300,10 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("write_cmnd") }}
-        sta {{ symbol("tmp") }}
-        jsr {{ symbol("wait_ready") }}
-        jsr {{ symbol("write_cmnd_raw") }}
+    .proc {{ api_def("write_cmnd") }}
+        sta {{ var("tmp") }}
+        jsr {{ my("wait_ready") }}
+        jsr {{ my("write_cmnd_raw") }}
         rts
     .endproc
 
@@ -326,18 +317,18 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("write") }}
-        sta {{ symbol("tmp") }}
-        jsr {{ symbol("wait_ready") }}
+    .proc {{ api_def("write") }}
+        sta {{ var("tmp") }}
+        jsr {{ my("wait_ready") }}
         ; RS=1 (data register), RWB=0 (write).
         {{ CTRL_P }}_write {{ constant("CTRL_DATA_WR") }}
 
 {% if IS_4BIT %}
-        jsr {{ symbol("write_nibbles") }}
+        jsr {{ my("write_nibbles") }}
 {% else %}
-        lda {{ symbol("tmp") }}
+        lda {{ var("tmp") }}
         {{ DATA_P }}_write_a
-        jsr {{ symbol("pulse_en") }}
+        jsr {{ my("pulse_en") }}
 {% endif %}
         rts
     .endproc
@@ -348,9 +339,9 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("clr") }}
+    .proc {{ api_def("clr") }}
         lda #{{ constant("CMD_CLEAR") }}
-        jsr {{ symbol("write_cmnd") }}
+        jsr {{ api("write_cmnd") }}
         rts
     .endproc
 
@@ -360,9 +351,9 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("home") }}
+    .proc {{ api_def("home") }}
         lda #{{ constant("CMD_HOME") }}
-        jsr {{ symbol("write_cmnd") }}
+        jsr {{ api("write_cmnd") }}
         rts
     .endproc
 
@@ -370,16 +361,16 @@
     ; Print a null-terminated string.
     ;
     ; In (zero page):
-    ;   {{ symbol("ptr") }} = pointer to null-terminated string
+    ;   {{ zp("ptr") }} = pointer to null-terminated string
     ; Out:
     ;   A, Y = clobbered
 
-    .proc {{ symbol("print") }}
+    .proc {{ api_def("print") }}
         ldy #0
-@loop:  lda ({{ symbol("ptr") }}),y
+@loop:  lda ({{ zp("ptr") }}),y
         beq @done
         phy
-        jsr {{ symbol("write") }}
+        jsr {{ api("write") }}
         ply
         iny
         bne @loop

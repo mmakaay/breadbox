@@ -7,16 +7,6 @@
 .include "hardware.inc"
 .include "{{ component_path }}/macros.inc"
 
-{% if direction in ("out", "both") %}
-.export {{ symbol("turn_on") }}
-.export {{ symbol("turn_off") }}
-.export {{ symbol("toggle") }}
-{% endif %}
-
-{% if direction in ("in", "both") %}
-.export {{ symbol("read") }}
-{% endif %}
-
 {% set PORT_REG = bus_device.id ~ "_PORT" ~ port %}
 {% set DDR_REG = bus_device.id ~ "_DDR" ~ port %}
 {% set MASK = bitmask %}
@@ -32,7 +22,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("init") }}
+    .proc {{ my_def("init") }}
 {% if exclusive_port %}
         lda #{{ MASK | hex }}
         sta {{ DDR_REG }}
@@ -58,7 +48,7 @@
 {% endif %}
         rts
     .endproc
-    .constructor {{ symbol("init") }}, 16
+    .constructor {{ my("init") }}, 16
 {% endif %}
 
 {% if direction in ("out", "both") %}
@@ -68,7 +58,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("turn_on") }}
+    .proc {{ api_def("turn_on") }}
         {{ symbol_prefix }}_on
         rts
     .endproc
@@ -79,7 +69,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("turn_off") }}
+    .proc {{ api_def("turn_off") }}
         {{ symbol_prefix }}_off
         rts
     .endproc
@@ -90,7 +80,7 @@
     ; Out:
     ;   A = clobbered
 
-    .proc {{ symbol("toggle") }}
+    .proc {{ api_def("toggle") }}
         {{ symbol_prefix }}_toggle
         rts
     .endproc
@@ -103,7 +93,7 @@
     ; Out:
     ;   A = pin state (bit {{ pin[-1] }}, masked)
 
-    .proc {{ symbol("read") }}
+    .proc {{ api_def("read") }}
         {{ symbol_prefix }}_read
         rts
     .endproc
