@@ -61,12 +61,12 @@ class CodeGenerator:
         """
         Generate all assembly output from the resolved config.
         """
-        self._process_project_sources()
         self._prepare_build_dir()
         self._process_stdlib()
         for component in self.breadbox.config.components.values():
             if component.parent is None:
                 component.accept(self)
+        self._process_project_sources()
         self._generate_hardware_inc()
         self._generate_breadbox_inc()
         self._generate_linker_cfg()
