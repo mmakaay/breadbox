@@ -6,31 +6,34 @@
 {% set P = symbol_prefix %}
 {% set CTRL_P = ctrl.symbol_prefix %}
 {% set DATA_P = data.symbol_prefix %}
+{% set EN_P = pin_en.symbol_prefix %}
 {% set IS_4BIT = (mode == "4bit") %}
 
 .include "hardware.inc"
 .include "CORE/delay.inc"
 .include "{{ component_path }}/constants.inc"
-.include "{{ data.component_path }}/macros.inc"
-.include "{{ ctrl.component_path }}/macros.inc"
-.include "{{ pin_en.component_path }}/macros.inc"
+.include "{{ data.component_path }}/api.inc"
+.include "{{ ctrl.component_path }}/api.inc"
+.include "{{ pin_en.component_path }}/api.inc"
 
 ; CTRL pin ordering: pins[0]=RS, pins[1]=RWB (set by LCD resolver).
 {% set RS_PIN = ctrl.pins[0] %}
 {% set RWB_PIN = ctrl.pins[1] %}
+{% set RS_BIT = ctrl.pin_bit(RS_PIN) %}
+{% set RWB_BIT = ctrl.pin_bit(RWB_PIN) %}
 
-; Select register + read or write mode                                                            RS RWB
-{{ constant("CTRL_CMD_WR") }}  = $00                                                             ; 0  0  write command
-{{ constant("CTRL_CMD_RD") }}  = {{ CTRL_P }}_BIT_{{ RWB_PIN }}                                  ; 0  1  read status
-{{ constant("CTRL_DATA_WR") }} = {{ CTRL_P }}_BIT_{{ RS_PIN }}                                   ; 1  0  write data
-{{ constant("CTRL_DATA_RD") }} = {{ CTRL_P }}_BIT_{{ RS_PIN }} | {{ CTRL_P }}_BIT_{{ RWB_PIN }}  ; 1  1  read data
+; Select register + read or write mode                                       RS RWB
+{{ constant("CTRL_CMD_WR") }}  = $00                                       ; 0  0  write command
+{{ constant("CTRL_CMD_RD") }}  = {{ RWB_BIT | bin }}                       ; 0  1  read status
+{{ constant("CTRL_DATA_WR") }} = {{ RS_BIT | bin }}                        ; 1  0  write data
+{{ constant("CTRL_DATA_RD") }} = {{ RS_BIT | bin }} | {{ RWB_BIT | bin }}  ; 1  1  read data
 
 .segment "KERNALROM"
 
     ; =========================================================================
     ; Private: pulse EN high then low.
     ;
-    ; The GPIO pin macros include sufficient instruction cycles for the
+    ; The GPIO subroutines include sufficient instruction cycles for the
     ; HD44780's minimum EN pulse width (450ns). At 1 MHz each instruction
     ; takes 2-6 µs, so no extra delays are needed.
     ;
@@ -38,8 +41,8 @@
     ;   A = clobbered
 
     .proc {{ my_def("pulse_en") }}
-        {{ P }}_PIN_EN_on
-        {{ P }}_PIN_EN_off
+        jsr {{ EN_P }}::turn_on
+        jsr {{ EN_P }}::turn_off
         rts
     .endproc
 
@@ -53,12 +56,12 @@
     ; In:
     ;   A = byte to send
     ; Out:
-    ;   A, X = clobbered
+    ;   A = clobbered
 
     .proc {{ my_def("write_nibbles") }}
         ; High nibble: upper 4 bits are already in position.
         pha
-        {{ DATA_P }}_write_a
+        jsr {{ DATA_P }}::write_a
         jsr {{ my("pulse_en") }}
 
         ; Low nibble: shift lower 4 bits into upper position.
@@ -67,7 +70,7 @@
         asl
         asl
         asl
-        {{ DATA_P }}_write_a
+        jsr {{ DATA_P }}::write_a
         jsr {{ my("pulse_en") }}
 
         rts
@@ -87,7 +90,7 @@
     ;   A = clobbered
 
     .proc {{ my_def("write_init") }}
-        {{ DATA_P }}_write_a
+        jsr {{ DATA_P }}::write_a
         jsr {{ my("pulse_en") }}
         rts
     .endproc
@@ -172,12 +175,13 @@
 
     .proc {{ my_def("write_cmnd_raw") }}
         pha
-        {{ CTRL_P }}_write {{ constant("CTRL_CMD_WR") }}
+        lda #{{ constant("CTRL_CMD_WR") }}
+        jsr {{ CTRL_P }}::write_a
         pla
 {% if IS_4BIT %}
         jsr {{ my("write_nibbles") }}
 {% else %}
-        {{ DATA_P }}_write_a
+        jsr {{ DATA_P }}::write_a
         jsr {{ my("pulse_en") }}
 {% endif %}
         rts
@@ -195,16 +199,17 @@
     .proc {{ my_def("wait_ready") }}
     @loop:
         ; Switch data pins to input.
-        {{ DATA_P }}_set_input
+        jsr {{ DATA_P }}::set_input
 
         ; Set control: RS=0 (status), RWB=1 (read).
-        {{ CTRL_P }}_write {{ constant("CTRL_CMD_RD") }}
+        lda #{{ constant("CTRL_CMD_RD") }}
+        jsr {{ CTRL_P }}::write_a
 
         ; Pulse EN high and read the data port.
-        {{ P }}_PIN_EN_on
-        {{ DATA_P }}_read_port
+        jsr {{ EN_P }}::turn_on
+        jsr {{ DATA_P }}::read_port
         pha                          ; save status byte
-        {{ P }}_PIN_EN_off
+        jsr {{ EN_P }}::turn_off
 
 {% if IS_4BIT %}
         ; Clock out the low nibble (ignored).
@@ -212,10 +217,11 @@
 {% endif %}
 
         ; Restore data pins to output.
-        {{ DATA_P }}_set_output
+        jsr {{ DATA_P }}::set_output
 
         ; Restore control to write mode.
-        {{ CTRL_P }}_write {{ constant("CTRL_CMD_WR") }}
+        lda #{{ constant("CTRL_CMD_WR") }}
+        jsr {{ CTRL_P }}::write_a
 
         ; Check busy flag.
         pla
@@ -240,11 +246,12 @@
 
     .proc {{ api_def("init") }}
         ; Set data pins to output.
-        {{ DATA_P }}_set_output
+        jsr {{ DATA_P }}::set_output
 
         ; Set control pins low (EN=0, CTRL=CMD_WR).
-        {{ P }}_PIN_EN_off
-        {{ CTRL_P }}_write {{ constant("CTRL_CMD_WR") }}
+        jsr {{ EN_P }}::turn_off
+        lda #{{ constant("CTRL_CMD_WR") }}
+        jsr {{ CTRL_P }}::write_a
 
         ; Power-up, set the device to the correct bit mode.
         jsr {{ my("power_up") }}
@@ -293,12 +300,13 @@
         pha
         jsr {{ my("wait_ready") }}
         ; RS=1 (data register), RWB=0 (write).
-        {{ CTRL_P }}_write {{ constant("CTRL_DATA_WR") }}
+        lda #{{ constant("CTRL_DATA_WR") }}
+        jsr {{ CTRL_P }}::write_a
         pla
 {% if IS_4BIT %}
         jsr {{ my("write_nibbles") }}
 {% else %}
-        {{ DATA_P }}_write_a
+        jsr {{ DATA_P }}::write_a
         jsr {{ my("pulse_en") }}
 {% endif %}
         rts
