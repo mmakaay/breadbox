@@ -17,8 +17,8 @@
 
 .segment "KERNALRAM"
 
-    {{ var("rx_buffer") }}: .res $100          ; 256-byte RX ring buffer
-    {{ var("tx_buffer") }}: .res $100          ; 256-byte TX ring buffer
+    {{ var("rx_buffer") }}: .res $100        ; 256-byte RX ring buffer
+    {{ var("tx_buffer") }}: .res $100        ; 256-byte TX ring buffer
 
 .segment "ZEROPAGE" : zeropage
 

@@ -21,10 +21,28 @@
 .include "CORE/delay.inc"
 .include "{{ component_path }}/constants.inc"
 .include "CORE/macros.inc"
-.include "{{ component_path }}/macros.inc"
 {% if pin_rts %}
 .include "{{ pin_rts.component_path }}/macros.inc"
 {% endif %}
+
+; =========================================================================
+; 6551 ACIA register addresses
+; =========================================================================
+
+{{ constant("DATA") }}   = {{ address | hex }}       ; +$0 Transmit / Receive data
+{{ constant("STATUS") }} = {{ (address + 1) | hex }} ; +$1 Status (write = soft reset)
+{{ constant("CMD") }}    = {{ (address + 2) | hex }} ; +$2 Command register
+{{ constant("CTRL") }}   = {{ (address + 3) | hex }} ; +$3 Control register
+
+; =========================================================================
+; Settings
+; =========================================================================
+
+{{ constant("CTRL_BAUD") }}   = {{ baud_code | hex }}
+
+; =========================================================================
+; Driver code.
+; =========================================================================
 
 .segment "KERNALROM"
 
