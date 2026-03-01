@@ -19,6 +19,7 @@
 
 .include "hardware.inc"
 .include "CORE/delay.inc"
+.include "{{ component_path }}/constants.inc"
 .include "CORE/macros.inc"
 .include "{{ component_path }}/macros.inc"
 {% if pin_rts %}

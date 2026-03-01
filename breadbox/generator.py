@@ -275,6 +275,7 @@ class CodeGenerator:
 
         Returns None if the component has no API functions or exported ZP variables.
         """
+        lines: list[str] = []
         api_defs: list[str] = context["_api_defs"]
         zp_defs: list[str] = context["_zp_defs"]
         P = context["symbol_prefix"]
@@ -283,12 +284,8 @@ class CodeGenerator:
         if not api_defs and not zp_defs:
             return None
 
-        lines: list[str] = [
-            f".include \"{component_path}/macros.inc\"",
-            f".include \"{component_path}/macros.inc\"",
-            "",
-            f".scope {P}",
-        ]
+        lines.append("")
+        lines.append(f".scope {P}")
 
         for name in zp_defs:
             sym = f"__{P}_{name}"

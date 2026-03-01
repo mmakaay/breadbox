@@ -10,7 +10,7 @@
 
 .include "hardware.inc"
 .include "CORE/delay.inc"
-.include "{{ component_path }}/macros.inc"
+.include "{{ component_path }}/constants.inc"
 .include "{{ data.component_path }}/macros.inc"
 .include "{{ ctrl.component_path }}/macros.inc"
 .include "{{ pin_en.component_path }}/macros.inc"
@@ -141,15 +141,19 @@
 
     .proc {{ my_def("configure") }}
         jsr {{ my("wait_ready") }}
-        lda #{{ constant("CMD_FUNCSET") }}
+        {% if IS_4BIT %}
+        lda #CMD_FUNCSET_4BIT
+{% else %}
+        lda #CMD_FUNCSET_8BIT
+{% endif %}
         jsr {{ my("write_cmnd_raw") }}
 
         jsr {{ my("wait_ready") }}
-        lda #{{ constant("CMD_DISPLAY_ON") }}
+        lda #CMD_DISPLAY_ON
         jsr {{ my("write_cmnd_raw") }}
 
         jsr {{ my("wait_ready") }}
-        lda #{{ constant("CMD_ENTRYMODE") }}
+        lda #CMD_ENTRYMODE
         jsr {{ my("write_cmnd_raw")}}
 
         rts
@@ -215,7 +219,7 @@
 
         ; Check busy flag.
         pla
-        and #{{ constant("BUSY_FLAG") }}
+        and #BUSY_FLAG
         bne @loop
 
         rts
@@ -250,7 +254,7 @@
 
         ; Clear screen.
         jsr {{ my("wait_ready") }}
-        lda #{{ constant("CMD_CLEAR") }}
+        lda #CMD_CLEAR
         jsr {{ my("write_cmnd_raw") }}
 
         rts
@@ -307,7 +311,7 @@
     ;   A = clobbered
 
     .proc {{ api_def("clr") }}
-        lda #{{ constant("CMD_CLEAR") }}
+        lda #CMD_CLEAR
         jsr {{ api("write_cmnd") }}
         rts
     .endproc
@@ -319,7 +323,7 @@
     ;   A = clobbered
 
     .proc {{ api_def("home") }}
-        lda #{{ constant("CMD_HOME") }}
+        lda #CMD_HOME
         jsr {{ api("write_cmnd") }}
         rts
     .endproc

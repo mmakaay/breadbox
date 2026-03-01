@@ -67,12 +67,12 @@
 {% endif %}
 
         ; CTRL: 8N1, internal baud rate generator.
-        lda #({{ constant("CTRL_8BIT") }} | {{ constant("CTRL_1STOP") }} | {{ constant("CTRL_INTCLK") }} | {{ constant("CTRL_BAUD") }})
+        lda #(CTRL_8BIT | CTRL_1STOP | CTRL_INTCLK | {{ constant("CTRL_BAUD") }})
         sta {{ constant("CTRL") }}
 
         ; CMD: no parity, no echo, TX IRQ disabled (/RTS asserted), DTR on.
         ;      RX IRQ enabled.
-        lda #({{ constant("CMD_TIC2") }} | {{ constant("CMD_DTR") }})
+        lda #(CMD_TIC2 | CMD_DTR)
         sta {{ constant("CMD") }}
 
         ; Enable CPU interrupts. The IRQ handler is registered at link time
@@ -95,7 +95,7 @@
     .proc {{ my_def("irq_handler") }}
         lda {{ constant("STATUS") }}
         sta {{ var("status") }}
-        and #{{ constant("SR_IRQ") }}
+        and #SR_IRQ
         beq @done
         lda {{ var("status") }}
         jsr {{ my("irq_handler_rx") }}
@@ -115,7 +115,7 @@
     ;   A = status register value (from irq_handler)
 
     .proc {{ my_def("irq_handler_rx") }}
-        and #{{ constant("SR_RDRF") }}
+        and #SR_RDRF
         beq @done
 
         lda {{ constant("DATA") }}
@@ -277,12 +277,12 @@
 {% endif %}
 
         ; CTRL: 8N1, internal baud rate generator.
-        lda #({{ constant("CTRL_8BIT") }} | {{ constant("CTRL_1STOP") }} | {{ constant("CTRL_INTCLK") }} | {{ constant("CTRL_BAUD") }})
+        lda #(CTRL_8BIT | CTRL_1STOP | CTRL_INTCLK | {{ constant("CTRL_BAUD") }})
         sta {{ constant("CTRL") }}
 
         ; CMD: no parity, no echo, TX IRQ disabled (/RTS asserted), DTR on.
         ;      RX IRQ disabled for polling mode.
-        lda #({{ constant("CMD_TIC2") }} | {{ constant("CMD_DTR") }} | {{ constant("CMD_IRQOFF") }})
+        lda #(CMD_TIC2 | CMD_DTR | CMD_IRQOFF)
         sta {{ constant("CMD") }}
 
         rts
@@ -302,7 +302,7 @@
     .proc {{ api_def("read") }}
         clc
         lda {{ constant("STATUS") }}
-        and #{{ constant("SR_RDRF") }}
+        and #SR_RDRF
         beq @done
 
         lda {{ constant("DATA") }}
@@ -319,7 +319,7 @@
 
     .proc {{ api_def("check_rx") }}
         lda {{ constant("STATUS") }}
-        and #{{ constant("SR_RDRF") }}
+        and #SR_RDRF
         rts
     .endproc
 
