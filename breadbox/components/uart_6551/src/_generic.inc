@@ -1,5 +1,5 @@
 ; UM6551 driver: {{ component_id }}
-;
+
 {% if irq == "on" %}
 ; Mode: IRQ (RX + TX ring buffers, hardware TDRE for TX flow)
 {% else %}

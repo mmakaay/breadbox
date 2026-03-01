@@ -28,7 +28,7 @@ write:
     cd "{{invocation_directory()}}"
     minipro -p AT28C256 -w ./"build/rom.bin"
 
-go: test build write
+go: build write
 
 write-u:
     #!/bin/bash

@@ -41,16 +41,6 @@
         rts
     .endproc
 
-; =========================================================================
-; IC-specific driver code.
-; =========================================================================
-
-{% if type == "w65c51n" %}
-.include "{{ component_path }}/_w65c51n.inc"
-{% else %}
-.include "{{ component_path }}/_generic.inc"
-{% endif %}
-
     ; =====================================================================
     ; Write a byte to a terminal.
     ;
@@ -71,3 +61,13 @@
     @raw:
         jmp {{ api("write") }}
     .endproc
+
+; =========================================================================
+; IC-specific driver code.
+; =========================================================================
+
+{% if type == "w65c51n" %}
+.include "{{ component_path }}/_w65c51n.inc"
+{% else %}
+.include "{{ component_path }}/_generic.inc"
+{% endif %}

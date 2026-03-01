@@ -19,32 +19,3 @@
 {{ constant("CMD_SETCGRAM") }}   = $40  ; Set CGRAM address (OR with address)
 
 {{ constant("BUSY_FLAG") }}      = $80  ; Busy flag mask (bit 7)
-
-{{ constant("LINE1") }}          = $00  ; DDRAM address for line 1
-{{ constant("LINE2") }}          = $40  ; DDRAM address for line 2
-
-; =========================================================================
-; Set cursor position to the beginning of a display line.
-;
-; In:
-;   line = line address constant ({{ constant("LINE1") }} or {{ constant("LINE2") }})
-; Out:
-;   A = clobbered
-
-.macro {{ P }}_goto line
-    lda #({{ constant("CMD_SETDDRAM") }} | line)
-    jsr {{ P }}::write_cmnd
-.endmacro
-
-; =========================================================================
-; Write a character to the display at the current cursor position.
-;
-; In:
-;   char = immediate character byte to write
-; Out:
-;   A = clobbered
-
-.macro {{ P }}_putc char
-    lda #char
-    jsr {{ P }}::write
-.endmacro

@@ -30,6 +30,15 @@ def _hex_filter(value: int) -> str:
     return f"${value:04X}"
 
 
+def _bin_filter(value: int) -> str:
+    """
+    Format an integer as a ca65 binary literal (%bbbb or %bbbbbbbb).
+    """
+    if value <= 0xFF:
+        return f"%{value:04b}"
+    return f"%{value:08b}"
+
+
 class CodeGenerator:
     """
     Walks the resolved component tree and generates ca65 assembly output.
@@ -95,6 +104,7 @@ class CodeGenerator:
             trim_blocks=True,
         )
         env.filters["hex"] = _hex_filter
+        env.filters["bin"] = _bin_filter
 
         for src_file in src_files:
             relative = src_file.relative_to(STDLIB_DIR)
@@ -142,6 +152,7 @@ class CodeGenerator:
             trim_blocks=True,
         )
         env.filters["hex"] = _hex_filter
+        env.filters["bin"] = _bin_filter
         return env
 
     def _generate_breadbox_inc(self) -> None:
@@ -181,6 +192,7 @@ class CodeGenerator:
                 trim_blocks=True,
             )
             env.filters["hex"] = _hex_filter
+            env.filters["bin"] = _bin_filter
             template = env.get_template("linker.cfg")
         else:
             template = self._template_env.get_template("linker.cfg")
@@ -223,6 +235,7 @@ class CodeGenerator:
             trim_blocks=True,
         )
         env.filters["hex"] = _hex_filter
+        env.filters["bin"] = _bin_filter
 
         context = self._build_context(component)
 

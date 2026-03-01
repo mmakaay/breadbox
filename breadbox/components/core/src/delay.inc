@@ -10,13 +10,13 @@
 ;
 ; In:
 ;   iterations: word value, containing the number of iterations to perform
-; Out:
-;   A = clobbered
 
 .macro DELAY _iterations
     .assert _iterations <= 65535, error, "DELAY overflow: iteration count exceeds 16-bit max (65535). Use a hardware timer for longer delays."
+    pha
     SET_WORD {{ symbol("delay_iterations") }}, _iterations
     jsr {{ symbol("delay") }}
+    pla
 .endmacro
 
 ; =========================================================================
@@ -27,8 +27,6 @@
 ;
 ; In:
 ;   us = delay duration in microseconds (compile-time constant)
-; Out:
-;   A = clobbered
 
 .macro DELAY_US us
     .local ITERATIONS
@@ -44,8 +42,6 @@
 ;
 ; In:
 ;   ms = delay duration in milliseconds (compile-time constant)
-; Out:
-;   A = clobbered
 
 .macro DELAY_MS ms
     .local US
