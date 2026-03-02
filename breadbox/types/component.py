@@ -98,5 +98,13 @@ class Component(ABC):
     def symbol_prefix(self) -> str:
         return self.make_path("_")
 
+    @cached_property
+    def scope(self) -> str:
+        return self.make_path("_")
+
+    def api(self, name: str) -> str:
+        """Reference a public API subroutine: __{scope}_{name}."""
+        return f"__{self.scope}_{name}"
+
     def accept(self, visitor: ComponentVisitor) -> None:
         visitor.visit(self)

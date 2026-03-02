@@ -8,7 +8,7 @@
 .export {{ symbol("boot") }}
 .export {{ symbol("halt") }}
 
-.segment "ZEROPAGE" : zeropage
+.segment "ZEROPAGE"
 
     {{ symbol("constructor_ptr") }}:.res 2          ; Target address for trampoline construction
     {{ symbol("condes_ptr") }}:     .res 2          ; Pointer into constructor table (boot only)

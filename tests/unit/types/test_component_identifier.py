@@ -4,7 +4,7 @@ from breadbox.types.component_identifier import ComponentIdentifier
 
 
 class TestValidIdentifiers:
-    @pytest.mark.parametrize("value", ["CPU", "VIA0", "LED", "PROGRESS_LEDS1", "PIN_RTS"])
+    @pytest.mark.parametrize("value", ["CPU", "VIA0", "LED", "PROGRESS_LEDS1", "RTS_PIN"])
     def test_valid_identifiers(self, value):
         result = ComponentIdentifier(value)
         assert result == value

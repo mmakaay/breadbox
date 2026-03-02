@@ -1,14 +1,11 @@
 ; HD44780 LCD: {{ component_id }} ({{ mode }} mode, {{ width }}x{{ height }}, {{ characters }})
 ;
-; Control: {{ ctrl.component_path }} (RS+RWB), {{ pin_en.component_path }} (EN)
-; Data bus: {{ data.component_path }}
+; Control  : RS   = {{ ctrl.bus }}[{{ ctrl.pins[0] }}]
+;            RWB  = {{ ctrl.bus }}[{{ ctrl.pins[1] }}]
+;            EN   = {{ en_pin.bus }}[{{ en_pin.pin }}]
+; Data bus : DATA = {{ data.bus }}{{ data.pins }}
 
-{% set P = symbol_prefix %}
-{% set CTRL_P = ctrl.symbol_prefix %}
-{% set DATA_P = data.symbol_prefix %}
-{% set EN_P = pin_en.symbol_prefix %}
-
-; CTRL pin bits: pins[0]=RS, pins[1]=RWB (order is set by LCD resolver).
+{# The order of the pins is set by the resolver. #}
 {% set RS_BIT = ctrl.pin_bit(ctrl.pins[0]) %}
 {% set RWB_BIT = ctrl.pin_bit(ctrl.pins[1]) %}
 
@@ -17,10 +14,9 @@
 .include "{{ component_path }}/constants.inc"
 .include "{{ data.component_path }}/api.inc"
 .include "{{ ctrl.component_path }}/api.inc"
-.include "{{ pin_en.component_path }}/api.inc"
+.include "{{ en_pin.component_path }}/api.inc"
 
-
-; Select register + read or write mode                                       RS RWB
+; Select register + read or write mode                                      RS RWB
 {{ constant("CTRL_CMD_WR") }}  = $00                                       ; 0  0  write command
 {{ constant("CTRL_CMD_RD") }}  = {{ RWB_BIT | bin }}                       ; 0  1  read status
 {{ constant("CTRL_DATA_WR") }} = {{ RS_BIT | bin }}                        ; 1  0  write data
@@ -73,11 +69,11 @@
     {% set NOP_COUNT    = (EN_MIN_NS / NS_PER_NOP) | round(0, 'ceil') | int %}
 
     .proc {{ my_def("pulse_en") }}
-        jsr {{ EN_P }}::turn_on
+        jsr {{ en_pin.api("turn_on") }}
         {% for _ in range(NOP_COUNT) %}
         nop
         {% endfor %}
-        jsr {{ EN_P }}::turn_off
+        jsr {{ en_pin.api("turn_off") }}
         rts
     .endproc
 
@@ -94,7 +90,7 @@
     ;   A = clobbered
 
     .proc {{ my_def("write_init") }}
-        jsr {{ DATA_P }}::write
+        jsr {{ data.api("write") }}
         jsr {{ my("pulse_en") }}
         rts
     .endproc
@@ -145,7 +141,7 @@
     .proc {{ my_def("write_cmnd_raw") }}
         pha
         lda #{{ constant("CTRL_CMD_WR") }}
-        jsr {{ CTRL_P }}::write
+        jsr {{ ctrl.api("write") }}
         pla
         jsr {{ my("write_byte") }}
         rts
@@ -162,11 +158,11 @@
 
     .proc {{ my_def("wait_ready") }}
         ; Switch data pins to input.
-        jsr {{ DATA_P }}::set_input
+        jsr {{ data.api("set_input") }}
 
         ; Set control: RS=0 (status), RWB=1 (read).
         lda #{{ constant("CTRL_CMD_RD") }}
-        jsr {{ CTRL_P }}::write
+        jsr {{ ctrl.api("write") }}
     @loop:
         ; Read data from the port.
         jsr {{ my("read_byte") }}
@@ -176,11 +172,11 @@
         bne @loop
 
         ; Restore data pins to output.
-        jsr {{ DATA_P }}::set_output
+        jsr {{ data.api("set_output") }}
 
         ; Restore control to write mode.
         lda #{{ constant("CTRL_CMD_WR") }}
-        jsr {{ CTRL_P }}::write
+        jsr {{ ctrl.api("write") }}
 
         rts
     .endproc
@@ -238,12 +234,12 @@
 
     .proc {{ api_def("init") }}
         ; Set data pins to output.
-        jsr {{ DATA_P }}::set_output
+        jsr {{ data.api("set_output") }}
 
         ; Set control pins low (EN=0, CTRL=CMD_WR).
-        jsr {{ EN_P }}::turn_off
+        jsr {{ en_pin.api("turn_off") }}
         lda #{{ constant("CTRL_CMD_WR") }}
-        jsr {{ CTRL_P }}::write
+        jsr {{ ctrl.api("write") }}
 
         ; Power-up, set the device to the correct bus mode.
         jsr {{ my("power_up") }}
@@ -308,7 +304,7 @@
         jsr {{ my("wait_ready") }}
         ; RS=1 (data register), RWB=0 (write).
         lda #{{ constant("CTRL_DATA_WR") }}
-        jsr {{ CTRL_P }}::write
+        jsr {{ ctrl.api("write") }}
         pla
         jsr {{ my("write_byte") }}
         rts

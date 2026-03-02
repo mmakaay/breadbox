@@ -1,28 +1,19 @@
 CORE:
-  cpu: 65c02
+  cpu: "65c02"
   clock_mhz: 1.000
 
-BUS:
+VIA:
   component: via_w65c22
   address: $6000
 
 LCD:
   component: lcd_hd44780
   cmnd:
-    bus: BUS
+    bus: VIA
     rs_pin: PB0
     rwb_pin: PB1
     en_pin: PB2
   data:
-    bus: BUS
+    bus: VIA
     mode: 4bit
     port: B
-
-CONSOLE:
-  component: uart_6551
-  type: um6551
-  address: $5000
-  irq: on
-  rts:
-    bus: BUS
-    pin: PA0

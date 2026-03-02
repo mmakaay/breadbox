@@ -39,7 +39,7 @@ def resolve(
     device.add(
         gpio_pin_resolve.resolve(
             breadbox,
-            ComponentIdentifier("PIN_EN"),
+            ComponentIdentifier("EN_PIN"),
             {"bus": cmnd.bus, "pin": cmnd.en_pin, "direction": "out"},
         )
     )

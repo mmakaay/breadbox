@@ -3,7 +3,6 @@
 .include "hardware.inc"
 .include "{{ bus_device.component_path }}/registers.inc"
 
-{% set P = symbol_prefix %}
 {% set PORT_REG = bus_device.id ~ "_PORT" ~ port %}
 {% set DDR_REG = bus_device.id ~ "_DDR" ~ port %}
 {% set MASK = bits | int %}
@@ -16,7 +15,7 @@
 {% endfor %}
 
 {% if direction in ("out", "both") and not exclusive_port %}
-.segment "ZEROPAGE" : zeropage
+.segment "ZEROPAGE"
 
 {{ var("tmp") }}: .res 1                   ; Internal temporary for read-modify-write
 
@@ -74,20 +73,20 @@
 
     .proc {{ api_def("turn_on") }}
 {% if exclusive_port %}
-{% if BIDIR %}
+    {% if BIDIR %}
         lda #{{ MASK | bin }}
         sta {{ DDR_REG }}
         sta {{ PORT_REG }}
-{% else %}
+    {% else %}
         lda #{{ MASK | bin }}
         sta {{ PORT_REG }}
-{% endif %}
+    {% endif %}
 {% else %}
-{% if BIDIR %}
+    {% if BIDIR %}
         lda {{ DDR_REG }}
         ora #{{ MASK | bin }}
         sta {{ DDR_REG }}
-{% endif %}
+    {% endif %}
         lda {{ PORT_REG }}
         ora #{{ MASK | bin }}
         sta {{ PORT_REG }}
@@ -157,7 +156,7 @@
     ; Write the accumulator to {{ component_id }}.
     ;
     ; Does NOT change DDR direction. For bidirectional groups, call
-    ; {{ P }}::set_output first if the bus was set to input.
+    ; {{ api("set_output") }} first if the bus was set to input.
     ;
     ; The value in A must have bits positioned within the group mask ({{ MASK | bin }}).
     ; Bits outside the mask are ignored{% if not exclusive_port %} and preserved{% endif %}.

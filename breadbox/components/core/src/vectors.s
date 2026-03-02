@@ -10,7 +10,7 @@
 
 .constructor {{ symbol("init_vectors") }}, 32  ; Add constructor, max prio.
 
-.segment "ZEROPAGE" : zeropage
+.segment "ZEROPAGE"
 
     ; Address vectors, that can be modified in order to point
     ; to a custom interrupt handler.

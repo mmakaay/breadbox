@@ -141,7 +141,7 @@ class BreadboxConfig:
         """
         Check that no two components produce the same symbol prefix.
 
-        The symbol_prefix (e.g. CONSOLE_PIN_RTS) is derived from the
+        The symbol_prefix (e.g. CONSOLE_RTS_PIN) is derived from the
         component tree path using underscores. A flat component named A_B
         and a nested component A > B would both produce prefix 'A_B',
         causing symbol collisions in the generated assembly.

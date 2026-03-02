@@ -62,11 +62,11 @@ class Uart6551Device(Device):
         return BAUD_RATES[self.baudrate]
 
     @cached_property
-    def pin_rts(self) -> Device | None:
+    def rts_pin(self) -> Device | None:
         """
         The RTS flow control GPIO pin sub-device, or None.
         """
         try:
-            return self._sub("PIN_RTS")
+            return self._sub("RTS_PIN")
         except ValueError:
             return None

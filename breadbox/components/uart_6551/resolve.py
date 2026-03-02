@@ -20,7 +20,7 @@ def resolve(
         device.add(
             gpio_pin_resolve.resolve(
                 breadbox,
-                ComponentIdentifier("PIN_RTS"),
+                ComponentIdentifier("RTS_PIN"),
                 {**rts_settings, "direction": "out"},
             )
         )

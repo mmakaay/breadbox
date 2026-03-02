@@ -6,30 +6,27 @@
 ; Mode: polling (timed TX delay for TDRE bug workaround)
 {% endif %}
 
-{% set P = symbol_prefix %}
-{% if pin_rts %}{% set RTS_P = pin_rts.symbol_prefix %}{% endif %}
+; =====================================================================
+; TX character time (microseconds) for the W65C51N timed-TX workaround.
+;
+; The W65C51N has a hardware bug: the TDRE (Transmit Data Register Empty)
+; status bit is never set. Polling it would spin forever. Instead, we
+; delay for one full character time (10 bits at baud rate) after each
+; write to allow the shift register to drain.
 
-    ; =====================================================================
-    ; TX character time (microseconds) for the W65C51N timed-TX workaround.
-    ;
-    ; The W65C51N has a hardware bug: the TDRE (Transmit Data Register Empty)
-    ; status bit is never set. Polling it would spin forever. Instead, we
-    ; delay for one full character time (10 bits at baud rate) after each
-    ; write to allow the shift register to drain.
+_CHAR_TIME_US = 10000000 / {{ baudrate }}
 
-    _CHAR_TIME_US = 10000000 / {{ baudrate }}
-
-    .proc {{ my_def("tx_delay") }}
-        DELAY_US _CHAR_TIME_US
-        rts
-    .endproc
+.proc {{ my_def("tx_delay") }}
+    DELAY_US _CHAR_TIME_US
+    rts
+.endproc
 
 {% if irq == "on" %}
 .segment "KERNALRAM"
 
     {{ var("rx_buffer") }}: .res $100  ; 256-byte RX ring buffer
 
-.segment "ZEROPAGE" : zeropage
+.segment "ZEROPAGE"
 
     {{ var("rx_w_ptr") }}:   .res 1    ; Ring buffer write pointer (IRQ side)
     {{ var("rx_r_ptr") }}:   .res 1    ; Ring buffer read pointer (main side)
@@ -61,10 +58,10 @@
         sta {{ var("rx_off") }}
         lda {{ constant("STATUS") }}
         sta {{ var("status") }}
-{% if pin_rts %}
+{% if rts_pin %}
 
         ; Assert RTS: active low = ready to receive.
-        jsr {{ RTS_P }}::turn_off
+        jsr {{ rts_pin.api("turn_off") }}
 {% endif %}
 
         ; CTRL: 8N1, internal baud rate generator.
@@ -124,7 +121,7 @@
         sta {{ var("rx_buffer") }},X
         inc {{ var("rx_w_ptr") }}
         inc {{ var("rx_pending") }}
-{% if pin_rts %}
+{% if rts_pin %}
 
         jsr {{ my("turn_rx_off_if_buffer_almost_full") }}
 {% endif %}
@@ -132,7 +129,7 @@
     @done:
         rts
     .endproc
-{% if pin_rts %}
+{% if rts_pin %}
 
     ; =====================================================================
     ; Deassert RTS if the receive buffer is almost full (~80%).
@@ -150,7 +147,7 @@
 
         lda #1
         sta {{ var("rx_off") }}
-        jsr {{ RTS_P }}::turn_on
+        jsr {{ rts_pin.api("turn_on") }}
 
     @done:
         rts
@@ -174,7 +171,7 @@
         sei
         lda #0
         sta {{ var("rx_off") }}
-        jsr {{ RTS_P }}::turn_off
+        jsr {{ rts_pin.api("turn_off") }}
         cli
 
     @done:
@@ -201,12 +198,12 @@
 
         ldx {{ var("rx_r_ptr") }}
         lda {{ var("rx_buffer") }},X
-{% if pin_rts %}
+{% if rts_pin %}
         pha
 {% endif %}
         inc {{ var("rx_r_ptr") }}
         dec {{ var("rx_pending") }}
-{% if pin_rts %}
+{% if rts_pin %}
 
         jsr {{ my("turn_rx_on_if_buffer_emptying") }}
         pla
@@ -271,10 +268,10 @@
 
     .proc {{ api_def("init") }}
         jsr {{ my("soft_reset") }}
-{% if pin_rts %}
+{% if rts_pin %}
 
         ; Assert RTS: active low = ready to receive.
-        jsr {{ RTS_P }}::turn_off
+        jsr {{ rts_pin.api("turn_off") }}
 {% endif %}
 
         ; CTRL: 8N1, internal baud rate generator.

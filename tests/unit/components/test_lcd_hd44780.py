@@ -22,37 +22,37 @@ def make_config(*devices):
 
 class TestCmndSettings:
     def test_construction(self):
-        cmnd = CmndSettings(bus="VIA0", rwb_pin="PA0", en_pin="PA1", rs_pin="PA2")
+        cmnd = CmndSettings(bus=ComponentIdentifier("VIA0"), rwb_pin="PA0", en_pin="PA1", rs_pin="PA2")
         assert cmnd.rwb_pin == "PA0"
         assert cmnd.en_pin == "PA1"
         assert cmnd.rs_pin == "PA2"
 
     def test_bus_coerced_to_component_identifier(self):
-        cmnd = CmndSettings(bus="VIA0", rwb_pin="PA0", en_pin="PA1", rs_pin="PA2")
+        cmnd = CmndSettings(bus=ComponentIdentifier("VIA0"), rwb_pin="PA0", en_pin="PA1", rs_pin="PA2")
         assert isinstance(cmnd.bus, ComponentIdentifier)
         assert cmnd.bus == "VIA0"
 
 
 class TestDataSettings:
     def test_construction_4bit(self):
-        data = DataSettings(bus="VIA0", mode="4bit", port="B")
+        data = DataSettings(bus=ComponentIdentifier("VIA0"), mode="4bit", port="B")
         assert data.mode == "4bit"
         assert data.port == "B"
 
     def test_construction_8bit(self):
-        data = DataSettings(bus="VIA0", mode="8bit", port="B")
+        data = DataSettings(bus=ComponentIdentifier("VIA0"), mode="8bit", port="B")
         assert data.mode == "8bit"
 
     def test_mode_lowercased(self):
-        data = DataSettings(bus="VIA0", mode="4BIT", port="B")
+        data = DataSettings(bus=ComponentIdentifier("VIA0"), mode="4BIT", port="B")
         assert data.mode == "4bit"
 
     def test_invalid_mode(self):
         with pytest.raises(ValueError, match="Invalid mode"):
-            DataSettings(bus="VIA0", mode="16bit", port="B")
+            DataSettings(bus=ComponentIdentifier("VIA0"), mode="16bit", port="B")
 
     def test_bus_coerced_to_component_identifier(self):
-        data = DataSettings(bus="VIA0", mode="4bit", port="B")
+        data = DataSettings(bus=ComponentIdentifier("VIA0"), mode="4bit", port="B")
         assert isinstance(data.bus, ComponentIdentifier)
 
 
@@ -126,7 +126,7 @@ class TestLcdHd44780Device:
 
         assert str(device.ctrl.id) == "CTRL"
         assert isinstance(device.ctrl, ViaW65c22GpioGroupDevice)
-        assert str(device.pin_en.id) == "PIN_EN"
+        assert str(device.en_pin.id) == "EN_PIN"
         assert str(device.data.id) == "DATA"
 
     def test_sub_device_accessor_missing_raises(self):
@@ -151,7 +151,7 @@ class TestResolve:
 
         sub_ids = [str(d.id) for d in device.children]
         assert "CTRL" in sub_ids
-        assert "PIN_EN" in sub_ids
+        assert "EN_PIN" in sub_ids
         assert "DATA" in sub_ids
 
     def test_resolve_8bit_mode(self):

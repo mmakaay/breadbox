@@ -4,7 +4,7 @@
 ; Differences with the original:
 ; - No hard-coded memory addresses, but using the linker for
 ;   assigning these automatically.
-; - Serial console is used for output, via CONSOLE::write_terminal
+; - Serial console is used for output, via SERIAL::write_terminal
 ;   which automatically expands CR to CR+LF for correct terminal
 ;   line endings.
 ; - The Apple II only supports upper case, resulting in the
@@ -41,7 +41,7 @@
 
 .export WOZMON
 
-.segment "ZEROPAGE" : zeropage
+.segment "ZEROPAGE"
 
     XAML: .res 1                ; Last "opened" location Low
     XAMH: .res 1                ; Last "opened" location High
@@ -87,7 +87,7 @@
         bmi GETLINE            ; Beyond start of line, reinitialize.
 
     NEXTCHAR:
-        jsr CONSOLE::read      ; Wait for a character.
+        jsr SERIAL::read       ; Wait for a character.
         bcc NEXTCHAR           ; No character read? Try again.
         cmp #$7F               ; DEL? (backspace on many terminals)
         bne @not_del
@@ -236,6 +236,6 @@
     ; Output the character in A to the serial console.
     ECHO:
         phx
-        jsr CONSOLE::write_terminal
+        jsr SERIAL::write_terminal
         plx
         rts

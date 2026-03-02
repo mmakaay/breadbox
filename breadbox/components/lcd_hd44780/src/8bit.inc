@@ -1,6 +1,3 @@
-{% set DATA_P = data.symbol_prefix %}
-{% set EN_P = pin_en.symbol_prefix %}
-
 ; -----------------------------------------------------------------
 ; Mode-specific initialization hook, called by the `init` routine.
 ;
@@ -25,7 +22,7 @@
 ;   A = clobbered
 
 .proc {{ my_def("write_byte") }}
-    jsr {{ DATA_P }}::write
+    jsr {{ data.api("write") }}
     jsr {{ my("pulse_en") }}
     rts
 .endproc
@@ -40,10 +37,10 @@
 
 .proc {{ my_def("read_byte") }}
     ; Pulse EN high and read the full byte from the data port.
-    jsr {{ EN_P }}::turn_on
-    jsr {{ DATA_P }}::read_port
+    jsr {{ en_pin.api("turn_on") }}
+    jsr {{ data.api("read_port") }}
     pha
-    jsr {{ EN_P }}::turn_off
+    jsr {{ en_pin.api("turn_off") }}
     pla
     rts
 .endproc

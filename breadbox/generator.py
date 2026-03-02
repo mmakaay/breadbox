@@ -274,28 +274,29 @@ class CodeGenerator:
         lines: list[str] = []
         api_defs: list[str] = context["_api_defs"]
         zp_defs: list[str] = context["_zp_defs"]
-        P = context["symbol_prefix"]
-        component_path = component.component_path
+        P = component.scope
 
         if not api_defs and not zp_defs:
             return None
 
-        lines.append("")
-        lines.append(f".scope {P}")
-
+        # Import directives go outside the scope so the raw symbols
+        # (e.g. __LCD_DATA_write) are globally visible. This allows both
+        # scoped access (LCD_DATA::write) and direct references via
+        # device.api("write") in templates.
         for name in zp_defs:
-            sym = f"__{P}_{name}"
-            lines.append(f"    .importzp {sym}")
-            lines.append(f"    {name} = {sym}")
+            lines.append(f".importzp __{P}_{name}")
+        for name in api_defs:
+            lines.append(f".import __{P}_{name}")
+        lines.append("")
 
+        # Scope block provides short aliases for consumer code.
+        lines.append(f".scope {P}")
+        for name in zp_defs:
+            lines.append(f"    {name} = __{P}_{name}")
         if zp_defs and api_defs:
             lines.append("")
-
         for name in api_defs:
-            sym = f"__{P}_{name}"
-            lines.append(f"    .import {sym}")
-            lines.append(f"    {name} = {sym}")
-
+            lines.append(f"    {name} = __{P}_{name}")
         lines.append("")
         lines.append(".endscope")
         lines.append("")
@@ -391,40 +392,40 @@ class CodeGenerator:
         """
         Build the Jinja2 template context for a component.
         """
-        P = component.symbol_prefix
+        P = component.scope
         _api_defs: list[str] = []
         _zp_defs: list[str] = []
 
         def api_def(name: str) -> str:
             """
-            Define a public API subroutine: __{P}_{name}.
+            Define a public API subroutine.
 
             Registers the name for auto-generation of .export and api.inc.
             Use at .proc sites for public API functions.
             """
             if name not in _api_defs:
                 _api_defs.append(name)
-            return f"__{P}_{name}"
+            return api(name)
 
         def api(name: str) -> str:
-            """Reference a public API subroutine: __{P}_{name}."""
-            return f"__{P}_{name}"
+            """Reference a public API subroutine."""
+            return component.api(name)
 
         def my_def(name: str) -> str:
             """
-            Define an internal subroutine: __{P}_{name}.
+            Define an internal subroutine.
 
             Use at .proc sites for component-internal functions.
             """
-            return f"__{P}_{name}"
+            return f"__{component.scope}_{name}"
 
         def my(name: str) -> str:
-            """Reference an internal symbol: __{P}_{name}."""
-            return f"__{P}_{name}"
+            """Reference an internal symbol."""
+            return f"__{component.scope}_{name}"
 
         def zp_def(name: str) -> str:
             """
-            Define a user-facing zero-page variable: __{P}_{name}.
+            Define a user-facing zero-page variable.
 
             Registers the name for auto-generation of .exportzp and api.inc.
             Use at .res label sites for ZP variables exposed in the public API.
@@ -434,21 +435,21 @@ class CodeGenerator:
             return f"__{P}_{name}"
 
         def zp(name: str) -> str:
-            """Reference a user-facing zero-page variable: __{P}_{name}."""
-            return f"__{P}_{name}"
+            """Reference a user-facing zero-page variable."""
+            return f"__{component.scope}_{name}"
 
         def var(name: str) -> str:
-            """Reference or define an internal data symbol: __{P}_{name}."""
-            return f"__{P}_{name}"
+            """Reference or define an internal data symbol."""
+            return f"__{component.scope}_{name}"
 
         def constant(name: str) -> str:
-            """Generate a public constant name: {P}_{name}."""
-            return f"{P}_{name}"
+            """Generate a public constant name."""
+            return f"{component.scope}_{name}"
 
         context: dict = {
             "component": component,
             "component_id": str(component.id),
-            "symbol_prefix": P,
+            "symbol_prefix": component.scope,
             "component_type": component.component_type,
             "api_def": api_def,
             "api": api,

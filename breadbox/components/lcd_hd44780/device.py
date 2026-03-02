@@ -75,11 +75,11 @@ class LcdHd44780Device(Device):
         return self._sub("CTRL")
 
     @cached_property
-    def pin_en(self) -> Device:
+    def en_pin(self) -> Device:
         """
         The EN (Enable) control pin sub-device.
         """
-        return self._sub("PIN_EN")
+        return self._sub("EN_PIN")
 
     @cached_property
     def data(self) -> Device:

@@ -1,6 +1,3 @@
-{% set DATA_P = data.symbol_prefix %}
-{% set EN_P = pin_en.symbol_prefix %}
-
 ; -----------------------------------------------------------------
 ; Mode-specific initialization hook, called by the `init` routine.
 ;
@@ -31,7 +28,7 @@
 .proc {{ my_def("write_byte") }}
     ; High nibble: upper 4 bits are already in position.
     pha
-    jsr {{ DATA_P }}::write
+    jsr {{ data.api("write") }}
     jsr {{ my("pulse_en") }}
 
     ; Low nibble: shift lower 4 bits into upper position.
@@ -40,7 +37,7 @@
     asl
     asl
     asl
-    jsr {{ DATA_P }}::write
+    jsr {{ data.api("write") }}
     jsr {{ my("pulse_en") }}
 
     rts
@@ -59,10 +56,10 @@
 
 .proc {{ my_def("read_byte") }}
     ; Pulse EN high and read the high nibble from the data port.
-    jsr {{ EN_P }}::turn_on
-    jsr {{ DATA_P }}::read_port
+    jsr {{ en_pin.api("turn_on") }}
+    jsr {{ data.api("read_port") }}
     pha
-    jsr {{ EN_P }}::turn_off
+    jsr {{ en_pin.api("turn_off") }}
 
     ; Pulse to clock out the low nibble (ignored).
     jsr {{ my("pulse_en") }}

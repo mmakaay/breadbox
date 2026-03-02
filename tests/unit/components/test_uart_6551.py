@@ -74,5 +74,5 @@ class TestResolveWithRts:
         assert isinstance(device, Uart6551Device)
         assert len(device.children) == 1
         sub = device.children[0]
-        assert sub.id == "PIN_RTS"
+        assert sub.id == "RTS_PIN"
         assert sub.parent is device

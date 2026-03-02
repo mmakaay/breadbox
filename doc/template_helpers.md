@@ -75,7 +75,7 @@ Exported zero-page variables that form part of the component's public API
 
 ```jinja2
 {# definition — at .res label site: #}
-.segment "ZEROPAGE" : zeropage
+.segment "ZEROPAGE"
 {{ zp_def("ptr") }}:  .res 2
 
 {# reference: #}
@@ -92,7 +92,7 @@ is not a subroutine and not part of the public API.
 .segment "KERNALRAM"
 {{ var("rx_buffer") }}: .res $100
 
-.segment "ZEROPAGE" : zeropage
+.segment "ZEROPAGE"
 {{ var("tmp") }}: .res 1
 
 {# reference: #}

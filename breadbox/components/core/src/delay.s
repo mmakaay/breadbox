@@ -4,7 +4,7 @@
 .export {{ symbol("delay") }}
 .exportzp {{ symbol("delay_iterations") }}
 
-.segment "ZEROPAGE" : zeropage
+.segment "ZEROPAGE"
 
     {{ symbol("delay_iterations") }}: .res 2   ; 16-bit iteration count (lo/hi)
 

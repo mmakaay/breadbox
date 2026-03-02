@@ -6,9 +6,6 @@
 ; Mode: polling (TDRE poll for TX, RDRF poll for RX)
 {% endif %}
 
-{% set P = symbol_prefix %}
-{% if pin_rts %}{% set RTS_P = pin_rts.symbol_prefix %}{% endif %}
-
 {% if irq == "on" %}
     ; CMD register presets for TX IRQ control.
     ;   TX_ACTIVE: TIC1 enables TX IRQ, /RTS asserted, DTR on, RX IRQ on.
@@ -21,7 +18,7 @@
     {{ var("rx_buffer") }}: .res $100        ; 256-byte RX ring buffer
     {{ var("tx_buffer") }}: .res $100        ; 256-byte TX ring buffer
 
-.segment "ZEROPAGE" : zeropage
+.segment "ZEROPAGE"
 
     {{ var("rx_w_ptr") }}:   .res 1          ; RX ring buffer write pointer (IRQ side)
     {{ var("rx_r_ptr") }}:   .res 1          ; RX ring buffer read pointer (main side)
@@ -61,10 +58,10 @@
         sta {{ var("tx_pending") }}
         lda {{ constant("STATUS") }}
         sta {{ var("status") }}
-{% if pin_rts %}
+{% if rts_pin %}
 
         ; Assert RTS: active low = ready to receive.
-        jsr {{ RTS_P }}::turn_off
+        jsr {{ rts_pin.api("turn_off") }}
 {% endif %}
 
         ; CTRL: 8N1, internal baud rate generator.
@@ -128,7 +125,7 @@
         sta {{ var("rx_buffer") }},X
         inc {{ var("rx_w_ptr") }}
         inc {{ var("rx_pending") }}
-{% if pin_rts %}
+{% if rts_pin %}
 
         jsr {{ my("turn_rx_off_if_buffer_almost_full") }}
 {% endif %}
@@ -170,7 +167,7 @@
     @done:
         rts
     .endproc
-{% if pin_rts %}
+{% if rts_pin %}
 
     ; =====================================================================
     ; Deassert RTS if the receive buffer is almost full (~80%).
@@ -188,7 +185,7 @@
 
         lda #1
         sta {{ var("rx_off") }}
-        jsr {{ RTS_P }}::turn_on
+        jsr {{ rts_pin.api("turn_on") }}
 
     @done:
         rts
@@ -212,7 +209,7 @@
         sei
         lda #0
         sta {{ var("rx_off") }}
-        jsr {{ RTS_P }}::turn_off
+        jsr {{ rts_pin.api("turn_off") }}
         cli
 
     @done:
@@ -239,12 +236,12 @@
 
         ldx {{ var("rx_r_ptr") }}
         lda {{ var("rx_buffer") }},X
-{% if pin_rts %}
+{% if rts_pin %}
         pha
 {% endif %}
         inc {{ var("rx_r_ptr") }}
         dec {{ var("rx_pending") }}
-{% if pin_rts %}
+{% if rts_pin %}
 
         jsr {{ my("turn_rx_on_if_buffer_emptying") }}
         pla
@@ -355,10 +352,10 @@
 
     .proc {{ api_def("init") }}
         jsr {{ my("soft_reset") }}
-{% if pin_rts %}
+{% if rts_pin %}
 
         ; Assert RTS: active low = ready to receive.
-        jsr {{ RTS_P }}::turn_off
+        jsr {{ rts_pin.api("turn_off") }}
 {% endif %}
 
         ; CTRL: 8N1, internal baud rate generator.
