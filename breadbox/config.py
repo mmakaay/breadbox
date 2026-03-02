@@ -139,23 +139,23 @@ class BreadboxConfig:
 
     def _validate_unique_prefixes(self) -> None:
         """
-        Check that no two components produce the same symbol prefix.
+        Check that no two components produce the same scope.
 
-        The symbol_prefix (e.g. CONSOLE_RTS_PIN) is derived from the
-        component tree path using underscores. A flat component named A_B
-        and a nested component A > B would both produce prefix 'A_B',
-        causing symbol collisions in the generated assembly.
+        The scope (e.g. CONSOLE_RTS_PIN) is derived from the component
+        tree path using underscores. A flat component named A_B and a
+        nested component A > B would both produce scope 'A_B', causing
+        symbol collisions in the generated assembly.
         """
-        prefixes: dict[str, Component] = {}
+        scopes: dict[str, Component] = {}
         for component in self._all_components():
-            prefix = component.symbol_prefix
-            if prefix in prefixes:
-                other = prefixes[prefix]
+            scope = component.scope
+            if scope in scopes:
+                other = scopes[scope]
                 raise ConfigError(
-                    f"Symbol prefix collision: components '{other.component_path}' and"
-                    f" '{component.component_path}' both produce prefix '{prefix}'"
+                    f"Symbol scope collision: components '{other.component_path}' and"
+                    f" '{component.component_path}' both produce scope '{scope}'"
                 )
-            prefixes[prefix] = component
+            scopes[scope] = component
 
     def _all_components(self) -> list[Component]:
         """

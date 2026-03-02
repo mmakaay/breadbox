@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import shutil
+import warnings
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -246,7 +247,7 @@ class CodeGenerator:
             template = env.get_template(src_file.name)
             rendered = template.render(context)
             if src_file.suffix == ".s":
-                rendered = self._inject_exports(rendered, context)
+                rendered = self._inject_exports(rendered, component, context)
             relative_path = component.component_path / src_file.name
             self._write_generated_output(relative_path, rendered)
 
@@ -268,13 +269,10 @@ class CodeGenerator:
     def _generate_api_inc(component: Component, context: dict) -> str | None:
         """
         Auto-generate api.inc from metadata collected during template rendering.
-
-        Returns None if the component has no API functions or exported ZP variables.
         """
         lines: list[str] = []
         api_defs: list[str] = context["_api_defs"]
         zp_defs: list[str] = context["_zp_defs"]
-        P = component.scope
 
         if not api_defs and not zp_defs:
             return None
@@ -284,19 +282,19 @@ class CodeGenerator:
         # scoped access (LCD_DATA::write) and direct references via
         # device.api("write") in templates.
         for name in zp_defs:
-            lines.append(f".importzp __{P}_{name}")
+            lines.append(f".importzp {component.zp(name)}")
         for name in api_defs:
-            lines.append(f".import __{P}_{name}")
+            lines.append(f".import {component.api(name)}")
         lines.append("")
 
         # Scope block provides short aliases for consumer code.
-        lines.append(f".scope {P}")
+        lines.append(f".scope {component.scope}")
         for name in zp_defs:
-            lines.append(f"    {name} = __{P}_{name}")
+            lines.append(f"    {name} = {component.zp(name)}")
         if zp_defs and api_defs:
             lines.append("")
         for name in api_defs:
-            lines.append(f"    {name} = __{P}_{name}")
+            lines.append(f"    {name} = {component.api(name)}")
         lines.append("")
         lines.append(".endscope")
         lines.append("")
@@ -304,7 +302,7 @@ class CodeGenerator:
         return "\n".join(lines)
 
     @staticmethod
-    def _inject_exports(rendered: str, context: dict) -> str:
+    def _inject_exports(rendered: str, component: Component, context: dict) -> str:
         """
         Inject .export/.exportzp directives into a rendered .s file.
 
@@ -314,18 +312,17 @@ class CodeGenerator:
         """
         api_defs: list[str] = context["_api_defs"]
         zp_defs: list[str] = context["_zp_defs"]
-        P: str = context["symbol_prefix"]
 
         if not api_defs and not zp_defs:
             return rendered
 
         export_lines: list[str] = []
         for name in zp_defs:
-            export_lines.append(f".exportzp __{P}_{name}")
+            export_lines.append(f".exportzp {component.zp(name)}")
         if zp_defs and api_defs:
             export_lines.append("")
         for name in api_defs:
-            export_lines.append(f".export __{P}_{name}")
+            export_lines.append(f".export {component.api(name)}")
 
         export_block = "\n".join(export_lines)
 
@@ -387,79 +384,76 @@ class CodeGenerator:
 
         return {"symbol": symbol}
 
-
     def _build_context(self, component: Component) -> dict:
         """
         Build the Jinja2 template context for a component.
+
+        Pure name-formatting methods live on Component (api, my, var, zp,
+        constant). The generator wraps them with *_def variants that track
+        defined names for .export injection and api.inc auto-generation,
+        and warns when different helpers produce the same symbol.
         """
-        P = component.scope
         _api_defs: list[str] = []
         _zp_defs: list[str] = []
+        _defined_symbols: dict[str, str] = {}  # symbol → source helper
+
+        def _register_def(symbol: str, source: str) -> None:
+            prev = _defined_symbols.get(symbol)
+            if prev is not None and prev != source:
+                warnings.warn(
+                    f"{component.scope}: symbol '{symbol}' defined by both "
+                    f"{prev}() and {source}() — possible collision",
+                    stacklevel=2,
+                )
+            _defined_symbols[symbol] = source
 
         def api_def(name: str) -> str:
             """
             Define a public API subroutine.
 
-            Registers the name for auto-generation of .export and api.inc.
-            Use at .proc sites for public API functions.
+            Registers the name for .export and api.inc auto-generation.
             """
+            sym = component.api(name)
+            _register_def(sym, "api_def")
             if name not in _api_defs:
                 _api_defs.append(name)
-            return api(name)
-
-        def api(name: str) -> str:
-            """Reference a public API subroutine."""
-            return component.api(name)
+            return sym
 
         def my_def(name: str) -> str:
             """
             Define an internal subroutine.
 
-            Use at .proc sites for component-internal functions.
+            Registers for duplicate detection but not for export.
             """
-            return f"__{component.scope}_{name}"
-
-        def my(name: str) -> str:
-            """Reference an internal symbol."""
-            return f"__{component.scope}_{name}"
+            sym = component.my(name)
+            _register_def(sym, "my_def")
+            return sym
 
         def zp_def(name: str) -> str:
             """
             Define a user-facing zero-page variable.
 
-            Registers the name for auto-generation of .exportzp and api.inc.
-            Use at .res label sites for ZP variables exposed in the public API.
+            Registers the name for .exportzp and api.inc auto-generation.
             """
+            sym = component.zp(name)
+            _register_def(sym, "zp_def")
             if name not in _zp_defs:
                 _zp_defs.append(name)
-            return f"__{P}_{name}"
-
-        def zp(name: str) -> str:
-            """Reference a user-facing zero-page variable."""
-            return f"__{component.scope}_{name}"
-
-        def var(name: str) -> str:
-            """Reference or define an internal data symbol."""
-            return f"__{component.scope}_{name}"
-
-        def constant(name: str) -> str:
-            """Generate a public constant name."""
-            return f"{component.scope}_{name}"
+            return sym
 
         context: dict = {
             "component": component,
             "component_id": str(component.id),
-            "symbol_prefix": component.scope,
             "component_type": component.component_type,
             "api_def": api_def,
-            "api": api,
+            "api": component.api,
             "my_def": my_def,
-            "my": my,
+            "my": component.my,
             "zp_def": zp_def,
-            "zp": zp,
-            "var": var,
-            "constant": constant,
-            "symbol": var,  # backward compat for CORE templates
+            "zp": component.zp,
+            "var": component.var,
+            "constant": component.constant,
+            "symbol": component.var,  # backward compat for CORE templates
             "_api_defs": _api_defs,
             "_zp_defs": _zp_defs,
         }

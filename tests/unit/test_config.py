@@ -65,7 +65,7 @@ class TestValidateFromYaml:
 class TestValidateUniquePrefixes:
     """
     BreadboxConfig._validate() must reject configs where two devices
-    produce the same symbol prefix (symbol_prefix).
+    produce the same scope.
     """
 
     def test_no_collision_passes(self):
@@ -75,19 +75,19 @@ class TestValidateUniquePrefixes:
 
     def test_nested_vs_flat_collision_raises(self):
         """
-        A flat device VIA_LED and a nested VIA > LED both produce prefix 'VIA_LED'.
+        A flat device VIA_LED and a nested VIA > LED both produce scope 'VIA_LED'.
         """
         via = ViaW65c22Device(id=ComponentIdentifier("VIA"), address=Address16("$6000"))
         led = ViaW65c22Device(id=ComponentIdentifier("LED"), address=Address16("$6001"))
         via.add(led)
         via_led = ViaW65c22Device(id=ComponentIdentifier("VIA_LED"), address=Address16("$6002"))
         config = make_config(CORE=make_core(), VIA=via, VIA_LED=via_led)
-        with pytest.raises(ConfigError, match="Symbol prefix collision.*VIA_LED"):
+        with pytest.raises(ConfigError, match="Symbol scope collision.*VIA_LED"):
             config._validate()
 
     def test_deeply_nested_collision_raises(self):
         """
-        FOO > BAR > BAZ produces prefix 'FOO_BAR_BAZ',
+        FOO > BAR > BAZ produces scope 'FOO_BAR_BAZ',
         which collides with a flat device named FOO_BAR_BAZ.
         """
         foo = ViaW65c22Device(id=ComponentIdentifier("FOO"), address=Address16("$6000"))
@@ -99,7 +99,7 @@ class TestValidateUniquePrefixes:
         flat = ViaW65c22Device(id=ComponentIdentifier("FOO_BAR_BAZ"), address=Address16("$6003"))
 
         config = make_config(CORE=make_core(), FOO=foo, FOO_BAR_BAZ=flat)
-        with pytest.raises(ConfigError, match="Symbol prefix collision.*FOO_BAR_BAZ"):
+        with pytest.raises(ConfigError, match="Symbol scope collision.*FOO_BAR_BAZ"):
             config._validate()
 
     def test_distinct_nested_devices_pass(self):

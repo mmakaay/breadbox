@@ -95,16 +95,28 @@ class Component(ABC):
         return Path(self.make_path("/"))
 
     @cached_property
-    def symbol_prefix(self) -> str:
-        return self.make_path("_")
-
-    @cached_property
     def scope(self) -> str:
         return self.make_path("_")
 
     def api(self, name: str) -> str:
         """Reference a public API subroutine: __{scope}_{name}."""
         return f"__{self.scope}_{name}"
+
+    def my(self, name: str) -> str:
+        """Reference an internal subroutine: __{scope}_{name}."""
+        return f"__{self.scope}_{name}"
+
+    def var(self, name: str) -> str:
+        """Reference or define an internal data symbol: __{scope}_{name}."""
+        return f"__{self.scope}_{name}"
+
+    def zp(self, name: str) -> str:
+        """Reference a user-facing zero-page variable: __{scope}_{name}."""
+        return f"__{self.scope}_{name}"
+
+    def constant(self, name: str) -> str:
+        """Generate a public constant name: {scope}_{name}."""
+        return f"{self.scope}_{name}"
 
     def accept(self, visitor: ComponentVisitor) -> None:
         visitor.visit(self)

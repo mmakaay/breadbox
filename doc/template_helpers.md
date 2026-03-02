@@ -17,7 +17,7 @@ communicates the **intent** of the usage site.
 | `var(n)`       | `__{P}_{n}`          | No        | label/`lda`/`sta` — internal data    |
 | `constant(n)`  | `{P}_{n}`            | No        | constant definitions and references  |
 
-`P` is the component's `symbol_prefix` (e.g. `UART`, `SCHERMPJE`).
+`P` is the component's `scope` (e.g. `UART`, `SCHERMPJE`).
 
 ## What the Generator Auto-Generates
 
