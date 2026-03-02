@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from functools import cached_property
 from breadbox.types.device import Device
 from breadbox.types.component_identifier import ComponentIdentifier
@@ -45,6 +45,7 @@ class LcdHd44780Device(Device):
     width: int = 16
     height: int = 2
     characters: str = "5x8"
+    clock_hz: int = field(default=0, init=False)
 
     def __post_init__(self) -> None:
         super().__post_init__()

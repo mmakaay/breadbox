@@ -4,10 +4,13 @@ from typing import Any
 
 import yaml
 
+from breadbox.components.core.device import CoreDevice
 from breadbox.errors import ConfigError
 from breadbox.memory import MemoryLayout, resolve_memory_layout
+from breadbox.types.address16 import Address16
 from breadbox.types.component import Component
 from breadbox.types.component_identifier import ComponentIdentifier
+from breadbox.types.memory_size import MemorySize
 from breadbox.visitors.config_printer import ConfigPrinter
 
 
@@ -27,6 +30,12 @@ class BreadboxConfig:
             return self.components[component_id]
         except KeyError:
             raise ValueError(f"Component '{component_id}' not found") from None
+
+    @property
+    def core(self) -> CoreDevice:
+        core = self.get(ComponentIdentifier("CORE"))
+        assert isinstance(core, CoreDevice)
+        return core
 
     @staticmethod
     def _resolve_config_path(config_path: Path) -> Path:
@@ -175,14 +184,21 @@ class BreadboxConfig:
         from breadbox.components.rom.device import RomDevice
 
         has_ram = any(isinstance(c, RamDevice) for c in self.components.values())
-        has_rom = any(isinstance(c, RomDevice) for c in self.components.values())
-
         if not has_ram:
-            device = RamDevice(id=ComponentIdentifier("RAM"), address="$0000", size=0x4000)
+            device = RamDevice(
+                id=ComponentIdentifier("RAM"),
+                address=Address16("$0000"),
+                size=MemorySize(0x4000),
+            )
             self.components[device.id] = device
 
+        has_rom = any(isinstance(c, RomDevice) for c in self.components.values())
         if not has_rom:
-            device = RomDevice(id=ComponentIdentifier("ROM"), address="$8000", size=0x8000)
+            device = RomDevice(
+                id=ComponentIdentifier("ROM"),
+                address=Address16("$8000"),
+                size=MemorySize(0x8000),
+            )
             self.components[device.id] = device
 
     def _resolve_memory(self) -> None:

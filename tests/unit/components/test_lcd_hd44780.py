@@ -1,12 +1,17 @@
 import pytest
 
 from breadbox.components.lcd_hd44780.device import CmndSettings, DataSettings, LcdHd44780Device
+from breadbox.components.core.device import CoreDevice
 from breadbox.components.lcd_hd44780.resolve import resolve
 from breadbox.components.via_w65c22.device import ViaW65c22Device
 from breadbox.components.via_w65c22.gpio_group.device import ViaW65c22GpioGroupDevice
 from breadbox.config import BreadboxConfig
 from breadbox.types.address16 import Address16
 from breadbox.types.component_identifier import ComponentIdentifier
+
+
+def make_core():
+    return CoreDevice(id=ComponentIdentifier("CORE"), clock_mhz=1.0)
 
 
 def make_config(*devices):
@@ -111,7 +116,7 @@ class TestLcdHd44780Device:
 
     def test_sub_device_accessors(self):
         via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
-        config = make_config(via)
+        config = make_config(make_core(), via)
 
         settings = {
             "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
@@ -132,7 +137,7 @@ class TestLcdHd44780Device:
 class TestResolve:
     def test_resolve_creates_sub_devices(self):
         via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
-        config = make_config(via)
+        config = make_config(make_core(), via)
 
         settings = {
             "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
@@ -151,7 +156,7 @@ class TestResolve:
 
     def test_resolve_8bit_mode(self):
         via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
-        config = make_config(via)
+        config = make_config(make_core(), via)
 
         settings = {
             "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
@@ -166,7 +171,7 @@ class TestResolve:
 
     def test_resolve_4bit_mode_data_bits(self):
         via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
-        config = make_config(via)
+        config = make_config(make_core(), via)
 
         settings = {
             "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
@@ -181,7 +186,7 @@ class TestResolve:
 
     def test_sub_devices_have_parent(self):
         via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
-        config = make_config(via)
+        config = make_config(make_core(), via)
 
         settings = {
             "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
@@ -196,7 +201,7 @@ class TestResolve:
 class TestDuplicatePinValidation:
     def test_valid_config_no_duplicates(self):
         via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
-        config = make_config(via)
+        config = make_config(make_core(), via)
 
         settings = {
             "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
@@ -208,7 +213,7 @@ class TestDuplicatePinValidation:
 
     def test_duplicate_cmnd_pin_raises(self):
         via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
-        config = make_config(via)
+        config = make_config(make_core(), via)
 
         settings = {
             "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA0"},
@@ -220,7 +225,7 @@ class TestDuplicatePinValidation:
     def test_different_buses_no_conflict(self):
         via0 = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
         via1 = ViaW65c22Device(id=ComponentIdentifier("VIA1"), address=Address16("$7000"))
-        config = make_config(via0, via1)
+        config = make_config(make_core(), via0, via1)
 
         # Same pin names but different buses -- should not raise
         settings = {

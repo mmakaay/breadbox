@@ -446,6 +446,7 @@ class CodeGenerator:
             return f"{P}_{name}"
 
         context: dict = {
+            "component": component,
             "component_id": str(component.id),
             "symbol_prefix": P,
             "component_type": component.component_type,

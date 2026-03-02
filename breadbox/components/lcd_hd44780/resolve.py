@@ -1,5 +1,6 @@
 from typing import Any
 
+from breadbox.components.core.device import CoreDevice
 from breadbox.components.gpio_group import resolve as gpio_group_resolve
 from breadbox.components.gpio_pin import resolve as gpio_pin_resolve
 from breadbox.components.lcd_hd44780.device import CmndSettings, DataSettings, LcdHd44780Device
@@ -23,6 +24,9 @@ def resolve(
         height=device_settings.get("height", 2),
         characters=device_settings.get("characters", "5x8"),
     )
+
+    # Set the CPU clock speed, required for timing computations.
+    device.clock_hz = breadbox.core.clock_hz
 
     device.add(
         gpio_group_resolve.resolve(

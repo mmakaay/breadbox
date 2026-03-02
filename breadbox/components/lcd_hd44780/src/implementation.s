@@ -7,7 +7,10 @@
 {% set CTRL_P = ctrl.symbol_prefix %}
 {% set DATA_P = data.symbol_prefix %}
 {% set EN_P = pin_en.symbol_prefix %}
-{% set IS_4BIT = (mode == "4bit") %}
+
+; CTRL pin bits: pins[0]=RS, pins[1]=RWB (order is set by LCD resolver).
+{% set RS_BIT = ctrl.pin_bit(ctrl.pins[0]) %}
+{% set RWB_BIT = ctrl.pin_bit(ctrl.pins[1]) %}
 
 .include "hardware.inc"
 .include "CORE/delay.inc"
@@ -16,11 +19,6 @@
 .include "{{ ctrl.component_path }}/api.inc"
 .include "{{ pin_en.component_path }}/api.inc"
 
-; CTRL pin ordering: pins[0]=RS, pins[1]=RWB (set by LCD resolver).
-{% set RS_PIN = ctrl.pins[0] %}
-{% set RWB_PIN = ctrl.pins[1] %}
-{% set RS_BIT = ctrl.pin_bit(RS_PIN) %}
-{% set RWB_BIT = ctrl.pin_bit(RWB_PIN) %}
 
 ; Select register + read or write mode                                       RS RWB
 {{ constant("CTRL_CMD_WR") }}  = $00                                       ; 0  0  write command
@@ -38,62 +36,51 @@
 
 .segment "KERNALRAM"
 
-{{ var("shadow_display") }}: .res 1   ; Display Control bits (D, C, B)
-{{ var("shadow_entry") }}:   .res 1   ; Entry Mode Set bits (I/D, S)
+    {{ var("shadow_display") }}: .res 1   ; Display Control bits (D, C, B)
+    {{ var("shadow_entry") }}:   .res 1   ; Entry Mode Set bits (I/D, S)
 
 .segment "KERNALROM"
+
+; Load mode-specific driver code.
+.include "{{ component_path }}/{{ mode }}.inc"
 
 ; =========================================================================
 ; Private helpers
 ; =========================================================================
 
     ; -----------------------------------------------------------------
-    ; Pulse EN high then low.
+    ; Pulse EN high then low, with at least 450ns pulse time (per spec).
     ;
-    ; The GPIO subroutines include sufficient instruction cycles for the
-    ; HD44780's minimum EN pulse width (450ns). At 1 MHz each instruction
-    ; takes 2-6 µs, so no extra delays are needed.
+    ; Ensuring the required pulse time is done by injecting the number
+    ; of nop operations that is required for reaching the pulse time,
+    ; based on the configured CPU clock speed.
+    ;
+    ; This method allows for driving the display on higher clock speeds,
+    ; without breaking the data transfers. Most tutorials related to
+    ; this end up with the conclusion that the CPU is slow enough to
+    ; get the timing right. While that is true for a 1 MHz setup, where
+    ; instructions take 2us - 6us (way above the required 450ns), on a
+    ; 14 MHz system we're looking at 143ns - 428ns.
     ;
     ; Out:
     ;   A = clobbered
 
+    {# Pulse timing computation, to make sure 450ns is reached #}
+    {% set EN_MIN_NS    = 450 %}
+    {% set NOP_CYCLES   = 2 %}
+    {% set NS_PER_CYCLE = (1_000_000_000 / clock_hz) %}
+    {% set NS_PER_NOP   = NOP_CYCLES * NS_PER_CYCLE %}
+    {% set NOP_COUNT    = (EN_MIN_NS / NS_PER_NOP) | round(0, 'ceil') | int %}
+
     .proc {{ my_def("pulse_en") }}
         jsr {{ EN_P }}::turn_on
+        {% for _ in range(NOP_COUNT) %}
+        nop
+        {% endfor %}
         jsr {{ EN_P }}::turn_off
         rts
     .endproc
 
-{% if IS_4BIT %}
-    ; -----------------------------------------------------------------
-    ; Write a byte as two nibbles to the 4-bit data bus.
-    ;
-    ; The register select (RS) must already be configured by the caller.
-    ; Sends the high nibble first, then the low nibble, with EN pulses.
-    ;
-    ; In:
-    ;   A = byte to send
-    ; Out:
-    ;   A = clobbered
-
-    .proc {{ my_def("write_nibbles") }}
-        ; High nibble: upper 4 bits are already in position.
-        pha
-        jsr {{ DATA_P }}::write
-        jsr {{ my("pulse_en") }}
-
-        ; Low nibble: shift lower 4 bits into upper position.
-        pla
-        asl
-        asl
-        asl
-        asl
-        jsr {{ DATA_P }}::write
-        jsr {{ my("pulse_en") }}
-
-        rts
-    .endproc
-
-{% endif %}
     ; -----------------------------------------------------------------
     ; Write a raw byte to the data bus (used during init only).
     ;
@@ -113,9 +100,11 @@
     .endproc
 
     ; -----------------------------------------------------------------
-    ; Power up sequence — force LCD into {{ mode }} mode.
+    ; Power up sequence — force LCD into 8-bit mode.
     ;
-    ; Executes the initialization procedure as described in the datasheet.
+    ; Executes the initialization procedure as described in the datasheet,
+    ; until the point where the display is guaranteed to be switched into
+    ; 8-bit mode.
     ;
     ; Out:
     ;   A = clobbered
@@ -138,14 +127,6 @@
         ; 3rd Function Set — LCD is now reliably in 8-bit mode.
         jsr {{ my("write_init") }}
         DELAY_US 200
-{% if IS_4BIT %}
-
-        ; Switch the display to 4-bit mode.
-        ; After this, all commands use two-nibble transfers.
-        lda #$20
-        jsr {{ my("write_init") }}
-        DELAY_US 200
-{% endif %}
 
         rts
     .endproc
@@ -166,12 +147,7 @@
         lda #{{ constant("CTRL_CMD_WR") }}
         jsr {{ CTRL_P }}::write
         pla
-{% if IS_4BIT %}
-        jsr {{ my("write_nibbles") }}
-{% else %}
-        jsr {{ DATA_P }}::write
-        jsr {{ my("pulse_en") }}
-{% endif %}
+        jsr {{ my("write_byte") }}
         rts
     .endproc
 
@@ -185,24 +161,19 @@
     ;   A = clobbered
 
     .proc {{ my_def("wait_ready") }}
-    @loop:
         ; Switch data pins to input.
         jsr {{ DATA_P }}::set_input
 
         ; Set control: RS=0 (status), RWB=1 (read).
         lda #{{ constant("CTRL_CMD_RD") }}
         jsr {{ CTRL_P }}::write
+    @loop:
+        ; Read data from the port.
+        jsr {{ my("read_byte") }}
 
-        ; Pulse EN high and read the data port.
-        jsr {{ EN_P }}::turn_on
-        jsr {{ DATA_P }}::read_port
-        pha                          ; save status byte
-        jsr {{ EN_P }}::turn_off
-
-{% if IS_4BIT %}
-        ; Clock out the low nibble (ignored).
-        jsr {{ my("pulse_en") }}
-{% endif %}
+        ; Check busy flag, and wait for "not busy".
+        and #BUSY_FLAG
+        bne @loop
 
         ; Restore data pins to output.
         jsr {{ DATA_P }}::set_output
@@ -210,11 +181,6 @@
         ; Restore control to write mode.
         lda #{{ constant("CTRL_CMD_WR") }}
         jsr {{ CTRL_P }}::write
-
-        ; Check busy flag.
-        pla
-        and #BUSY_FLAG
-        bne @loop
 
         rts
     .endproc
@@ -282,7 +248,10 @@
         ; Power-up, set the device to the correct bus mode.
         jsr {{ my("power_up") }}
 
-        ; Function Set (init only, computed from config).
+        ; Hook for mode-specific initialization.
+        jsr {{ my("init_for_mode") }}
+
+        ; Configure Function Set (init only, computed from config).
         jsr {{ my("wait_ready") }}
         lda #{{ funcset_value | hex }}
         jsr {{ my("write_cmnd_raw") }}
@@ -341,12 +310,7 @@
         lda #{{ constant("CTRL_DATA_WR") }}
         jsr {{ CTRL_P }}::write
         pla
-{% if IS_4BIT %}
-        jsr {{ my("write_nibbles") }}
-{% else %}
-        jsr {{ DATA_P }}::write
-        jsr {{ my("pulse_en") }}
-{% endif %}
+        jsr {{ my("write_byte") }}
         rts
     .endproc
 
