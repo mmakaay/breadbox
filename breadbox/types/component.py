@@ -114,9 +114,6 @@ class Component(ABC):
         """Reference a user-facing zero-page variable: __{scope}_{name}."""
         return f"__{self.scope}_{name}"
 
-    def constant(self, name: str) -> str:
-        """Generate a public constant name: {scope}_{name}."""
-        return f"{self.scope}_{name}"
 
     def accept(self, visitor: ComponentVisitor) -> None:
         visitor.visit(self)

@@ -452,7 +452,6 @@ class CodeGenerator:
             "zp_def": zp_def,
             "zp": component.zp,
             "var": component.var,
-            "constant": component.constant,
             "symbol": component.var,  # backward compat for CORE templates
             "_api_defs": _api_defs,
             "_zp_defs": _zp_defs,

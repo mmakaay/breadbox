@@ -344,8 +344,8 @@ class TestHardwareInc:
         generator = CodeGenerator(project)
         generator.generate()
 
-        content = (output_dir / "VIA" / "registers.inc").read_text()
-        assert "VIA_BASE = $6000" in content
+        content = (output_dir / "VIA" / "constants.inc").read_text()
+        assert "BASE" in content and "= $6000" in content
 
     def test_via_base_address_custom(self, tmp_path):
         project = make_project(tmp_path, make_core_via_config(via_address="$7000"))
@@ -353,8 +353,8 @@ class TestHardwareInc:
         generator = CodeGenerator(project)
         generator.generate()
 
-        content = (output_dir / "VIA" / "registers.inc").read_text()
-        assert "VIA_BASE = $7000" in content
+        content = (output_dir / "VIA" / "constants.inc").read_text()
+        assert "BASE" in content and "= $7000" in content
 
     def test_via_registers(self, tmp_path):
         project = make_project(tmp_path, make_core_via_config())
@@ -362,13 +362,13 @@ class TestHardwareInc:
         generator = CodeGenerator(project)
         generator.generate()
 
-        content = (output_dir / "VIA" / "registers.inc").read_text()
-        assert "VIA_PORTB = VIA_BASE + $00" in content
-        assert "VIA_PORTA = VIA_BASE + $01" in content
-        assert "VIA_DDRB = VIA_BASE + $02" in content
-        assert "VIA_DDRA = VIA_BASE + $03" in content
-        assert "VIA_IER = VIA_BASE + $0E" in content
-        assert "VIA_PORTA_NH = VIA_BASE + $0F" in content
+        content = (output_dir / "VIA" / "constants.inc").read_text()
+        assert "PORTB     = BASE + $00" in content
+        assert "PORTA     = BASE + $01" in content
+        assert "DDRB      = BASE + $02" in content
+        assert "DDRA      = BASE + $03" in content
+        assert "IER       = BASE + $0E" in content
+        assert "PORTA_NH  = BASE + $0F" in content
 
     def test_via_all_sixteen_registers(self, tmp_path):
         project = make_project(tmp_path, make_core_via_config())
@@ -376,9 +376,9 @@ class TestHardwareInc:
         generator = CodeGenerator(project)
         generator.generate()
 
-        content = (output_dir / "VIA" / "registers.inc").read_text()
+        content = (output_dir / "VIA" / "constants.inc").read_text()
         for name, offset in REGISTERS:
-            expected = f"VIA_{name} = VIA_BASE + ${offset:02X}"
+            expected = f"{name:<10s}= BASE + ${offset:02X}"
             assert expected in content, f"Missing register: {expected}"
 
     def test_empty_config_hardware_inc(self, tmp_path):

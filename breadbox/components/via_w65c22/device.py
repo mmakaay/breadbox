@@ -1,6 +1,5 @@
 import dataclasses
 from dataclasses import dataclass
-from functools import cached_property
 from typing import Self
 
 from breadbox.types.address16 import Address16
@@ -41,11 +40,6 @@ class ViaW65c22Device(Device):
     def __post_init__(self) -> None:
         super().__post_init__()
         self._internal_fields.add("_bus_clients")
-
-    @cached_property
-    def registers(self) -> list[tuple[str, int]]:
-        return REGISTERS
-
     def register_bus_client(self, device: Device) -> None:
         """
         Track a device that uses this VIA as its bus.

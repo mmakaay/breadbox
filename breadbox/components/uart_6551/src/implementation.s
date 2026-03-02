@@ -19,19 +19,12 @@
 .include "CORE/delay.inc"
 .include "CORE/macros.inc"
 .include "{{ component_path }}/constants.inc"
-.include "{{ component_path }}/registers.inc"
 {% if rts_pin %}
 .include "{{ rts_pin.component_path }}/api.inc"
 {% endif %}
 
 ; =========================================================================
-; Settings
-; =========================================================================
-
-{{ constant("CTRL_BAUD") }} = {{ baud_code | hex }}
-
-; =========================================================================
-; Driver code.
+; Shared driver code.
 ; =========================================================================
 
 .segment "KERNALROM"
@@ -45,7 +38,7 @@
     ;   A = clobbered
 
     .proc {{ my_def("soft_reset") }}
-        sta {{ constant("STATUS") }}
+        sta STATUS
         DELAY_MS 100
         rts
     .endproc

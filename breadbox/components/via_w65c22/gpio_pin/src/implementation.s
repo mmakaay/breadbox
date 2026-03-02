@@ -1,10 +1,10 @@
 ; GPIO pin: {{ component_id }} ({{ pin }} on {{ bus_device.id }}, port {{ port }})
 
 .include "hardware.inc"
-.include "{{ bus_device.component_path }}/registers.inc"
+.include "{{ bus_device.component_path }}/constants.inc"
 
-{% set PORT_REG = bus_device.id ~ "_PORT" ~ port %}
-{% set DDR_REG = bus_device.id ~ "_DDR" ~ port %}
+{% set PORT_REG = "PORT" ~ port %}
+{% set DDR_REG = "DDR" ~ port %}
 {% set MASK = bitmask %}
 {% set INV_MASK = 255 - bitmask %}
 {% set BIDIR = (direction == "both") %}

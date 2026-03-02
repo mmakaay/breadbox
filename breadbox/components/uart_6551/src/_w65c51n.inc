@@ -56,7 +56,7 @@ _CHAR_TIME_US = 10000000 / {{ baudrate }}
         sta {{ var("rx_w_ptr") }}
         sta {{ var("rx_pending") }}
         sta {{ var("rx_off") }}
-        lda {{ constant("STATUS") }}
+        lda STATUS
         sta {{ var("status") }}
 {% if rts_pin %}
 
@@ -65,13 +65,13 @@ _CHAR_TIME_US = 10000000 / {{ baudrate }}
 {% endif %}
 
         ; CTRL: 8N1, internal baud rate generator.
-        lda #(CTRL_8BIT | CTRL_1STOP | CTRL_INTCLK | {{ constant("CTRL_BAUD") }})
-        sta {{ constant("CTRL") }}
+        lda #(CTRL_8BIT | CTRL_1STOP | CTRL_INTCLK | CTRL_BAUD)
+        sta CTRL
 
         ; CMD: no parity, no echo, TX IRQ disabled (/RTS asserted), DTR on.
         ;      RX IRQ enabled.
         lda #(CMD_TIC2 | CMD_DTR)
-        sta {{ constant("CMD") }}
+        sta CMD
 
         ; Enable CPU interrupts. The IRQ handler is registered at link time
         ; via .interruptor and dispatched by the core interruptor table.
@@ -91,7 +91,7 @@ _CHAR_TIME_US = 10000000 / {{ baudrate }}
     ; Register saving and RTI are handled by the core dispatcher.
 
     .proc {{ my_def("irq_handler") }}
-        lda {{ constant("STATUS") }}
+        lda STATUS
         sta {{ var("status") }}
         and #SR_IRQ
         beq @done
@@ -116,7 +116,7 @@ _CHAR_TIME_US = 10000000 / {{ baudrate }}
         and #SR_RDRF
         beq @done
 
-        lda {{ constant("DATA") }}
+        lda DATA
         ldx {{ var("rx_w_ptr") }}
         sta {{ var("rx_buffer") }},X
         inc {{ var("rx_w_ptr") }}
@@ -275,13 +275,13 @@ _CHAR_TIME_US = 10000000 / {{ baudrate }}
 {% endif %}
 
         ; CTRL: 8N1, internal baud rate generator.
-        lda #(CTRL_8BIT | CTRL_1STOP | CTRL_INTCLK | {{ constant("CTRL_BAUD") }})
-        sta {{ constant("CTRL") }}
+        lda #(CTRL_8BIT | CTRL_1STOP | CTRL_INTCLK | CTRL_BAUD)
+        sta CTRL
 
         ; CMD: no parity, no echo, TX IRQ disabled (/RTS asserted), DTR on.
         ;      RX IRQ disabled for polling mode.
         lda #(CMD_TIC2 | CMD_DTR | CMD_IRQOFF)
-        sta {{ constant("CMD") }}
+        sta CMD
 
         rts
     .endproc
@@ -299,11 +299,11 @@ _CHAR_TIME_US = 10000000 / {{ baudrate }}
 
     .proc {{ api_def("read") }}
         clc
-        lda {{ constant("STATUS") }}
+        lda STATUS
         and #SR_RDRF
         beq @done
 
-        lda {{ constant("DATA") }}
+        lda DATA
         sec
     @done:
         rts
@@ -316,7 +316,7 @@ _CHAR_TIME_US = 10000000 / {{ baudrate }}
     ;   A = non-zero if data available, zero if not
 
     .proc {{ api_def("check_rx") }}
-        lda {{ constant("STATUS") }}
+        lda STATUS
         and #SR_RDRF
         rts
     .endproc
@@ -342,7 +342,7 @@ _CHAR_TIME_US = 10000000 / {{ baudrate }}
     ;   A = status register contents
 
     .proc {{ api_def("load_status") }}
-        lda {{ constant("STATUS") }}
+        lda STATUS
         rts
     .endproc
 
@@ -359,7 +359,7 @@ _CHAR_TIME_US = 10000000 / {{ baudrate }}
     ;   A = clobbered
 
     .proc {{ api_def("write") }}
-        sta {{ constant("DATA") }}
+        sta DATA
         jsr {{ my("tx_delay") }}
         rts
     .endproc

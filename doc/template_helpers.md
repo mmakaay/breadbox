@@ -15,7 +15,6 @@ communicates the **intent** of the usage site.
 | `zp_def(n)`    | `__{P}_{n}`          | Yes       | label `.res` — exported ZP variable  |
 | `zp(n)`        | `__{P}_{n}`          | No        | `lda`/`sta` — exported ZP reference  |
 | `var(n)`       | `__{P}_{n}`          | No        | label/`lda`/`sta` — internal data    |
-| `constant(n)`  | `{P}_{n}`            | No        | constant definitions and references  |
 
 `P` is the component's `scope` (e.g. `UART`, `SCHERMPJE`).
 
@@ -103,18 +102,19 @@ sta {{ var("tmp") }}
 .exportzp {{ var("tmp") }}
 ```
 
-### `constant(name)` — Public Constants
+### Plain Constants
 
-Hardware register names and public constant values. Uses the bare prefix
-(no `__` mangling) because users write these directly.
+Hardware registers and configuration values use plain assembly equate names
+with Jinja2 only for computed values. No helper function needed.
 
 ```jinja2
 {# definition: #}
-{{ constant("CMD_CLEAR") }} = $01
+CTRL_BAUD = {{ baud_code | hex }}
+STATUS    = {{ (address + 1) | hex }}
 
 {# reference: #}
-lda #{{ constant("CMD_CLEAR") }}
-sta {{ constant("STATUS") }}
+lda #CTRL_BAUD
+sta STATUS
 ```
 
 ## Addressing Modes

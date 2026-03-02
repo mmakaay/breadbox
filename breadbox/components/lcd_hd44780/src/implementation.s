@@ -17,10 +17,10 @@
 .include "{{ en_pin.component_path }}/api.inc"
 
 ; Select register + read or write mode                                      RS RWB
-{{ constant("CTRL_CMD_WR") }}  = $00                                       ; 0  0  write command
-{{ constant("CTRL_CMD_RD") }}  = {{ RWB_BIT | bin }}                       ; 0  1  read status
-{{ constant("CTRL_DATA_WR") }} = {{ RS_BIT | bin }}                        ; 1  0  write data
-{{ constant("CTRL_DATA_RD") }} = {{ RS_BIT | bin }} | {{ RWB_BIT | bin }}  ; 1  1  read data
+CTRL_CMD_WR  = $00                                       ; 0  0  write command
+CTRL_CMD_RD  = {{ RWB_BIT | bin }}                       ; 0  1  read status
+CTRL_DATA_WR = {{ RS_BIT | bin }}                        ; 1  0  write data
+CTRL_DATA_RD = {{ RS_BIT | bin }} | {{ RWB_BIT | bin }}  ; 1  1  read data
 
 ; =========================================================================
 ; Shadow registers for composite commands.
@@ -140,7 +140,7 @@
 
     .proc {{ my_def("write_cmnd_raw") }}
         pha
-        lda #{{ constant("CTRL_CMD_WR") }}
+        lda #CTRL_CMD_WR
         jsr {{ ctrl.api("write") }}
         pla
         jsr {{ my("write_byte") }}
@@ -161,7 +161,7 @@
         jsr {{ data.api("set_input") }}
 
         ; Set control: RS=0 (status), RWB=1 (read).
-        lda #{{ constant("CTRL_CMD_RD") }}
+        lda #CTRL_CMD_RD
         jsr {{ ctrl.api("write") }}
     @loop:
         ; Read data from the port.
@@ -175,7 +175,7 @@
         jsr {{ data.api("set_output") }}
 
         ; Restore control to write mode.
-        lda #{{ constant("CTRL_CMD_WR") }}
+        lda #CTRL_CMD_WR
         jsr {{ ctrl.api("write") }}
 
         rts
@@ -238,7 +238,7 @@
 
         ; Set control pins low (EN=0, CTRL=CMD_WR).
         jsr {{ en_pin.api("turn_off") }}
-        lda #{{ constant("CTRL_CMD_WR") }}
+        lda #CTRL_CMD_WR
         jsr {{ ctrl.api("write") }}
 
         ; Power-up, set the device to the correct bus mode.
@@ -303,7 +303,7 @@
         pha
         jsr {{ my("wait_ready") }}
         ; RS=1 (data register), RWB=0 (write).
-        lda #{{ constant("CTRL_DATA_WR") }}
+        lda #CTRL_DATA_WR
         jsr {{ ctrl.api("write") }}
         pla
         jsr {{ my("write_byte") }}

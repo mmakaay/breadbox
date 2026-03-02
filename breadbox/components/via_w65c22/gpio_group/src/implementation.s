@@ -1,17 +1,17 @@
 ; GPIO group: {{ component_id }} (port {{ port }} on {{ bus_device.id }}, mask {{ bits | hex }})
 
 .include "hardware.inc"
-.include "{{ bus_device.component_path }}/registers.inc"
+.include "{{ bus_device.component_path }}/constants.inc"
 
-{% set PORT_REG = bus_device.id ~ "_PORT" ~ port %}
-{% set DDR_REG = bus_device.id ~ "_DDR" ~ port %}
+{% set PORT_REG = "PORT" ~ port %}
+{% set DDR_REG = "DDR" ~ port %}
 {% set MASK = bits | int %}
 {% set INV_MASK = 255 - MASK %}
 {% set BIDIR = (direction == "both") %}
 
 ; Per-pin bitmask constants (named by pin, preserving caller's order).
 {% for bitmask in pin_bitmasks %}
-{{ constant("BIT_" ~ pins[loop.index0]) }} = {{ bitmask | bin }}
+BIT_{{ pins[loop.index0] }} = {{ bitmask | bin }}
 {% endfor %}
 
 {% if direction in ("out", "both") and not exclusive_port %}
