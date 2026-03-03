@@ -15,7 +15,7 @@ built-in RTSB pin. Options for the output of this pin:
 - **low** = remote side can send
 - **high** = remote side sending halted
 
-Implementing RTS using the RTSB pin was not possible unfortunately.
+Implementing RTS using the RTSB pin was not possible, unfortunately.
 
 ### Issue with using the RTSB pin
 
@@ -44,7 +44,7 @@ flow control, we have to connect the remote side's CTS pin to a GPIO pin
 on the computer, e.g. a pin on an interface adapter like the W65C22 VIA,
 making that pin an RTS signal source.
 
-### LD;DR:
+### TL;DR:
 
 The UART IC has no usable pin for driving the RTS signal, but we can use a
 GPIO pin on an interface adapter to perform its function.
