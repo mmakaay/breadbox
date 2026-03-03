@@ -11,8 +11,9 @@
 ; In:
 ;   fmtdec16::value = the 16 bit value to convert
 ; Out:
-;   fmtdec16::decimal = the null-terminated decimal string (reversed)
-;   A/X/Y = preserved
+;   fmtdec16::decimal = null-terminated decimal string, zero-padded
+;   X = index into decimal of the first significant digit
+;   A/Y = preserved
 
 .segment "KERNALROM"
 
@@ -21,32 +22,43 @@
     value   = {{ symbol("value") }}
     decimal = {{ symbol("decimal") }}
 
-    PUSH_AXY
-    ldx #0
-    stx decimal
+    pha
+    phy
 
-    ; Set the divider for divmod16 to 10, so we can use it to strip off the "ones".
+    ; Pre-fill buffer with "00000\0".
+    lda #'0'
+    ldy #4
+@fill:
+    sta decimal,y
+    dey
+    bpl @fill
+    lda #0
+    sta decimal+5           ; Null terminator.
+
+    ; Setup divmod16.
     CP_WORD divmod16::dividend, value
     SET_WORD divmod16::divisor, 10
 
+    ldx #4                  ; Start at rightmost digit position.
+
 @next_digit:
     jsr divmod16
-
-    lda divmod16::remainder   ; Get computed remainder
-    clc                       ; Clear carry for clean addition
-    adc #'0'                  ; Add remainder to ASCII value of "0"
-    sta decimal,x             ; Store digit in output buffer
-    inx
-
-    ; Repeat until all base 10 digits have been extracted.
-    lda divmod16::dividend
-    ora divmod16::dividend + 1
-    bne @next_digit           ; Branch if not yet at zero
-
-    lda #0                    ; Null-terminate the string
+    lda divmod16::remainder
+    clc
+    adc #'0'
     sta decimal,x
 
-    PULL_AXY
+    lda divmod16::dividend
+    ora divmod16::dividend+1
+    beq @done
+
+    dex
+    bpl @next_digit
+
+@done:
+    ; X = index of first significant digit.
+    ply
+    pla
     rts
 
 .endproc
