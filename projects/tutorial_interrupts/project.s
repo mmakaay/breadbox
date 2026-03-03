@@ -21,6 +21,10 @@
 ;   is started, the LCD display is updated with the new value. This
 ;   saves a lot of resources, compared to continuously updating the LCD,
 ;   even when there is no new counter value to display.
+;
+; A nice extra that was easy to add with this change, is a "debounce"
+; text on the display, during the time that debouncing is active.
+; This gives a good insight in the debouncing process.
 
 .include "breadbox.inc"
 .include "stdlib/io/print.inc"
@@ -28,7 +32,7 @@
 .include "VIA/constants.inc"
 
 .export main
-.interruptor handle_irq   ; Registers the subroutine as IRQ handler with BREADBOX
+.interruptor handle_irq   ; Register subroutine in BREADBOX as IRQ handler
 
 .segment "RAM"
 
@@ -65,30 +69,38 @@
         beq @wait_for_change         ; It is, wait some more.
 
         ; Count value updated! let's write it to the display.
+        sei
         CP_WORD fmtdec16::value, counter
         jsr fmtdec16
         jsr LCD::home
         PRINT LCD::write, fmtdec16::decimal
+        cli
 
         ; Show debounce marker.
         ldy #0
         ldx #8
         jsr LCD::cursor_move
+        sei
         PRINT LCD::write, debounce_on
+        cli
 
         ; Run the debounce countdown.
     @debounce_countdown:
+        sei
         lda debounce                 ; Check if debounce counter is 0.
         ora debounce + 1
         beq @debounce_done           ; Yes, go wait for the next change.
         DEC_WORD debounce            ; No, decrement the debounce counter,
+        cli
         jmp @debounce_countdown      ; and debounce a bit longer.
 
     @debounce_done:
         ldy #0
         ldx #8
         jsr LCD::cursor_move
+        sei
         PRINT LCD::write, debounce_off
+        cli
         jmp @wait_for_change
 
     .endproc
