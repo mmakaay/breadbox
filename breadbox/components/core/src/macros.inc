@@ -19,6 +19,19 @@
 .endmacro
 
 ; =========================================================================
+; Copy a byte value from one memory location to another.
+;
+; In:
+;   _target = destination address
+;   _source = source address
+; Out:
+;   A = clobbered
+
+.macro CP_BYTE _target, _source
+    SET_BYTE _target, _source
+.endmacro
+
+; =========================================================================
 ; Store zero into a memory location.
 ;
 ; In:
@@ -73,7 +86,7 @@
 .endmacro
 
 ; =========================================================================
-; Copy a 16-bit word from one memory location to another.
+; Copy a 16-bit word value from one memory location to another.
 ;
 ; In:
 ;   _target = destination address
