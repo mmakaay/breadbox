@@ -11,10 +11,13 @@ DDRB             = BASE + $02      ; Data directions port B (bit 0 = in, 1 = out
 DDRA             = BASE + $03      ; Data directions port A (bit 0 = in, 1 = out)
 T1CL             = BASE + $04      ; T1 counter format and operation, low byte
 T1CH             = BASE + $05      ; T1 counter format and operation, high byte
-T1LL             = BASE + $06      ; T1 latch format and operaiton, low byte
-T1LH             = BASE + $07      ; T1 latch format and operaiton, high byte
+T1_COUNTER       = T1CL            ; Convenience alias
+T1LL             = BASE + $06      ; T1 latch format and operation, low byte
+T1LH             = BASE + $07      ; T1 latch format and operation, high byte
+T1_LATCH         = T1LL            ; Convenience alias
 T2CL             = BASE + $08      ; T2 lower-order latches (write) / counter (read)
 T2CH             = BASE + $09      ; T2 high-order counter
+T2_COUNTER       = T2CL            ; Convenience alias
 SR               = BASE + $0A      ; Shift register
 ACR              = BASE + $0B      ; Auxiliary Control Register
 PCR              = BASE + $0C      ; Peripheral Control Register
