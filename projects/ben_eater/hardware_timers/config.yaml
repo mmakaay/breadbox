@@ -29,12 +29,3 @@ LED:
   pin: PA1
   direction: out
   default: off
-
-CONSOLE:
-  component: uart_6551
-  type: um6551
-  address: $5000
-  irq: on
-  rts:
-    provider: VIA
-    pin: PA0
