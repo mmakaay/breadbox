@@ -8,7 +8,7 @@ VIA:
 
 LEDS:
   component: gpio_group
-  parent: VIA
+  provider: VIA
   pins: [PB0, PB1, PB2, PB3, PB4, PB5, PB6, PB7]
   direction: out
   default: off

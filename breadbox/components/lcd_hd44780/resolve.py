@@ -13,13 +13,13 @@ def resolve(
     component_id: ComponentIdentifier,
     device_settings: dict[str, Any],
 ) -> LcdHd44780Device:
-    cmnd = CmndSettings(**device_settings["cmnd"])
-    data = DataSettings(**device_settings["data"])
+    cmnd_pins = CmndSettings(**device_settings["cmnd_pins"])
+    data_pins = DataSettings(**device_settings["data_pins"])
 
     # Pin ordering convention: CTRL pins = [RS, RWB] (semantic order matters for LCD mode constants)
     device = LcdHd44780Device(
         id=component_id,
-        mode=data.mode,
+        mode=data_pins.mode,
         width=device_settings.get("width", 16),
         height=device_settings.get("height", 2),
         characters=device_settings.get("characters", "5x8"),
@@ -31,8 +31,8 @@ def resolve(
     device.add(
         gpio_group_resolve.resolve(
             breadbox,
-            ComponentIdentifier("CTRL"),
-            {"bus": cmnd.bus, "pins": [cmnd.rs_pin, cmnd.rwb_pin], "direction": "out"},
+            ComponentIdentifier("CTRL_PINS"),
+            {"provider": cmnd_pins.provider, "pins": [cmnd_pins.rs_pin, cmnd_pins.rwb_pin], "direction": "out"},
         )
     )
 
@@ -40,23 +40,23 @@ def resolve(
         gpio_pin_resolve.resolve(
             breadbox,
             ComponentIdentifier("EN_PIN"),
-            {"bus": cmnd.bus, "pin": cmnd.en_pin, "direction": "out"},
+            {"provider": cmnd_pins.provider, "pin": cmnd_pins.en_pin, "direction": "out"},
         )
     )
 
-    mode = data.mode.upper()
+    mode = data_pins.mode.upper()
     if mode == "4BIT":
         bits = 0b11110000
     elif mode == "8BIT":
         bits = 0b11111111
     else:
-        raise ValueError(f"Invalid data.mode {mode!r} for component {component_id!r} (expected: 4BIT or 8BIT)")
+        raise ValueError(f"Invalid data_pins.mode {mode!r} for component {component_id!r} (expected: 4BIT or 8BIT)")
 
     device.add(
         gpio_group_resolve.resolve(
             breadbox,
-            ComponentIdentifier("DATA"),
-            {"bus": data.bus, "port": data.port, "bits": bits},
+            ComponentIdentifier("DATA_PINS"),
+            {"provider": data_pins.provider, "port": data_pins.port, "bits": bits},
         )
     )
 

@@ -1,7 +1,6 @@
-; GPIO group: {{ component_id }} (port {{ port }} on {{ bus_device.id }}, mask {{ bits | hex }})
+; GPIO group: {{ component_id }} (port {{ port }} on {{ provider_device.id }}, mask {{ bits | hex }})
 
-.include "hardware.inc"
-.include "{{ bus_device.component_path }}/constants.inc"
+.include "{{ provider_device.component_path }}/constants.inc"
 
 {% set PORT_REG = "PORT" ~ port %}
 {% set DDR_REG = "DDR" ~ port %}
@@ -156,7 +155,7 @@ BIT_{{ pins[loop.index0] }} = {{ bitmask | bin }}
     ; Write the accumulator to {{ component_id }}.
     ;
     ; Does NOT change DDR direction. For bidirectional groups, call
-    ; {{ api("set_output") }} first if the bus was set to input.
+    ; {{ api("set_output") }} first if the port was set to input.
     ;
     ; The value in A must have bits positioned within the group mask ({{ MASK | bin }}).
     ; Bits outside the mask are ignored{% if not exclusive_port %} and preserved{% endif %}.

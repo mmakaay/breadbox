@@ -468,9 +468,9 @@ class CodeGenerator:
             ):
                 context[name] = getattr(component, name)
 
-        # Expose the bus device reference for register name generation.
-        bus_device = getattr(component, "bus_device", None)
-        if bus_device is not None:
-            context["bus_device"] = bus_device
+        # Expose the provider device reference for register name generation.
+        provider_device = getattr(component, "provider_device", None)
+        if provider_device is not None:
+            context["provider_device"] = provider_device
 
         return context

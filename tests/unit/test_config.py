@@ -118,16 +118,16 @@ class TestValidateUniquePrefixes:
 class TestValidatePinConflicts:
     """
     BreadboxConfig._validate() must reject configs where two devices
-    claim the same physical pin on a bus device.
+    claim the same physical pin on a provider device.
     """
 
     def test_no_pin_conflict_passes(self):
         via = ViaW65c22Device(id=ComponentIdentifier("VIA"), address=Address16("$6000"))
         pin1 = ViaW65c22GpioPinDevice(
-            id=ComponentIdentifier("LED1"), bus_device=via, pin="PB0", bus="VIA"
+            id=ComponentIdentifier("LED1"), provider_device=via, pin="PB0", provider="VIA"
         )
         pin2 = ViaW65c22GpioPinDevice(
-            id=ComponentIdentifier("LED2"), bus_device=via, pin="PB1", bus="VIA"
+            id=ComponentIdentifier("LED2"), provider_device=via, pin="PB1", provider="VIA"
         )
         config = make_config(CORE=make_core(), VIA=via, LED1=pin1, LED2=pin2)
         config._validate()
@@ -135,10 +135,10 @@ class TestValidatePinConflicts:
     def test_same_pin_raises(self):
         via = ViaW65c22Device(id=ComponentIdentifier("VIA"), address=Address16("$6000"))
         pin1 = ViaW65c22GpioPinDevice(
-            id=ComponentIdentifier("LED1"), bus_device=via, pin="PB0", bus="VIA"
+            id=ComponentIdentifier("LED1"), provider_device=via, pin="PB0", provider="VIA"
         )
         pin2 = ViaW65c22GpioPinDevice(
-            id=ComponentIdentifier("LED2"), bus_device=via, pin="PB0", bus="VIA"
+            id=ComponentIdentifier("LED2"), provider_device=via, pin="PB0", provider="VIA"
         )
         config = make_config(CORE=make_core(), VIA=via, LED1=pin1, LED2=pin2)
         with pytest.raises(ConfigError, match="Pin conflict.*PB0"):
@@ -155,12 +155,12 @@ class TestValidatePinConflicts:
             "  address: '$6000'\n"
             "LED1:\n"
             "  component: gpio_pin\n"
-            "  bus: VIA\n"
+            "  provider: VIA\n"
             "  pin: PB0\n"
             "  direction: out\n"
             "LED2:\n"
             "  component: gpio_pin\n"
-            "  bus: VIA\n"
+            "  provider: VIA\n"
             "  pin: PB0\n"
             "  direction: out\n"
         )

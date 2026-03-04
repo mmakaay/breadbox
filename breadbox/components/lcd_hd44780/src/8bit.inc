@@ -22,7 +22,7 @@
 ;   A = clobbered
 
 .proc {{ my_def("write_byte") }}
-    jsr {{ data.api("write") }}
+    jsr {{ data_pins.api("write") }}
     jsr {{ my("pulse_en") }}
     rts
 .endproc
@@ -38,7 +38,7 @@
 .proc {{ my_def("read_byte") }}
     ; Pulse EN high and read the full byte from the data port.
     jsr {{ en_pin.api("turn_on") }}
-    jsr {{ data.api("read_port") }}
+    jsr {{ data_pins.api("read_port") }}
     pha
     jsr {{ en_pin.api("turn_off") }}
     pla

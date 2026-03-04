@@ -22,38 +22,38 @@ def make_config(*devices):
 
 class TestCmndSettings:
     def test_construction(self):
-        cmnd = CmndSettings(bus=ComponentIdentifier("VIA0"), rwb_pin="PA0", en_pin="PA1", rs_pin="PA2")
-        assert cmnd.rwb_pin == "PA0"
-        assert cmnd.en_pin == "PA1"
-        assert cmnd.rs_pin == "PA2"
+        cmnd_pins = CmndSettings(provider=ComponentIdentifier("VIA0"), rwb_pin="PA0", en_pin="PA1", rs_pin="PA2")
+        assert cmnd_pins.rwb_pin == "PA0"
+        assert cmnd_pins.en_pin == "PA1"
+        assert cmnd_pins.rs_pin == "PA2"
 
     def test_bus_coerced_to_component_identifier(self):
-        cmnd = CmndSettings(bus=ComponentIdentifier("VIA0"), rwb_pin="PA0", en_pin="PA1", rs_pin="PA2")
-        assert isinstance(cmnd.bus, ComponentIdentifier)
-        assert cmnd.bus == "VIA0"
+        cmnd_pins = CmndSettings(provider=ComponentIdentifier("VIA0"), rwb_pin="PA0", en_pin="PA1", rs_pin="PA2")
+        assert isinstance(cmnd_pins.provider, ComponentIdentifier)
+        assert cmnd_pins.provider == "VIA0"
 
 
 class TestDataSettings:
     def test_construction_4bit(self):
-        data = DataSettings(bus=ComponentIdentifier("VIA0"), mode="4bit", port="B")
-        assert data.mode == "4bit"
-        assert data.port == "B"
+        data_pins = DataSettings(provider=ComponentIdentifier("VIA0"), mode="4bit", port="B")
+        assert data_pins.mode == "4bit"
+        assert data_pins.port == "B"
 
     def test_construction_8bit(self):
-        data = DataSettings(bus=ComponentIdentifier("VIA0"), mode="8bit", port="B")
-        assert data.mode == "8bit"
+        data_pins = DataSettings(provider=ComponentIdentifier("VIA0"), mode="8bit", port="B")
+        assert data_pins.mode == "8bit"
 
     def test_mode_lowercased(self):
-        data = DataSettings(bus=ComponentIdentifier("VIA0"), mode="4BIT", port="B")
-        assert data.mode == "4bit"
+        data_pins = DataSettings(provider=ComponentIdentifier("VIA0"), mode="4BIT", port="B")
+        assert data_pins.mode == "4bit"
 
     def test_invalid_mode(self):
         with pytest.raises(ValueError, match="Invalid mode"):
-            DataSettings(bus=ComponentIdentifier("VIA0"), mode="16bit", port="B")
+            DataSettings(provider=ComponentIdentifier("VIA0"), mode="16bit", port="B")
 
     def test_bus_coerced_to_component_identifier(self):
-        data = DataSettings(bus=ComponentIdentifier("VIA0"), mode="4bit", port="B")
-        assert isinstance(data.bus, ComponentIdentifier)
+        data_pins = DataSettings(provider=ComponentIdentifier("VIA0"), mode="4bit", port="B")
+        assert isinstance(data_pins.provider, ComponentIdentifier)
 
 
 class TestLcdHd44780Device:
@@ -119,20 +119,20 @@ class TestLcdHd44780Device:
         config = make_config(make_core(), via)
 
         settings = {
-            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
-            "data": {"bus": "VIA0", "mode": "8bit", "port": "B"},
+            "cmnd_pins": {"provider": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
+            "data_pins": {"provider": "VIA0", "mode": "8bit", "port": "B"},
         }
         device = resolve(config, ComponentIdentifier("LCD0"), settings)
 
-        assert str(device.ctrl.id) == "CTRL"
-        assert isinstance(device.ctrl, ViaW65c22GpioGroupDevice)
+        assert str(device.ctrl_pins.id) == "CTRL_PINS"
+        assert isinstance(device.ctrl_pins, ViaW65c22GpioGroupDevice)
         assert str(device.en_pin.id) == "EN_PIN"
-        assert str(device.data.id) == "DATA"
+        assert str(device.data_pins.id) == "DATA_PINS"
 
     def test_sub_device_accessor_missing_raises(self):
         device = LcdHd44780Device(id=ComponentIdentifier("LCD0"), mode="8bit")
         with pytest.raises(ValueError, match="Child device.*not found"):
-            _ = device.ctrl
+            _ = device.ctrl_pins
 
 class TestResolve:
     def test_resolve_creates_sub_devices(self):
@@ -140,8 +140,8 @@ class TestResolve:
         config = make_config(make_core(), via)
 
         settings = {
-            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
-            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
+            "cmnd_pins": {"provider": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
+            "data_pins": {"provider": "VIA0", "mode": "4bit", "port": "B"},
         }
         device = resolve(config, ComponentIdentifier("LCD0"), settings)
 
@@ -150,21 +150,21 @@ class TestResolve:
         assert len(device.children) == 3
 
         sub_ids = [str(d.id) for d in device.children]
-        assert "CTRL" in sub_ids
+        assert "CTRL_PINS" in sub_ids
         assert "EN_PIN" in sub_ids
-        assert "DATA" in sub_ids
+        assert "DATA_PINS" in sub_ids
 
     def test_resolve_8bit_mode(self):
         via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
         config = make_config(make_core(), via)
 
         settings = {
-            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
-            "data": {"bus": "VIA0", "mode": "8bit", "port": "B"},
+            "cmnd_pins": {"provider": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
+            "data_pins": {"provider": "VIA0", "mode": "8bit", "port": "B"},
         }
         device = resolve(config, ComponentIdentifier("LCD0"), settings)
 
-        data_device = next(d for d in device.children if str(d.id) == "DATA")
+        data_device = next(d for d in device.children if str(d.id) == "DATA_PINS")
         assert isinstance(data_device, ViaW65c22GpioGroupDevice)
         assert data_device.bits == 0xFF
         assert device.mode == "8bit"
@@ -174,13 +174,13 @@ class TestResolve:
         config = make_config(make_core(), via)
 
         settings = {
-            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
-            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
+            "cmnd_pins": {"provider": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
+            "data_pins": {"provider": "VIA0", "mode": "4bit", "port": "B"},
         }
         device = resolve(config, ComponentIdentifier("LCD0"), settings)
 
         assert device.mode == "4bit"
-        data_device = next(d for d in device.children if str(d.id) == "DATA")
+        data_device = next(d for d in device.children if str(d.id) == "DATA_PINS")
         assert isinstance(data_device, ViaW65c22GpioGroupDevice)
         assert data_device.bits == 0xF0
 
@@ -189,8 +189,8 @@ class TestResolve:
         config = make_config(make_core(), via)
 
         settings = {
-            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
-            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
+            "cmnd_pins": {"provider": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
+            "data_pins": {"provider": "VIA0", "mode": "4bit", "port": "B"},
         }
         device = resolve(config, ComponentIdentifier("LCD0"), settings)
 
@@ -204,8 +204,8 @@ class TestDuplicatePinValidation:
         config = make_config(make_core(), via)
 
         settings = {
-            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
-            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
+            "cmnd_pins": {"provider": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
+            "data_pins": {"provider": "VIA0", "mode": "4bit", "port": "B"},
         }
         # Should not raise -- cmnd pins on port A, data pins on port B
         device = resolve(config, ComponentIdentifier("LCD0"), settings)
@@ -216,8 +216,8 @@ class TestDuplicatePinValidation:
         config = make_config(make_core(), via)
 
         settings = {
-            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA0"},
-            "data": {"bus": "VIA0", "mode": "4bit", "port": "B"},
+            "cmnd_pins": {"provider": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA0"},
+            "data_pins": {"provider": "VIA0", "mode": "4bit", "port": "B"},
         }
         with pytest.raises(ValueError, match="Duplicate pin"):
             resolve(config, ComponentIdentifier("LCD0"), settings)
@@ -229,8 +229,8 @@ class TestDuplicatePinValidation:
 
         # Same pin names but different buses -- should not raise
         settings = {
-            "cmnd": {"bus": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
-            "data": {"bus": "VIA1", "mode": "4bit", "port": "A"},
+            "cmnd_pins": {"provider": "VIA0", "rwb_pin": "PA0", "en_pin": "PA1", "rs_pin": "PA2"},
+            "data_pins": {"provider": "VIA1", "mode": "4bit", "port": "A"},
         }
         device = resolve(config, ComponentIdentifier("LCD0"), settings)
         assert len(device.children) == 3

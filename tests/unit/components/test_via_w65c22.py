@@ -154,67 +154,67 @@ class TestViaW65c22Port:
 
 
 def _make_pin(via, pin_id, pin_name, **kwargs):
-    defaults = {"bus": "VIA0", "direction": "out"}
+    defaults = {"provider": "VIA0", "direction": "out"}
     defaults.update(kwargs)
     pin = ViaW65c22GpioPinDevice(
-        id=ComponentIdentifier(pin_id), bus_device=via, pin=pin_name, **defaults
+        id=ComponentIdentifier(pin_id), provider_device=via, pin=pin_name, **defaults
     )
-    via.register_bus_client(pin)
+    via.register_client(pin)
     return pin
 
 
 def _make_group(via, group_id, pins, port, bits, **kwargs):
-    defaults = {"bus": "VIA0", "direction": "both"}
+    defaults = {"provider": "VIA0", "direction": "both"}
     defaults.update(kwargs)
     group = ViaW65c22GpioGroupDevice(
-        id=ComponentIdentifier(group_id), bus_device=via,
+        id=ComponentIdentifier(group_id), provider_device=via,
         pins=pins, port=port, bits=bits, **defaults
     )
-    via.register_bus_client(group)
+    via.register_client(group)
     return group
 
 
-class TestValidateBusClients:
+class TestValidateClients:
     def test_no_clients_passes(self):
         via = make_via()
-        via.validate_bus_clients()
+        via.validate_clients()
 
     def test_disjoint_pins_pass(self):
         via = make_via()
         _make_pin(via, "LED1", "PA0")
         _make_pin(via, "LED2", "PA1")
-        via.validate_bus_clients()
+        via.validate_clients()
 
     def test_disjoint_ports_pass(self):
         via = make_via()
         _make_pin(via, "LED", "PA0")
         _make_pin(via, "BTN", "PB0", direction="in")
-        via.validate_bus_clients()
+        via.validate_clients()
 
     def test_duplicate_pin_raises(self):
         via = make_via()
         _make_pin(via, "OUT", "PB2", direction="both")
         _make_pin(via, "IN", "PB2", direction="in")
         with pytest.raises(ValueError, match="Pin conflict.*PB2"):
-            via.validate_bus_clients()
+            via.validate_clients()
 
     def test_pin_overlaps_group_raises(self):
         via = make_via()
         _make_group(via, "LEDS", ["PA0", "PA1"], "A", 0b00000011)
         _make_pin(via, "LED0", "PA0")
         with pytest.raises(ValueError, match="Pin conflict.*PA0"):
-            via.validate_bus_clients()
+            via.validate_clients()
 
     def test_groups_overlap_raises(self):
         via = make_via()
         _make_group(via, "GRP1", ["PB0", "PB1"], "B", 0b00000011)
         _make_group(via, "GRP2", ["PB1", "PB2"], "B", 0b00000110)
         with pytest.raises(ValueError, match="Pin conflict.*PB1"):
-            via.validate_bus_clients()
+            via.validate_clients()
 
     def test_error_includes_device_paths(self):
         via = make_via()
         _make_pin(via, "FIRST", "PA5")
         _make_pin(via, "SECOND", "PA5")
         with pytest.raises(ValueError, match=r"'FIRST'.*'SECOND'"):
-            via.validate_bus_clients()
+            via.validate_clients()

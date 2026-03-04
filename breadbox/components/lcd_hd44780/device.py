@@ -8,25 +8,25 @@ from breadbox.types.component_identifier import ComponentIdentifier
 
 @dataclass(kw_only=True)
 class CmndSettings:
-    bus: ComponentIdentifier
+    provider: ComponentIdentifier
     rs_pin: str
     rwb_pin: str
     en_pin: str
 
     def __post_init__(self) -> None:
-        if not isinstance(self.bus, ComponentIdentifier):
-            self.bus = ComponentIdentifier(self.bus)
+        if not isinstance(self.provider, ComponentIdentifier):
+            self.provider = ComponentIdentifier(self.provider)
 
 
 @dataclass(kw_only=True)
 class DataSettings:
-    bus: ComponentIdentifier
+    provider: ComponentIdentifier
     mode: str
     port: str
 
     def __post_init__(self) -> None:
-        if not isinstance(self.bus, ComponentIdentifier):
-            self.bus = ComponentIdentifier(self.bus)
+        if not isinstance(self.provider, ComponentIdentifier):
+            self.provider = ComponentIdentifier(self.provider)
         self.mode = self.mode.lower()
         if self.mode not in ("4bit", "8bit"):
             raise ValueError(f"Invalid mode {self.mode!r} (expected '4bit' or '8bit')")
@@ -38,7 +38,7 @@ class LcdHd44780Device(Device):
     HD44780 LCD controller.
 
     Manages sub-devices for control pins (CTRL group for RS+RWB, EN pin)
-    and data bus (DATA). Supports both 4-bit and 8-bit data bus modes.
+    and data group (DATA). Supports both 4-bit and 8-bit data modes.
     """
 
     mode: str
@@ -68,11 +68,11 @@ class LcdHd44780Device(Device):
             raise ValueError(f"Invalid width x height (requires {byte_size} bytes, but device has 80 bytes)")
 
     @cached_property
-    def ctrl(self) -> Device:
+    def ctrl_pins(self) -> Device:
         """
         The CTRL (RS + RWB) control pin group sub-device.
         """
-        return self._sub("CTRL")
+        return self._sub("CTRL_PINS")
 
     @cached_property
     def en_pin(self) -> Device:
@@ -82,11 +82,11 @@ class LcdHd44780Device(Device):
         return self._sub("EN_PIN")
 
     @cached_property
-    def data(self) -> Device:
+    def data_pins(self) -> Device:
         """
         The DATA bus sub-device (gpio_group).
         """
-        return self._sub("DATA")
+        return self._sub("DATA_PINS")
 
     @cached_property
     def funcset_value(self) -> int:

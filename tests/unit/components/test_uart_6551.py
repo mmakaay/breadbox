@@ -68,7 +68,7 @@ class TestResolveWithRts:
         via = ViaW65c22Device(id=ComponentIdentifier("VIA0"), address=Address16("$6000"))
         config = make_config(via)
 
-        settings = {"address": "$5000", "rts": {"bus": "VIA0", "pin": "PA0"}}
+        settings = {"address": "$5000", "rts": {"provider": "VIA0", "pin": "PA0"}}
         device = resolve(config, ComponentIdentifier("UART0"), settings)
 
         assert isinstance(device, Uart6551Device)

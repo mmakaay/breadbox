@@ -49,8 +49,8 @@ hardware flow control. Together, these provide a reliable connection between the
 UART and the remote system.
 
 ```yaml
-BUS:
-  component: ....        # A bus component (e.g. VIA) that provides GPIO pins
+GPIO_PROVIDER:
+  component: ....        # A component (e.g. VIA) that provides GPIO pins
 
 UART:
   component: uart_6551   # Driver implementation
@@ -59,7 +59,7 @@ UART:
   baudrate: 19200        # Supported: 1200, 2400, 3600, 4800, 7200, 9600, 19200 (default)
   irq: on                # Enable IRQs (required for buffering)
   rts:                   # GPIO pin for RTS (hardware flow control)
-    bus: BUS
+    provider: GPIO_PROVIDER
     pin: PA0
 ```
 

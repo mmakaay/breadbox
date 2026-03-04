@@ -95,8 +95,8 @@ class BreadboxConfig:
         Validate the resolved configuration.
         """
         self._validate_single_core()
-        self._collect_bus_clients()
-        self._validate_bus_clients()
+        self._collect_clients()
+        self._validate_clients()
         self._validate_unique_prefixes()
         self._resolve_memory()
 
@@ -110,30 +110,30 @@ class BreadboxConfig:
             ids = ", ".join(str(c.id) for c in cores)
             raise ConfigError(f"Configuration must have exactly one CORE device, found {len(cores)}: {ids}")
 
-    def _collect_bus_clients(self) -> None:
+    def _collect_clients(self) -> None:
         """
-        Walk the component tree and register bus clients on their bus devices.
+        Walk the component tree and register clients on their provider devices.
 
-        Must run before bus client validation so that bus devices can
+        Must run before client validation so that provider devices can
         answer queries about their clients (e.g. port exclusivity, pin conflicts).
         """
-        from breadbox.visitors.bus_client_collector import BusClientCollector
+        from breadbox.visitors.client_collector import ClientCollector
 
-        collector = BusClientCollector()
+        collector = ClientCollector()
         for component in self.components.values():
             if component.parent is None:
                 component.accept(collector)
 
-    def _validate_bus_clients(self) -> None:
+    def _validate_clients(self) -> None:
         """
-        Ask each device to validate its registered bus clients.
+        Ask each device to validate its registered clients.
         """
         from breadbox.types.device import Device
 
         for component in self.components.values():
             if isinstance(component, Device):
                 try:
-                    component.validate_bus_clients()
+                    component.validate_clients()
                 except ValueError as e:
                     raise ConfigError(str(e)) from None
 

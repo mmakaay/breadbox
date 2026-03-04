@@ -8,7 +8,7 @@ VIA:
 
 LED:
   component: gpio_pin
-  parent: VIA
+  provider: VIA
   pin: PA1
   direction: out
   default: off

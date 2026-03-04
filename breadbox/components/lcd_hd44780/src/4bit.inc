@@ -28,7 +28,7 @@
 .proc {{ my_def("write_byte") }}
     ; High nibble: upper 4 bits are already in position.
     pha
-    jsr {{ data.api("write") }}
+    jsr {{ data_pins.api("write") }}
     jsr {{ my("pulse_en") }}
 
     ; Low nibble: shift lower 4 bits into upper position.
@@ -37,7 +37,7 @@
     asl
     asl
     asl
-    jsr {{ data.api("write") }}
+    jsr {{ data_pins.api("write") }}
     jsr {{ my("pulse_en") }}
 
     rts
@@ -57,7 +57,7 @@
 .proc {{ my_def("read_byte") }}
     ; Pulse EN high and read the high nibble from the data port.
     jsr {{ en_pin.api("turn_on") }}
-    jsr {{ data.api("read_port") }}
+    jsr {{ data_pins.api("read_port") }}
     pha
     jsr {{ en_pin.api("turn_off") }}
 

@@ -8,7 +8,7 @@ VIA:
 
 LEDS:
   component: gpio_group
-  parent: VIA
+  provider: VIA
   port: B
   bits: "11111111"
   direction: out

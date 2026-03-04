@@ -23,7 +23,7 @@ class TestPortBitsPath:
     def test_resolve_port_bits(self):
         via = make_via()
         config = make_config()
-        settings = {"bus": "VIA0", "port": "A", "bits": 0b00000011}
+        settings = {"provider": "VIA0", "port": "A", "bits": 0b00000011}
         device = resolve(config, ComponentIdentifier("LEDS"), via, settings)
 
         assert isinstance(device, ViaW65c22GpioGroupDevice)
@@ -35,8 +35,8 @@ class TestPortBitsPath:
     def test_high_bits(self):
         via = make_via()
         config = make_config()
-        settings = {"bus": "VIA0", "port": "B", "bits": 0b11110000}
-        device = resolve(config, ComponentIdentifier("DATA"), via, settings)
+        settings = {"provider": "VIA0", "port": "B", "bits": 0b11110000}
+        device = resolve(config, ComponentIdentifier("DATA_PINS"), via, settings)
 
         assert isinstance(device, ViaW65c22GpioGroupDevice)
         assert device.port == "B"
@@ -47,7 +47,7 @@ class TestPinsPath:
     def test_resolve_pins(self):
         via = make_via()
         config = make_config()
-        settings = {"bus": "VIA0", "pins": ["PA0", "PA1"]}
+        settings = {"provider": "VIA0", "pins": ["PA0", "PA1"]}
         device = resolve(config, ComponentIdentifier("LEDS"), via, settings)
 
         assert isinstance(device, ViaW65c22GpioGroupDevice)
@@ -61,8 +61,8 @@ class TestPathEquivalence:
         via = make_via()
         config = make_config()
 
-        port_bits_settings = {"bus": "VIA0", "port": "A", "bits": 0b00000011}
-        pins_settings = {"bus": "VIA0", "pins": ["PA0", "PA1"]}
+        port_bits_settings = {"provider": "VIA0", "port": "A", "bits": 0b00000011}
+        pins_settings = {"provider": "VIA0", "pins": ["PA0", "PA1"]}
 
         d1 = resolve(config, ComponentIdentifier("G1"), via, port_bits_settings)
         d2 = resolve(config, ComponentIdentifier("G2"), via, pins_settings)
@@ -78,14 +78,14 @@ class TestInvalidConfig:
     def test_neither_path_raises(self):
         via = make_via()
         config = make_config()
-        settings = {"bus": "VIA0"}
+        settings = {"provider": "VIA0"}
         with pytest.raises(ValueError, match="requires either"):
             resolve(config, ComponentIdentifier("BAD"), via, settings)
 
     def test_both_paths_raises(self):
         via = make_via()
         config = make_config()
-        settings = {"bus": "VIA0", "port": "A", "bits": 0b11, "pins": ["PA0", "PA1"]}
+        settings = {"provider": "VIA0", "port": "A", "bits": 0b11, "pins": ["PA0", "PA1"]}
         with pytest.raises(ValueError, match="requires either"):
             resolve(config, ComponentIdentifier("BAD"), via, settings)
 
@@ -94,7 +94,7 @@ class TestDefaults:
     def test_default_direction_and_default(self):
         via = make_via()
         config = make_config()
-        settings = {"bus": "VIA0", "port": "A", "bits": 0b00000001}
+        settings = {"provider": "VIA0", "port": "A", "bits": 0b00000001}
         device = resolve(config, ComponentIdentifier("LEDS"), via, settings)
 
         assert isinstance(device, ViaW65c22GpioGroupDevice)
@@ -104,7 +104,7 @@ class TestDefaults:
     def test_custom_direction_and_default(self):
         via = make_via()
         config = make_config()
-        settings = {"bus": "VIA0", "port": "A", "bits": 0b00000001, "direction": "out", "default": "on"}
+        settings = {"provider": "VIA0", "port": "A", "bits": 0b00000001, "direction": "out", "default": "on"}
         device = resolve(config, ComponentIdentifier("LEDS"), via, settings)
 
         assert isinstance(device, ViaW65c22GpioGroupDevice)

@@ -9,15 +9,15 @@ from breadbox.types.pin_direction import PinDirection
 
 @dataclass(kw_only=True)
 class ViaW65c22GpioPinDevice(Device):
-    bus_device: ViaW65c22Device
+    provider_device: ViaW65c22Device
     pin: ViaW65c22PortPin
-    bus: str
+    provider: str
     direction: PinDirection = field(default=PinDirection("both"))
     default: OnOff | None = None
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self._internal_fields.add("bus_device")
+        self._internal_fields.add("provider_device")
         if self.default is not None:
             self.default = OnOff(self.default)
         if self.direction == "in" and self.default is not None:
@@ -45,4 +45,4 @@ class ViaW65c22GpioPinDevice(Device):
         """
         True when this pin is the sole device on its VIA port.
         """
-        return self.bus_device.is_port_exclusive(self)
+        return self.provider_device.is_port_exclusive(self)

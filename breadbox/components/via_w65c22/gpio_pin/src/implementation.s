@@ -1,7 +1,6 @@
-; GPIO pin: {{ component_id }} ({{ pin }} on {{ bus_device.id }}, port {{ port }})
+; GPIO pin: {{ component_id }} ({{ pin }} on {{ provider_device.id }}, port {{ port }})
 
-.include "hardware.inc"
-.include "{{ bus_device.component_path }}/constants.inc"
+.include "{{ provider_device.component_path }}/constants.inc"
 
 {% set PORT_REG = "PORT" ~ port %}
 {% set DDR_REG = "DDR" ~ port %}

@@ -10,7 +10,7 @@ from breadbox.types.component_identifier import ComponentIdentifier
 def resolve(
     breadbox: BreadboxConfig,
     component_id: ComponentIdentifier,
-    bus_device: ViaW65c22Device,
+    provider_device: ViaW65c22Device,
     device_settings: dict[str, Any],
 ) -> Component:
-    return ViaW65c22GpioPinDevice(id=component_id, bus_device=bus_device, **device_settings)
+    return ViaW65c22GpioPinDevice(id=component_id, provider_device=provider_device, **device_settings)

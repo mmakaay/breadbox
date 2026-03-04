@@ -35,36 +35,36 @@ REGISTERS = [
 @dataclass(kw_only=True)
 class ViaW65c22Device(Device):
     address: Address16
-    _bus_clients: list[Device] = dataclasses.field(default_factory=list, init=False, repr=False)
+    _clients: list[Device] = dataclasses.field(default_factory=list, init=False, repr=False)
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self._internal_fields.add("_bus_clients")
-    def register_bus_client(self, device: Device) -> None:
+        self._internal_fields.add("_clients")
+    def register_client(self, device: Device) -> None:
         """
-        Track a device that uses this VIA as its bus.
+        Track a device that uses this VIA as its provider.
         """
-        self._bus_clients.append(device)
+        self._clients.append(device)
 
     def is_port_exclusive(self, device: Device) -> bool:
         """
         Check whether a device is the sole client on its VIA port.
 
-        Returns True if no other registered bus client shares the
+        Returns True if no other registered client shares the
         same port. Devices without a port attribute are always
         considered exclusive.
         """
         port = getattr(device, "port", None)
         if port is None:
             return True
-        return sum(1 for c in self._bus_clients if getattr(c, "port", None) == port) <= 1
+        return sum(1 for c in self._clients if getattr(c, "port", None) == port) <= 1
 
-    def validate_bus_clients(self) -> None:
+    def validate_clients(self) -> None:
         """
-        Check that no physical pin is claimed by multiple bus clients.
+        Check that no physical pin is claimed by multiple clients.
         """
         pin_owners: dict[str, Device] = {}
-        for client in self._bus_clients:
+        for client in self._clients:
             pins = self._client_pins(client)
             for pin in pins:
                 if pin in pin_owners:
@@ -78,7 +78,7 @@ class ViaW65c22Device(Device):
     @staticmethod
     def _client_pins(device: Device) -> list[str]:
         """
-        Extract the physical pin names claimed by a bus client.
+        Extract the physical pin names claimed by a client.
         """
         pin = getattr(device, "pin", None)
         if pin is not None:
