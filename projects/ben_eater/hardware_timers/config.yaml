@@ -6,6 +6,11 @@ VIA:
   component: via_w65c22
   address: $6000
 
+TICKER:
+  component: ticker
+  provider: VIA
+  ms_per_tick: 10
+
 LCD:
   component: lcd_hd44780
   cmnd_pins:
@@ -21,11 +26,15 @@ LCD:
 LED:
   component: gpio_pin
   provider: VIA
-  pin: PA0
+  pin: PA1
   direction: out
   default: off
 
-TICKER:
-  component: ticker
-  provider: VIA
-  ms_per_tick: 10
+CONSOLE:
+  component: uart_6551
+  type: um6551
+  address: $5000
+  irq: on
+  rts:
+    provider: VIA
+    pin: PA0
