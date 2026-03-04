@@ -1,14 +1,15 @@
 CORE:
-  cpu: 65c02
-  clock_mhz: 1.0000
+  cpu: "65c02"
+  clock_mhz: 1.000
 
 VIA:
   component: via_w65c22
   address: $6000
 
-LED:
-  component: gpio_pin
+LEDS:
+  component: gpio_group
   parent: VIA
-  pin: PA1
+  port: B
+  bits: "11111111"
   direction: out
   default: off

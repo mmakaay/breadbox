@@ -11,30 +11,8 @@
 ;   the original code also only working with upper case input.
 ;   This modified code converts all input to upper case, so
 ;   the user can also input lower case characters.
-; - Like Ben Eater, I made sure that the ECHO routine remained at
-;   $FFEF, like described in the Apple II manual.
-;
-; Even with ECHO at the expected position in memory, the test
-; program requires a small modification. The Apple II example
-; writes the code directly into the zero page, but that is also in
-; use by our KERNAL code. Therefore, a different memory location
-; must be used for this. For example, use $2000:
-;
-;     2000:A9 00 AA 20 EF FF E8 8A 4C 02 20
-;
-; After entering the code, the program can be started using:
-;
-;     2000R
-;
-; The bytes disassemble into the following code:
-;
-;     2000: A9 00     LDA #$00         ; A = 0
-;     2002: AA        TAX              ; X = A
-;     2003: 20 EF FF  JSR $FFEF        ; Call ECHO routine at $FFEF
-;     2006: E8        INX              ; X = X + 1
-;     2007: 8A        TXA              ; A = X
-;     2008: 4C 02 20  JMP $2002        ; Loop forever
-;
+; - Unlike Ben Eater, I did not make sure that the ECHO routine
+;   remained at $FFEF, like described in the Apple II manual.;
 ; -----------------------------------------------------------------
 
 .include "breadbox.inc"

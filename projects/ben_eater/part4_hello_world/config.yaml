@@ -1,27 +1,19 @@
 CORE:
-  cpu: 65c02
-  clock_mhz: 1.0
+  cpu: "65c02"
+  clock_mhz: 1.000
 
 VIA:
   component: via_w65c22
   address: $6000
 
-SCHERMPJE:
+LCD:
   component: lcd_hd44780
   cmnd:
-    bus: VIA
+    parent: VIA
     rs_pin: PB0
     rwb_pin: PB1
     en_pin: PB2
   data:
-    bus: VIA 
+    parent: VIA
     mode: 4bit
     port: B
-
-UART:
-  component: uart_6551
-  address: $5000
-  irq: on
-  rts:
-    bus: VIA
-    pin: PA0
