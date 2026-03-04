@@ -8,23 +8,24 @@ VIA:
 
 LCD:
   component: lcd_hd44780
-  cmnd:
-    parent: VIA
+  cmnd_pins:
+    provider: VIA
     rs_pin: PB0
     rwb_pin: PB1
     en_pin: PB2
-  data:
-    parent: VIA
+  data_pins:
+    provider: VIA
     mode: 4bit
     port: B
 
 LED:
   component: gpio_pin
-  parent: VIA
+  provider: VIA
   pin: PA0
   direction: out
   default: off
 
 TICKER:
   component: ticker
-  parent: VIA
+  provider: VIA
+  ms_per_tick: 10
