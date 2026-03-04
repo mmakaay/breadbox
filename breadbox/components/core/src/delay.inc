@@ -12,7 +12,7 @@
 ;   iterations: word value, containing the number of iterations to perform
 
 .macro DELAY _iterations
-    .assert _iterations <= 65535, error, "DELAY overflow: iteration count exceeds 16-bit max (65535). Use a hardware timer for longer delays."
+    .assert _iterations <= 65535, error, "DELAY overflow: iteration count exceeds 16-bit max (65535)."
     pha
     SET_WORD {{ symbol("delay_iterations") }}, _iterations
     jsr {{ symbol("delay") }}

@@ -32,6 +32,7 @@ fi
 export PATH="$PATH:$(pwd)/cc65/bin"
 
 # Extra lazy.
+alias bb='breadbox'
 alias b='just build'
 alias r='just build && just write'
 

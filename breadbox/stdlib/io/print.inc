@@ -14,9 +14,11 @@
 ;   CP_ADDRESS PRINT::writer, MY_DISPLAY::write
 ;   jsr PRINT::print
 ;
-; The `PRINT` macro provides a convencience wrapper for this.
+; The `PRINT` macro provides a convenience wrapper for this.
+; Use `PRINT_PTR` when the string address is in a pointer variable.
 ;
-;   PRINT MY_DISPLAY::write, my_text
+;   PRINT     MY_DISPLAY::write, my_text      ; label (direct)
+;   PRINT_PTR MY_DISPLAY::write, my_pointer   ; pointer (indirect)
 ;
 ; Writer function contract:
 ;   In:  A = byte to write
@@ -80,5 +82,19 @@
 
     CP_ADDRESS print::writer, _writer_function
     CP_ADDRESS print::string, _string_address
+    jsr print
+.endmacro
+
+.macro PRINT_PTR _writer_function, _pointer
+    ; PRINT_PTR - print a null-terminated string via a pointer variable.
+    ;
+    ; In:
+    ;   _writer_function = the writer function (e.g. LCD::write)
+    ;   _pointer = address of a 2-byte pointer to the string
+    ; Out:
+    ;   A, X, Y preserved
+
+    CP_ADDRESS print::writer, _writer_function
+    CP_WORD print::string, _pointer
     jsr print
 .endmacro

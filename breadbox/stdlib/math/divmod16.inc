@@ -7,6 +7,25 @@
 ; ==================================================================
 ; Perform divmod operation on a 2 byte word.
 ;
+; Usage:
+;   ; Set the dividend value to 1337.
+;   lda #$39
+;   sta divmod16::dividend
+;   lda #05
+;   sta divmod16::dividend + 1
+;
+;   ; Set the divisor to 50.
+;   lda #32
+;   sta divmod16::divisor
+;   lda #00
+;   sta divmod16::divisor + 1
+;
+;   ; Execute the division.
+;   jsr divmod16
+;
+;   `divmod16::quotient` now contains 26
+;   `divmod16::remainder` now contains 37
+;
 ; In:
 ;   dividend = the word to divide
 ;   divisor = the word to divide by
