@@ -1,21 +1,24 @@
 .include "breadbox.inc"
 .include "stdlib/io/print.inc"
+.include "stdlib/math/fmtdec.inc"
 .include "stdlib/math/fmtdec16.inc"
 
 .export main
 
 .segment "DATA"
 
-    message: .asciiz "BREADBOX HWticks"
+    message1: .asciiz "ticker"
+    message2: .asciiz "BREADBOX HWticks"
 
 .segment "CODE"
 
     .proc main
-        ; Display the message at line 2 of the display.
+        ; Printmessages on the display.
+        PRINT LCD::write, message1
         ldx #0
         ldy #1
         jsr LCD::cursor_move
-        PRINT LCD::write, message
+        PRINT LCD::write, message2
 
         ; Run the execution loop, giving each task, in turn, a chance
         ; to perform some work.
@@ -41,14 +44,19 @@
         SET_BYTE TICKER::lcd_update, #0
 
         ; Update the LCD with the current tick counter.
-        jsr LCD::home
-        lda TICKER::ticks + 2
-        sta fmtdec16::value
-        SET_BYTE fmtdec16::value + 1, #0
-        jsr fmtdec16
-        PRINT LCD::write, fmtdec16::decimal
+
+        ldx #7
+        ldy #0
+        jsr LCD::cursor_move
+
+        ; Print the decimal value for bits 16-23 of the ticks counter.
+        CP_BYTE fmtdec::value, TICKER::ticks + 2
+        jsr fmtdec
+        PRINT LCD::write, fmtdec::padded
         lda #' '
         jsr LCD::write
+
+        ; Print the decimal value for bits 0-16 of the ticks counter.
         CP_WORD fmtdec16::value, TICKER::ticks
         jsr fmtdec16
         PRINT LCD::write, fmtdec16::padded
