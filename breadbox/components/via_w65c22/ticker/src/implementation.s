@@ -20,7 +20,7 @@
 
 .segment "KERNALRAM"
 
-    {{ api_def("ticks") }}: .res 4    ; 4 byte counter, for a wide range of options
+    {{ api_def("ticks") }}: .res 3    ; 3 byte counter (~46 hours at 10ms/tick)
 {% for timer in timers %}
     {{ api_def(timer.name) }}: .res 1
     {{ my_def(timer.name + "_cd") }}: .res {{ timer.byte_width }}
@@ -37,12 +37,11 @@
     ;   A = clobbered
 
     .proc {{ my_def("init") }}
-        ; Clear the ticker counter.
+        ; Reset the ticker counter.
         lda #0
         sta {{ api("ticks") }}
         sta {{ api("ticks") }} + 1
         sta {{ api("ticks") }} + 2
-        sta {{ api("ticks") }} + 3
 {% for timer in timers %}
 
         ; Initialize {{ timer.name }} timer ({{ timer.ms }}ms).
@@ -51,6 +50,13 @@
         SET_BYTE {{ my(timer.name + "_cd") }}, #{{ timer.ticks }}
 {% elif timer.byte_width == 2 %}
         SET_WORD {{ my(timer.name + "_cd") }}, {{ timer.ticks }}
+{% elif timer.byte_width == 3 %}
+        lda #<({{ timer.ticks }})
+        sta {{ my(timer.name + "_cd") }}
+        lda #>({{ timer.ticks }})
+        sta {{ my(timer.name + "_cd") }} + 1
+        lda #^({{ timer.ticks }})
+        sta {{ my(timer.name + "_cd") }} + 2
 {% endif %}
 {% endfor %}
 
@@ -87,14 +93,12 @@
 
         SET_BYTE IFR, #IFR_T1     ; Clear the T1 interrupt flag.
 
-        ; Increment the 4-byte ticks counter.
+        ; Increment the 3-byte ticks counter.
         inc {{ api("ticks") }}
         bne :+
         inc {{ api("ticks") }} + 1
         bne :+
         inc {{ api("ticks") }} + 2
-        bne :+
-        inc {{ api("ticks") }} + 3
     :
 {% for timer in timers %}
 
@@ -116,6 +120,28 @@
         bne @{{ timer.name }}_done
         inc {{ api(timer.name) }}
         SET_WORD {{ my(timer.name + "_cd") }}, {{ timer.ticks }}
+    @{{ timer.name }}_done:
+{% elif timer.byte_width == 3 %}
+        lda {{ my(timer.name + "_cd") }}
+        bne :++
+        lda {{ my(timer.name + "_cd") }} + 1
+        bne :+
+        dec {{ my(timer.name + "_cd") }} + 2
+    :
+        dec {{ my(timer.name + "_cd") }} + 1
+    :
+        dec {{ my(timer.name + "_cd") }}
+        lda {{ my(timer.name + "_cd") }}
+        ora {{ my(timer.name + "_cd") }} + 1
+        ora {{ my(timer.name + "_cd") }} + 2
+        bne @{{ timer.name }}_done
+        inc {{ api(timer.name) }}
+        lda #<({{ timer.ticks }})
+        sta {{ my(timer.name + "_cd") }}
+        lda #>({{ timer.ticks }})
+        sta {{ my(timer.name + "_cd") }} + 1
+        lda #^({{ timer.ticks }})
+        sta {{ my(timer.name + "_cd") }} + 2
     @{{ timer.name }}_done:
 {% endif %}
 {% endfor %}

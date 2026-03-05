@@ -18,7 +18,9 @@ class TimerSlot:
             return 1
         if self.ticks <= 0xFFFF:
             return 2
-        raise ValueError(f"Timer '{self.name}' period {self.ticks} ticks exceeds 16-bit range")
+        if self.ticks <= 0xFFFFFF:
+            return 3
+        raise ValueError(f"Timer '{self.name}' period {self.ticks} ticks exceeds 24-bit range")
 
 
 @dataclass(kw_only=True)
