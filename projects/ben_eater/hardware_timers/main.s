@@ -28,7 +28,7 @@
     .proc update_led_task
         lda TICKER::led_toggle
         beq @done
-        CLR_BYTE TICKER::led_toggle
+        SET_BYTE TICKER::led_toggle, #0
 
         jsr LED::toggle
     @done:
@@ -38,13 +38,15 @@
     .proc update_lcd_task
         lda TICKER::lcd_update
         beq @done
-        CLR_BYTE TICKER::lcd_update
+        SET_BYTE TICKER::lcd_update, #0
 
         ; Update the LCD with the current tick counter.
         jsr LCD::home
-        CP_WORD fmtdec16::value, TICKER::ticks + 2
+        lda TICKER::ticks + 2
+        sta fmtdec16::value
+        SET_BYTE fmtdec16::value + 1, #0
         jsr fmtdec16
-        PRINT LCD::write, fmtdec16::padded
+        PRINT LCD::write, fmtdec16::decimal
         lda #' '
         jsr LCD::write
         CP_WORD fmtdec16::value, TICKER::ticks
