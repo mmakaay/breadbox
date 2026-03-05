@@ -1,4 +1,10 @@
 ; Ticker: {{ component_id }} on {{ provider_device.id }} timer T1, {{ ms_per_tick }}ms/tick
+{% if timers %}
+; Software timers:
+{% for timer in timers %}
+;   {{ timer.name }}: {{ timer.ms }}ms ({{ timer.ticks }} tick{{ "s" if timer.ticks != 1 }}, {{ timer.byte_width }} byte{{ "s" if timer.byte_width != 1 }})
+{% endfor %}
+{% endif %}
 
 .include "CORE/macros.inc"
 .include "{{ provider_device.component_path }}/constants.inc"
@@ -15,6 +21,10 @@
 .segment "KERNALRAM"
 
     {{ api_def("ticks") }}: .res 4    ; 4 byte counter, for a wide range of options
+{% for timer in timers %}
+    {{ api_def(timer.name) }}: .res 1
+    {{ my_def(timer.name + "_cd") }}: .res {{ timer.byte_width }}
+{% endfor %}
 
 .segment "KERNALROM"
 
@@ -33,6 +43,16 @@
         sta {{ api("ticks") }} + 1
         sta {{ api("ticks") }} + 2
         sta {{ api("ticks") }} + 3
+{% for timer in timers %}
+
+        ; Initialize {{ timer.name }} timer ({{ timer.ms }}ms).
+        sta {{ api(timer.name) }}
+{% if timer.byte_width == 1 %}
+        SET_BYTE {{ my(timer.name + "_cd") }}, #{{ timer.ticks }}
+{% elif timer.byte_width == 2 %}
+        SET_WORD {{ my(timer.name + "_cd") }}, {{ timer.ticks }}
+{% endif %}
+{% endfor %}
 
         ; Configure T1 count down value.
         SET_WORD T1_COUNTER, {{ cycles_per_tick }}
@@ -55,6 +75,10 @@
     ; Handle T1 timer interrupts.
     ;
     ; When the timer triggers, the ticks counter is incremented.
+{% if timers %}
+    ; Software timer countdowns are decremented; when a countdown reaches
+    ; zero, its flag is set and the countdown is reloaded.
+{% endif %}
 
     .proc {{ my_def("irq_handler") }}
         lda #IFR_T1               ; Prepare bit check for T1 interrupt.
@@ -63,13 +87,38 @@
 
         SET_BYTE IFR, #IFR_T1     ; Clear the T1 interrupt flag.
 
-        inc {{ api("ticks") }}    ; Increment the ticks counter.
-        bne @done
+        ; Increment the 4-byte ticks counter.
+        inc {{ api("ticks") }}
+        bne :+
         inc {{ api("ticks") }} + 1
-        bne @done
+        bne :+
         inc {{ api("ticks") }} + 2
-        bne @done
+        bne :+
         inc {{ api("ticks") }} + 3
+    :
+{% for timer in timers %}
+
+        ; --- {{ timer.name }} ({{ timer.ms }}ms = {{ timer.ticks }} tick{{ "s" if timer.ticks != 1 }}) ---
+{% if timer.byte_width == 1 %}
+        dec {{ my(timer.name + "_cd") }}
+        bne @{{ timer.name }}_done
+        inc {{ api(timer.name) }}
+        SET_BYTE {{ my(timer.name + "_cd") }}, #{{ timer.ticks }}
+    @{{ timer.name }}_done:
+{% elif timer.byte_width == 2 %}
+        lda {{ my(timer.name + "_cd") }}
+        bne :+
+        dec {{ my(timer.name + "_cd") }} + 1
+    :
+        dec {{ my(timer.name + "_cd") }}
+        lda {{ my(timer.name + "_cd") }}
+        ora {{ my(timer.name + "_cd") }} + 1
+        bne @{{ timer.name }}_done
+        inc {{ api(timer.name) }}
+        SET_WORD {{ my(timer.name + "_cd") }}, {{ timer.ticks }}
+    @{{ timer.name }}_done:
+{% endif %}
+{% endfor %}
     @done:
         rts
     .endproc
