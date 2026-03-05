@@ -10,7 +10,7 @@
 ; Format 16 bit value (word) into decimal representation string.
 ;
 ; Usage:
-;   ; Set the binary number to #$0539.
+;   ; Set the binary number to $0539.
 ;   lda #$39
 ;   sta fmtdec16::value
 ;   lda #05
@@ -23,7 +23,7 @@
 ;   `fmtdec16::decimal` now points at "1337<null>"
 ;
 ; In:
-;   fmtdec16::value = the 16 bit value to convert
+;   fmtdec16::value = the value to convert
 ; Out:
 ;   fmtdec16::padded  = null-terminated decimal string, zero-padded
 ;   fmtdec16::decimal = pointer to first significant digit in padded
@@ -70,7 +70,7 @@
     bpl @next_digit
 
 @done:
-    ; Compute decimal pointer = padded + X.
+    ; Compute decimal pointer = address of padded + X.
     clc
     txa
     adc #<padded

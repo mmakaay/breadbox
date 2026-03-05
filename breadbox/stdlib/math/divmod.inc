@@ -1,30 +1,26 @@
 .segment "KERNALRAM"
 
-    {{ symbol("dividend") }}:  .res 2
-    {{ symbol("divisor") }}:   .res 2
-    {{ symbol("remainder") }}: .res 2
+    {{ symbol("dividend") }}:  .res 1
+    {{ symbol("divisor") }}:   .res 1
+    {{ symbol("remainder") }}: .res 1
 
 ; ==================================================================
-; Perform divmod operation on a 2 byte word value.
+; Perform divmod operation on a byte value.
 ;
 ; Usage:
-;   ; Set the dividend value to 1337.
-;   lda #$39
-;   sta divmod16::dividend
-;   lda #05
-;   sta divmod16::dividend + 1
+;   ; Set the dividend value to 42.
+;   lda #422
+;   sta divmod::dividend
 ;
-;   ; Set the divisor to 50.
-;   lda #32
-;   sta divmod16::divisor
-;   lda #00
-;   sta divmod16::divisor + 1
+;   ; Set the divisor to 5.
+;   lda #5
+;   sta divmod::divisor
 ;
 ;   ; Execute the division.
-;   jsr divmod16
+;   jsr divmod
 ;
-;   `divmod16::quotient` now contains 26
-;   `divmod16::remainder` now contains 37
+;   `divmod::quotient` now contains 8
+;   `divmod::remainder` now contains 2
 ;
 ; In:
 ;   dividend = the value to divide
@@ -37,7 +33,7 @@
 
 .segment "KERNALROM"
 
-.proc divmod16
+.proc divmod
 
     dividend  = {{ symbol("dividend") }}
     divisor   = {{ symbol("divisor") }}
@@ -47,19 +43,17 @@
     PUSH_AXY
 
     ; Initialize the remainder.
-    CLR_WORD remainder
+    CLR_BYTE remainder
 
-    ldx #16
+    ldx #8
 
     clc ; Make sure the first carry rol'ed in below is a 0.
 @divloop:
-    ; Shift the 32-bit [remainder:dividend] register left by one bit.
+    ; Shift the 16-bit [remainder:dividend] register left by one bit.
     ; The carry from the previous subtraction comparison enters bit 0
     ; of the dividend, building up the quotient bit by bit.
     rol dividend            ; Low byte << 1
-    rol dividend + 1        ; High byte << 1
     rol remainder           ; Carry from dividend enters remainder
-    rol remainder + 1       ; High byte of remainder
 
     ; See if we can subtract the divisor from the bit value that is currently
     ; shifted into the remainder bytes. When remainder < divisor, then the
@@ -68,9 +62,6 @@
     sec                       ; Set carry bit, to detect carry borrow for sbc
     lda remainder             ; Load low byte of remainder
     sbc divisor               ; Subtract low byte of divisor -> A
-    tay                       ; A -> Y
-    lda remainder + 1         ; Load high byte of remainder
-    sbc divisor + 1           ; Subtract high byte of divisor -> A
 
     ; If carry bit is cleared, then division was not possible. We continue
     ; with shifting another bit, to see if that makes a division possible.
@@ -80,15 +71,14 @@
     ; with the new remainder and the rest of the digits, which in this case can be
     ; accomplished by updating the remainder word with the remainder from the
     ; subtraction from above.
-    sty remainder             ; Update remainder low byte <- Y
-    sta remainder + 1         ; Update remainder high byte <- A
+    sta remainder
 
 @no_div_possible:
     dex
-    bne @divloop              ; Process all 16 bits, before continuing.
+    bne @divloop              ; Process all 8 bits, before continuing.
 
     rol quotient              ; Shift last carry bit (representing if the last
-    rol quotient + 1          ; division was possible or not) into the quotient.
+                              ; division was possible or not) into the quotient.
 
     PULL_AXY
     rts
