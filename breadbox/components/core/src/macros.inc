@@ -1,11 +1,11 @@
 ; =========================================================================
 ; Coding utility macros.
 ;
-; Convenience wrappers for common 6502 byte and word operations.
+; Convenience wrappers for common operations.
 ; =========================================================================
 
 ; =========================================================================
-; Store an 8-bit value in a memory location.
+; Store a byte value in a memory location.
 ;
 ; In:
 ;   _target = target address
@@ -13,7 +13,7 @@
 ; Out:
 ;   A = clobbered
 
-.macro SET_BYTE _target, _value
+.macro STORE _target, _value
     lda _value
     sta _target
 .endmacro
@@ -23,12 +23,16 @@
 ;
 ; In:
 ;   _target = destination address
-;   _source = source address
+;   _source = source address (e.g. $1234)
 ; Out:
 ;   A = clobbered
 
-.macro CP_BYTE _target, _source
-    SET_BYTE _target, _source
+.macro COPY _target, _source
+    ; This is the same as the implementation for STORE.
+    ; The difference between STORE and COPY is purely semantic,
+    ; and choosing the one to use is purely based on intent.
+    lda _source
+    sta _target
 .endmacro
 
 ; =========================================================================
@@ -39,8 +43,9 @@
 ; Out:
 ;   A = clobbered
 
-.macro CLR_BYTE _target
-    SET_BYTE _target, #0
+.macro ZERO _target
+    lda #0
+    sta _target
 .endmacro
 
 ; =========================================================================
@@ -48,29 +53,30 @@
 ;
 ; In:
 ;   _target = address of the low byte
-;   _value  = direct word value to sture (not contents at address)
+;   _value  = the word value to store
 ; Out:
 ;   A = clobbered
 
-.macro SET_WORD _target, _value
-    SET_BYTE _target, #<(_value)
-    SET_BYTE _target + 1, #>(_value)
+.macro STORE16 _target, _value
+    lda #<_value
+    sta _target
+    lda #>_value
+    sta _target + 1
 .endmacro
 
 ; =========================================================================
 ; Copy a 16-bit address into two consecutive memory locations.
 ;
-; Stores the address of _source (not the contents at that address).
 ; Useful for setting up indirect jump vectors and pointers.
 ;
 ; In:
 ;   _target = address to store into
-;   _source = label whose address is stored
+;   _source = the pointer address value (e.g. label or #$1234)
 ; Out:
 ;   A = clobbered
 
-.macro CP_ADDRESS _target, _source
-    SET_WORD _target, _source
+.macro SET_POINTER _target, _source
+    STORE16 _target, _source
 .endmacro
 
 ; =========================================================================
@@ -81,8 +87,8 @@
 ; Out:
 ;   A = clobbered
 
-.macro CLR_WORD _target
-    SET_WORD _target, $0000
+.macro ZERO16 _target
+    STORE16 _target, $0000
 .endmacro
 
 ; =========================================================================
@@ -90,13 +96,13 @@
 ;
 ; In:
 ;   _target = destination address
-;   _source = source address
+;   _source = source address (e.g. label or @$1234)
 ; Out:
 ;   A = clobbered
 
-.macro CP_WORD _target, _source
-    SET_BYTE _target, _source
-    SET_BYTE _target + 1, _source + 1
+.macro COPY16 _target, _source
+    COPY _target, _source
+    COPY _target + 1, _source + 1
 .endmacro
 
 ; =========================================================================
@@ -108,7 +114,7 @@
 ;   C = set when word wraps ($FFFF -> $0000)
 ;   A = clobbered
 
-.macro INC_WORD _target
+.macro INC16 _target
     clc
     lda _target
     adc #1
@@ -127,7 +133,7 @@
 ;   C = clear when word wraps ($0000 -> $FFFF)
 ;   A = clobbered
 
-.macro DEC_WORD _target
+.macro DEC16 _target
     sec
     lda _target
     sbc #1

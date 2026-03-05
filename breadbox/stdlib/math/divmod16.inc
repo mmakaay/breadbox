@@ -47,7 +47,7 @@
     PUSH_AXY
 
     ; Initialize the remainder.
-    CLR_WORD remainder
+    ZERO16 remainder
 
     ldx #16
 

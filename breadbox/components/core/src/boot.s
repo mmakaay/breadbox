@@ -54,7 +54,7 @@
         beq @done
 
         ; Initialize pointer to constructor table.
-        CP_ADDRESS {{ symbol("condes_ptr") }}, __CONSTRUCTOR_TABLE__
+        SET_POINTER {{ symbol("condes_ptr") }}, __CONSTRUCTOR_TABLE__
 
         ldx #<__CONSTRUCTOR_COUNT__
     @loop:

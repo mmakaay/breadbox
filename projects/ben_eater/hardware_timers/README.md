@@ -3,9 +3,12 @@
 Tutorial : https://www.youtube.com/watch?v=g_koa00MBLg \
 Result   : https://youtu.be/g_koa00MBLg?t=1822
 
-The code from `main.s` implements the final result from the tutorial using
-the BREADBOX system. The tutorial also shows a blinking LED implementation,
-that uses delay loops to get the timing right. For completion’s sake, here is
+The code from `main.s` implements the final result from the tutorial, using
+BREADBOX for handling the hardware interaction and timer logic.
+
+## Blinking LED using simple delay loops
+
+The tutorial also shows a blinking LED implementation, that uses delay loops to get the timing right. For completion’s sake, here is
 what this code could look like, using BREADBOX:
 
 ```6502 assembly

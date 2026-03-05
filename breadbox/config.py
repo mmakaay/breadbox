@@ -21,6 +21,7 @@ class BreadboxConfig:
         self.config_data = self._load_config_data()
         self.components: dict[ComponentIdentifier, Component] = {}
         self.memory_layout: MemoryLayout | None = None
+        self.extra_source_dirs: list[tuple[str, Path]] = []
         self._resolve_config()
         self._inject_default_memory()
         self._validate()

@@ -1,4 +1,5 @@
 import importlib
+from pathlib import Path
 from typing import Any
 
 from breadbox.config import BreadboxConfig
@@ -25,4 +26,10 @@ def resolve_via_provider(
         raise ValueError(
             f"Provider type {provider_type!r} does not support {interface_name} (no module {module_name})"
         ) from None
+
+    # Register the delegation component's src/ directory for code generation.
+    delegation_dir = Path(__file__).parent / interface_name / "src"
+    if delegation_dir.is_dir():
+        breadbox.extra_source_dirs.append((interface_name, delegation_dir))
+
     return module.resolve(breadbox, component_id, provider_device, device_settings)

@@ -18,6 +18,7 @@ def make_config(**components: Component) -> BreadboxConfig:
     """
     config = object.__new__(BreadboxConfig)
     config.components = {ComponentIdentifier(k): v for k, v in components.items()}
+    config.extra_source_dirs = []
     return config
 
 

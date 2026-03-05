@@ -8,7 +8,7 @@ binary_value:  .word 1729
 
 main:
     ; Convert value into decimal.
-    CP_WORD fmtdec16::value, binary_value
+    COPY16 fmtdec16::value, binary_value
     jsr fmtdec16
 
     ; Print the zero-padded string buffer, "01729".

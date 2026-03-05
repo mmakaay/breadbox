@@ -12,6 +12,7 @@ from breadbox.types.on_off import OnOff
 def make_config(*devices):
     config = object.__new__(BreadboxConfig)
     config.components = {d.id: d for d in devices}
+    config.extra_source_dirs = []
     return config
 
 

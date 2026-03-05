@@ -50,8 +50,8 @@
     sta padded+5            ; Null terminator.
 
     ; Setup divmod16.
-    CP_WORD divmod16::dividend, value
-    SET_WORD divmod16::divisor, 10
+    COPY16 divmod16::dividend, value
+    STORE16 divmod16::divisor, 10
 
     ldx #4                  ; Start at rightmost digit position.
 

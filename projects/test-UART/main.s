@@ -150,6 +150,6 @@ CTRL_D = $04
         jsr DISPLAY::write
         dex
         bne @loop
-        CLR_BYTE cursor
+        ZERO cursor
         rts
     .endproc

@@ -17,6 +17,7 @@ def make_core():
 def make_config(*devices):
     config = object.__new__(BreadboxConfig)
     config.components = {d.id: d for d in devices}
+    config.extra_source_dirs = []
     return config
 
 

@@ -12,7 +12,7 @@
 ;   A clobbered
 
 .macro SET_NMI _handler
-    CP_ADDRESS nmi_vector, _handler
+    SET_POINTER nmi_vector, _handler
 .endmacro
 
 ; =========================================================================
@@ -28,5 +28,5 @@
 ;   A = clobbered
 
 .macro SET_IRQ _handler
-    CP_ADDRESS irq_vector, _handler
+    SET_POINTER irq_vector, _handler
 .endmacro

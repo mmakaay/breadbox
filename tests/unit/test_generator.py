@@ -30,6 +30,7 @@ def make_config():
     config = object.__new__(BreadboxConfig)
     config.components = {}
     config.memory_layout = None
+    config.extra_source_dirs = []
     return config
 
 

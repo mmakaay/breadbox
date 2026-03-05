@@ -47,9 +47,9 @@
         ; Initialize {{ timer.name }} timer ({{ timer.ms }}ms).
         sta {{ api(timer.name) }}
 {% if timer.byte_width == 1 %}
-        SET_BYTE {{ my(timer.name + "_cd") }}, #{{ timer.ticks }}
+        STORE {{ my(timer.name + "_cd") }}, #{{ timer.ticks }}
 {% elif timer.byte_width == 2 %}
-        SET_WORD {{ my(timer.name + "_cd") }}, {{ timer.ticks }}
+        STORE16 {{ my(timer.name + "_cd") }}, {{ timer.ticks }}
 {% elif timer.byte_width == 3 %}
         lda #<({{ timer.ticks }})
         sta {{ my(timer.name + "_cd") }}
@@ -61,7 +61,7 @@
 {% endfor %}
 
         ; Configure T1 count down value.
-        SET_WORD T1_COUNTER, {{ cycles_per_tick }}
+        STORE16 T1_COUNTER, {{ cycles_per_tick }}
 
         ; Configure T1 for free-running mode.
         lda ACR                   ; Get existing configuration.
@@ -70,7 +70,7 @@
         sta ACR                   ; Write back updated configuration.
 
         ; Enable T1 interrupts.
-        SET_BYTE IER, #(IER_TURN_ON | IER_T1)
+        STORE IER, #(IER_TURN_ON | IER_T1)
 
         cli                       ; Enable interrupts.
 
@@ -91,7 +91,7 @@
         bit IFR                   ; Check if T1 interrupt was triggered.
         beq @done                 ; No interrupt triggered? Then we're done.
 
-        SET_BYTE IFR, #IFR_T1     ; Clear the T1 interrupt flag.
+        STORE IFR, #IFR_T1     ; Clear the T1 interrupt flag.
 
         ; Increment the 3-byte ticks counter.
         inc {{ api("ticks") }}
@@ -107,7 +107,7 @@
         dec {{ my(timer.name + "_cd") }}
         bne @{{ timer.name }}_done
         inc {{ api(timer.name) }}
-        SET_BYTE {{ my(timer.name + "_cd") }}, #{{ timer.ticks }}
+        STORE {{ my(timer.name + "_cd") }}, #{{ timer.ticks }}
     @{{ timer.name }}_done:
 {% elif timer.byte_width == 2 %}
         lda {{ my(timer.name + "_cd") }}
@@ -119,7 +119,7 @@
         ora {{ my(timer.name + "_cd") }} + 1
         bne @{{ timer.name }}_done
         inc {{ api(timer.name) }}
-        SET_WORD {{ my(timer.name + "_cd") }}, {{ timer.ticks }}
+        STORE16 {{ my(timer.name + "_cd") }}, {{ timer.ticks }}
     @{{ timer.name }}_done:
 {% elif timer.byte_width == 3 %}
         lda {{ my(timer.name + "_cd") }}

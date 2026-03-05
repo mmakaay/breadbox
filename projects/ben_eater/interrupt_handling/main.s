@@ -27,8 +27,8 @@
         PRINT LCD::write, banner
 
         ; Initialize the variables to zero.
-        CLR_WORD counter
-        CLR_WORD debounce
+        ZERO16 counter
+        ZERO16 debounce
 
         ; Write the initial counter value to the display.
         jsr write_counter_to_display
@@ -60,7 +60,7 @@
         lda debounce                 ; Check if debounce counter is 0.
         ora debounce + 1
         beq @debounce_done           ; Yes, go wait for the next change.
-        DEC_WORD debounce            ; No, decrement the debounce counter,
+        DEC16 debounce            ; No, decrement the debounce counter,
         cli
         jmp @debounce_countdown      ; and debounce a bit longer.
 
@@ -80,8 +80,8 @@
         ora debounce + 1
         bne @done
 
-        SET_WORD debounce, $2000     ; Enable debounce countdown.
-        INC_WORD counter             ; Increment the interrupt counter.
+        STORE16 debounce, $2000     ; Enable debounce countdown.
+        INC16 counter             ; Increment the interrupt counter.
 
     @done:
         bit $6001                    ; Read PORTA to clear interrupt.
@@ -90,7 +90,7 @@
 
     .proc write_counter_to_display
         sei
-        CP_WORD fmtdec16::value, counter
+        COPY16 fmtdec16::value, counter
         jsr fmtdec16
         jsr LCD::home
         PRINT LCD::write, fmtdec16::padded
@@ -107,7 +107,7 @@
         and PCR_CA1_MASK     ; Clear the CA1 settings bit
         ora #PCR_CA1_NAE     ; Configure Negative Action Edge (i.e. falling edge)
         sta PCR              ; Write back new configuration
-        SET_BYTE IER, #(IER_TURN_ON | IER_CA1) ; Turn on CA1 interrupts
+        STORE IER, #(IER_TURN_ON | IER_CA1) ; Turn on CA1 interrupts
         cli                  ; Enable interrupts
         rts
     .endproc

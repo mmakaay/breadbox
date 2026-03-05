@@ -14,7 +14,7 @@
 .macro DELAY _iterations
     .assert _iterations <= 65535, error, "DELAY overflow: iteration count exceeds 16-bit max (65535)."
     pha
-    SET_WORD {{ symbol("delay_iterations") }}, _iterations
+    STORE16 {{ symbol("delay_iterations") }}, _iterations
     jsr {{ symbol("delay") }}
     pla
 .endmacro

@@ -43,7 +43,7 @@
     PUSH_AXY
 
     ; Initialize the remainder.
-    CLR_BYTE remainder
+    ZERO remainder
 
     ldx #8
 

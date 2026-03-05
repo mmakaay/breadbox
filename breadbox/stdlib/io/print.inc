@@ -10,8 +10,8 @@
 ;
 ; For direct use:
 ;
-;   CP_ADDRESS PRINT::string, my_text
-;   CP_ADDRESS PRINT::writer, MY_DISPLAY::write
+;   SET_POINTER PRINT::string, my_text
+;   SET_POINTER PRINT::writer, MY_DISPLAY::write
 ;   jsr PRINT::print
 ;
 ; The `PRINT` macro provides a convenience wrapper for this.
@@ -80,8 +80,8 @@
     ; Out:
     ;   A, X, Y preserved
 
-    CP_ADDRESS print::writer, _writer_function
-    CP_ADDRESS print::string, _string_address
+    SET_POINTER print::writer, _writer_function
+    SET_POINTER print::string, _string_address
     jsr print
 .endmacro
 
@@ -94,7 +94,7 @@
     ; Out:
     ;   A, X, Y preserved
 
-    CP_ADDRESS print::writer, _writer_function
-    CP_WORD print::string, _pointer
+    SET_POINTER print::writer, _writer_function
+    COPY16 print::string, _pointer
     jsr print
 .endmacro

@@ -9,6 +9,7 @@ from breadbox.types.component_identifier import ComponentIdentifier
 def make_config():
     config = object.__new__(BreadboxConfig)
     config.components = {}
+    config.extra_source_dirs = []
     return config
 
 

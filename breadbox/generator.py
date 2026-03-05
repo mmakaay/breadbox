@@ -64,6 +64,7 @@ class CodeGenerator:
         """
         self._prepare_build_dir()
         self._process_stdlib()
+        self._process_extra_sources()
         for component in self.breadbox.config.components.values():
             if component.parent is None:
                 component.accept(self)
@@ -114,6 +115,36 @@ class CodeGenerator:
             template = env.get_template(str(relative))
             rendered = template.render(context)
             self._write_generated_output(output_path, rendered)
+
+    def _process_extra_sources(self) -> None:
+        """
+        Process extra source directories registered during config resolution.
+        """
+        seen: set[str] = set()
+        for output_prefix, src_dir in self.breadbox.config.extra_source_dirs:
+            if output_prefix in seen:
+                continue
+            seen.add(output_prefix)
+
+            env = Environment(
+                loader=FileSystemLoader(str(src_dir)),
+                undefined=StrictUndefined,
+                keep_trailing_newline=True,
+                lstrip_blocks=True,
+                trim_blocks=True,
+            )
+            env.filters["hex"] = _hex_filter
+            env.filters["bin"] = _bin_filter
+
+            src_files = sorted(f for f in src_dir.iterdir() if f.suffix in (".s", ".inc"))
+            for src_file in src_files:
+                template = env.get_template(src_file.name)
+                rendered = template.render()
+                output_path = Path(output_prefix) / src_file.name
+                self._write_generated_output(output_path, rendered)
+                if src_file.suffix == ".inc":
+                    self._component_includes.append(output_path)
+
 
     def _process_project_sources(self) -> None:
         """
