@@ -13,7 +13,7 @@
 .segment "CODE"
 
     .proc main
-        ; Printmessages on the display.
+        ; Print messages on the display.
         PRINT LCD::write, message1
         ldx #0
         ldy #1
@@ -29,34 +29,34 @@
     .endproc
 
     .proc update_led_task
-        IF_NOT_TIMER_TRIGGERED TICKER::led_toggle, @done
-
-        jsr LED::toggle
+        IF_TIMER_TRIGGERED TICKER::led_toggle
+            jsr LED::toggle
+        ENDIF
     @done:
         rts
     .endproc
 
     .proc update_lcd_task
-        IF_NOT_TIMER_TRIGGERED TICKER::lcd_update, @done
+        IF_TIMER_TRIGGERED TICKER::lcd_update
+            ; Place the cursor after "ticker" on the display.
+            ldx #7
+            ldy #0
+            jsr LCD::cursor_move
 
-        ; Place the cursor after "ticker" on the display.
-        ldx #7
-        ldy #0
-        jsr LCD::cursor_move
+            ; Print the decimal value for bits 16-23 of the ticks counter.
+            COPY fmtdec::value, TICKER::ticks + 2
+            jsr fmtdec
+            PRINT LCD::write, fmtdec::padded
 
-        ; Print the decimal value for bits 16-23 of the ticks counter.
-        COPY fmtdec::value, TICKER::ticks + 2
-        jsr fmtdec
-        PRINT LCD::write, fmtdec::padded
+            ; Print separator character.
+            lda #' '
+            jsr LCD::write
 
-        ; Print separator character.
-        lda #' '
-        jsr LCD::write
-
-        ; Print the decimal value for bits 0-16 of the ticks counter.
-        COPY16 fmtdec16::value, TICKER::ticks
-        jsr fmtdec16
-        PRINT LCD::write, fmtdec16::padded
+            ; Print the decimal value for bits 0-16 of the ticks counter.
+            COPY16 fmtdec16::value, TICKER::ticks
+            jsr fmtdec16
+            PRINT LCD::write, fmtdec16::padded
+        ENDIF
     @done:
         rts
     .endproc

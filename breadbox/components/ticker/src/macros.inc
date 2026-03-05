@@ -1,22 +1,23 @@
 ; =========================================================================
-; Check if a ticker timer was triggered, and jump to provided label if not.
+; Check if a ticker timer was triggered, and reset the timer + run code
+; block if it is.
 ;
 ; Prerequisite:
 ;   The timer to check must have been created in the YAML config.
 ;
 ; Usage:
-;     IF_NOT_TIMER_TRIGGERED TICKER::my_timer, done
-;     ; Perform actions for triggered timer.
-;     ; The macro resets the trigger, so the timer will
-;     ; automatically re-trigger after this.
-;   done:
-;     ; ...
+;     IF_TIMER_TRIGGERED TICKER::my_timer
+;         ; Perform actions for triggered timer.
+;         ; The macro resets the trigger, so the timer will
+;         ; automatically re-trigger after this.
+;     ENDIF
+;     ; Code jumps here, if timer was not triggered.
 ;
 
-.macro IF_NOT_TIMER_TRIGGERED _timer, _branch_to
-    lda TICKER::lcd_update
-    beq _branch_to
-    STORE TICKER::lcd_update, #0
+.macro IF_TIMER_TRIGGERED _timer
+    lda _timer
+    beq @endif
+    STORE _timer, #0
 .endmacro
 
 ; =========================================================================
@@ -59,7 +60,7 @@
 ; -----------------------------------------------------------------------------
 ; Check if an ad-hoc timer deadline has been reached.
 ;
-; See the `TIMER_SET` documentation for a usage example.
+; See the `ADHOC_TIMER_SET` documentation for a usage example.
 ;
 ; In:
 ;   _ticks    = current counter (3 bytes)
@@ -91,11 +92,11 @@
 ; Usage:
 ;     IF_ADHOC_TIMER_EXPIRED TICKER::ticks, future, TIME
 ;         ; Perform actions for expired timer.
-;         ; The macro resets the  the adhoc timer, so the timer will
+;         ; The macro resets the  the ad-hoc timer, so the timer will
 ;         ; automatically re-trigger after this. If you do not want this
 ;         ; reset behavior, then use `ADHOC_TIMER_EXPIRED` directly instead.
 ;     ENDIF
-;         ; Code jumps here, if timer has not expired.
+;     ; Code jumps here, if timer has not expired.
 ;
 ; In:
 ;   _ticks    = current counter (3 bytes)

@@ -88,7 +88,24 @@
 ;   A = clobbered
 
 .macro ZERO16 _target
-    STORE16 _target, $0000
+    lda #0
+    sta _target
+    sta _target + 1
+.endmacro
+
+; =========================================================================
+; Store zero into a 24-bit 3 byte value.
+;
+; In:
+;   _target = address of the low byte
+; Out:
+;   A = clobbered
+
+.macro ZERO24 _target
+    lda #0
+    sta _target
+    sta _target + 1
+    sta _target + 2
 .endmacro
 
 ; =========================================================================

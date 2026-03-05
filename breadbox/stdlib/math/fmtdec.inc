@@ -46,7 +46,8 @@
     sta padded+3
 
     ; Setup divmod.
-    COPY16 divmod::dividend, value
+    COPY divmod::dividend, value
+    ZERO divmod::dividend + 1
     STORE16 divmod::divisor, 10
 
     ldx #2                  ; Start at rightmost digit position.
