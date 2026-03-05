@@ -10,6 +10,9 @@ TICKER:
   component: ticker
   provider: VIA
   ms_per_tick: 10
+  timers:
+    led_toggle: 250
+    lcd_update: 3000
 
 LCD:
   component: lcd_hd44780
