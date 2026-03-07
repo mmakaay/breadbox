@@ -1,7 +1,0 @@
-; Core API: CPU={{ cpu }}, clock={{ clock_mhz }}MHz
-
-.include "{{ component_path }}/macros.inc"
-.include "{{ component_path }}/cpu_shims.inc"
-.include "{{ component_path }}/delay.inc"
-.include "{{ component_path }}/vectors.inc"
-.include "{{ component_path }}/boot.inc"

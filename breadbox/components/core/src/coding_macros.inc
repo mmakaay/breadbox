@@ -177,3 +177,22 @@
     plx
     pla
 .endmacro
+
+; =========================================================================
+; ENDIF can be used by other macros to implement an optional code block.
+;
+; Example macro:
+;
+;     .macro IF_A_EQ value
+;         cmp value
+;         bne @endif
+;
+; Example usage:
+;
+;     IF_A_EQ #10
+;         ... code to run if A = 10 ...
+;     ENDIF
+
+.macro ENDIF
+    @endif:
+.endmacro

@@ -1,7 +1,5 @@
-.ifndef {{ symbol("VECTORS_S") }}  ; import + export in one module = unhappy linker
-.importzp {{ symbol("nmi_vector") }}
-.importzp {{ symbol("irq_vector") }}
-.endif
+.importzp {{ api("nmi_vector") }}
+.importzp {{ api("irq_vector") }}
 
 ; =========================================================================
 ; Set the address of the NMI (Non-Maskable Interrupt) handler.
