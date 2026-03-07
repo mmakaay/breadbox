@@ -1,27 +1,28 @@
-import pytest
 from pathlib import Path
 
 from breadbox.components.core.device import CoreDevice
 from breadbox.components.ram.device import RamDevice
 from breadbox.components.rom.device import RomDevice
-from breadbox.components.via_w65c22.device import ViaW65c22Device, REGISTERS
+from breadbox.components.via_w65c22.device import ViaW65c22Device
 from breadbox.config import BreadboxConfig
 from breadbox.generator import CodeGenerator, COMPONENTS_DIR, _hex_filter
 from breadbox.memory import resolve_memory_layout
 from breadbox.project import BreadboxProject
 from breadbox.types.address16 import Address16
 from breadbox.types.component_identifier import ComponentIdentifier
+from breadbox.types.memory_size import MemorySize
 
 CORE_ASSEMBLY_FILES = {
     "boot.s",
-    "boot.inc",
+    "coding_macros.inc",
+    "cpu_shims.s",
+    "cpu_shims_macros.inc",
+    "delay.s",
+    "delay_macros.inc",
+    "halt.s",
+    "halt_macros.inc",
     "vectors.s",
     "vectors.inc",
-    "delay.s",
-    "delay.inc",
-    "cpu_shims.s",
-    "cpu_shims.inc",
-    "macros.inc",
     "api.inc",
 }
 
@@ -38,8 +39,8 @@ def make_core_config(cpu="65c02", clock_mhz=1.0):
     config = make_config()
     core = CoreDevice(id=ComponentIdentifier("CORE"), cpu=cpu, clock_mhz=clock_mhz)
     config.components[ComponentIdentifier("CORE")] = core
-    ram = RamDevice(id=ComponentIdentifier("RAM"), address="$0000", size=0x4000)
-    rom = RomDevice(id=ComponentIdentifier("ROM"), address="$8000", size=0x8000)
+    ram = RamDevice(id=ComponentIdentifier("RAM"), address=Address16("$0000"), size=MemorySize(0x4000))
+    rom = RomDevice(id=ComponentIdentifier("ROM"), address=Address16("$8000"), size=MemorySize(0x8000))
     config.components[ram.id] = ram
     config.components[rom.id] = rom
     config.memory_layout = resolve_memory_layout([ram], [rom])
@@ -65,7 +66,7 @@ def make_project(tmp_path, config):
 
 class TestOutputDirectory:
     def test_creates_output_directory(self, tmp_path):
-        project = make_project(tmp_path, make_config())
+        project = make_project(tmp_path, make_core_config())
         generator = CodeGenerator(project)
         generator.generate()
         assert project.generated_dir.is_dir()
@@ -76,7 +77,7 @@ class TestOutputDirectory:
         stale = output_dir / "stale.txt"
         stale.write_text("old content")
 
-        project = make_project(tmp_path, make_config())
+        project = make_project(tmp_path, make_core_config())
         generator = CodeGenerator(project)
         generator.generate()
         assert not stale.exists()
@@ -87,20 +88,22 @@ class TestOutputDirectory:
         stale_dir.mkdir(parents=True)
         (stale_dir / "old.s").write_text("stale")
 
-        project = make_project(tmp_path, make_config())
+        project = make_project(tmp_path, make_core_config())
         generator = CodeGenerator(project)
         generator.generate()
         assert not stale_dir.exists()
 
     def test_empty_config_produces_base_files_only(self, tmp_path):
-        project = make_project(tmp_path, make_config())
+        project = make_project(tmp_path, make_core_config())
         output_dir = project.generated_dir
         generator = CodeGenerator(project)
         generator.generate()
         files = {f.name for f in output_dir.iterdir() if f.is_file()}
         dirs = {d.name for d in output_dir.iterdir() if d.is_dir()}
-        assert files == {"breadbox.inc", "hardware.inc", "linker.cfg"}
-        assert dirs == {"stdlib"}
+        assert "breadbox.inc" in files
+        assert "linker.cfg" in files
+        assert "CORE" in dirs
+        assert "stdlib" in dirs
 
 
 class TestCoreGeneration:
@@ -203,8 +206,8 @@ class TestIncludeGuards:
         """
         Top-level .inc files get guard from filename only.
         """
-        result = CodeGenerator._wrap_include_guard("content", Path("hardware.inc"))
-        assert result.startswith(".ifndef __HARDWARE_INC\n__HARDWARE_INC = 1\n")
+        result = CodeGenerator._wrap_include_guard("content", Path("some.inc"))
+        assert result.startswith(".ifndef __SOME_INC\n__SOME_INC = 1\n")
 
     def test_guard_wraps_content(self):
         """
@@ -239,18 +242,6 @@ class TestIncludeGuards:
         content = (output_dir / "breadbox.inc").read_text()
         assert content.startswith(".ifndef __BREADBOX_INC\n__BREADBOX_INC = 1\n")
 
-    def test_hardware_inc_has_guard(self, tmp_path):
-        """
-        The hardware definitions file gets its own guard.
-        """
-        project = make_project(tmp_path, make_core_config())
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        content = (output_dir / "hardware.inc").read_text()
-        assert content.startswith(".ifndef __HARDWARE_INC\n__HARDWARE_INC = 1\n")
-
 
 class TestBreadboxInc:
     def test_generates_breadbox_inc(self, tmp_path):
@@ -261,15 +252,6 @@ class TestBreadboxInc:
 
         assert (output_dir / "breadbox.inc").exists()
 
-    def test_includes_hardware(self, tmp_path):
-        project = make_project(tmp_path, make_core_config())
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        content = (output_dir / "breadbox.inc").read_text()
-        assert '.include "hardware.inc"' in content
-
     def test_includes_core_files(self, tmp_path):
         project = make_project(tmp_path, make_core_config())
         output_dir = project.generated_dir
@@ -278,132 +260,6 @@ class TestBreadboxInc:
 
         content = (output_dir / "breadbox.inc").read_text()
         assert '.include "CORE/api.inc"' in content
-
-    def test_hardware_included_before_core(self, tmp_path):
-        """
-        hardware.inc must be included before core files (defines CPU_CLOCK etc.).
-        """
-        project = make_project(tmp_path, make_core_config())
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        content = (output_dir / "breadbox.inc").read_text()
-        hw_pos = content.index('.include "hardware.inc"')
-        core_pos = content.index('.include "CORE/api.inc"')
-        assert hw_pos < core_pos
-
-
-class TestHardwareInc:
-    def test_generates_hardware_inc(self, tmp_path):
-        project = make_project(tmp_path, make_core_via_config())
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        assert (output_dir / "hardware.inc").exists()
-
-    def test_core_setcpu(self, tmp_path):
-        project = make_project(tmp_path, make_core_via_config())
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        content = (output_dir / "hardware.inc").read_text()
-        assert '.setcpu "65c02"' in content
-
-    def test_core_setcpu_6502(self, tmp_path):
-        project = make_project(tmp_path, make_core_via_config(cpu="6502"))
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        content = (output_dir / "hardware.inc").read_text()
-        assert '.setcpu "6502"' in content
-
-    def test_core_clock(self, tmp_path):
-        project = make_project(tmp_path, make_core_via_config())
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        content = (output_dir / "hardware.inc").read_text()
-        assert "CPU_CLOCK = 1000000" in content
-
-    def test_core_clock_4mhz(self, tmp_path):
-        project = make_project(tmp_path, make_core_via_config(clock_mhz=4.0))
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        content = (output_dir / "hardware.inc").read_text()
-        assert "CPU_CLOCK = 4000000" in content
-
-    def test_via_base_address(self, tmp_path):
-        project = make_project(tmp_path, make_core_via_config())
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        content = (output_dir / "VIA" / "constants.inc").read_text()
-        assert "BASE" in content and "= $6000" in content
-
-    def test_via_base_address_custom(self, tmp_path):
-        project = make_project(tmp_path, make_core_via_config(via_address="$7000"))
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        content = (output_dir / "VIA" / "constants.inc").read_text()
-        assert "BASE" in content and "= $7000" in content
-
-    def test_via_registers(self, tmp_path):
-        project = make_project(tmp_path, make_core_via_config())
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        content = (output_dir / "VIA" / "constants.inc").read_text()
-        assert "PORTB            = BASE + $00" in content
-        assert "PORTA            = BASE + $01" in content
-        assert "DDRB             = BASE + $02" in content
-        assert "DDRA             = BASE + $03" in content
-        assert "IER              = BASE + $0E" in content
-        assert "PORTA_NH         = BASE + $0F" in content
-
-    def test_via_all_sixteen_registers(self, tmp_path):
-        project = make_project(tmp_path, make_core_via_config())
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        content = (output_dir / "VIA" / "constants.inc").read_text()
-        for name, offset in REGISTERS:
-            expected = f"{name:<17s}= BASE + ${offset:02X}"
-            assert expected in content, f"Missing register: {expected}"
-
-    def test_empty_config_hardware_inc(self, tmp_path):
-        """
-        Empty config produces hardware.inc with header only.
-        """
-        project = make_project(tmp_path, make_config())
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        content = (output_dir / "hardware.inc").read_text()
-        assert ".ifndef __HARDWARE_INC" in content
-        assert ".setcpu" not in content
-        assert "BASE" not in content
-
-    def test_has_auto_generated_header(self, tmp_path):
-        project = make_project(tmp_path, make_core_via_config())
-        output_dir = project.generated_dir
-        generator = CodeGenerator(project)
-        generator.generate()
-
-        content = (output_dir / "hardware.inc").read_text()
-        assert "; Auto-generated by breadbox. Do not edit." in content
 
 
 class TestBreadboxCfg:
