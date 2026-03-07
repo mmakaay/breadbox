@@ -55,7 +55,7 @@ class CodeGenerator:
 
     def __init__(self, breadbox: BreadboxProject) -> None:
         self.breadbox = breadbox
-        self._template_env = self._create_template_env()
+        self._template_env = self._create_jinja2_env(TEMPLATES_DIR)
         self._component_includes: list[Path] = []
 
     def generate(self) -> None:
@@ -69,7 +69,6 @@ class CodeGenerator:
             if component.parent is None:
                 component.accept(self)
         self._process_project_sources()
-        self._generate_hardware_inc()
         self._generate_breadbox_inc()
         self._generate_linker_cfg()
 
@@ -98,15 +97,7 @@ class CodeGenerator:
         if not src_files:
             return
 
-        env = Environment(
-            loader=FileSystemLoader(str(STDLIB_DIR)),
-            undefined=StrictUndefined,
-            keep_trailing_newline=True,
-            lstrip_blocks=True,
-            trim_blocks=True,
-        )
-        env.filters["hex"] = _hex_filter
-        env.filters["bin"] = _bin_filter
+        env = self._create_jinja2_env(STDLIB_DIR)
 
         for src_file in src_files:
             relative = src_file.relative_to(STDLIB_DIR)
@@ -126,15 +117,7 @@ class CodeGenerator:
                 continue
             seen.add(output_prefix)
 
-            env = Environment(
-                loader=FileSystemLoader(str(src_dir)),
-                undefined=StrictUndefined,
-                keep_trailing_newline=True,
-                lstrip_blocks=True,
-                trim_blocks=True,
-            )
-            env.filters["hex"] = _hex_filter
-            env.filters["bin"] = _bin_filter
+            env = self._create_jinja2_env(src_dir)
 
             src_files = sorted(f for f in src_dir.iterdir() if f.suffix in (".s", ".inc"))
             for src_file in src_files:
@@ -142,7 +125,12 @@ class CodeGenerator:
                 rendered = template.render()
                 output_path = Path(output_prefix) / src_file.name
                 self._write_generated_output(output_path, rendered)
-                if src_file.suffix == ".inc":
+
+                # Automatically add *macros.inc to the breadbox.inc includes.
+                # Normally, "macros.inc" is used, but if there are many macros that need
+                # some separation, they can be split up in multiple files, ending in
+                # "macros.inc", which is good for developer sanity.
+                if src_file.name.endswith("macros.inc"):
                     self._component_includes.append(output_path)
 
 
@@ -170,13 +158,12 @@ class CodeGenerator:
         for sub in component.children:
             sub.accept(self)
 
-    @staticmethod
-    def _create_template_env() -> Environment:
+    def _create_jinja2_env(self, template_path: Path) -> Environment:
         """
-        Create Jinja2 environment for top-level templates.
+        Create Jinja2 environment for the provided template path.
         """
         env = Environment(
-            loader=FileSystemLoader(str(TEMPLATES_DIR)),
+            loader=FileSystemLoader(str(template_path)),
             undefined=StrictUndefined,
             keep_trailing_newline=True,
             lstrip_blocks=True,
@@ -184,11 +171,12 @@ class CodeGenerator:
         )
         env.filters["hex"] = _hex_filter
         env.filters["bin"] = _bin_filter
+        env.globals["config"] = self.breadbox.config
         return env
 
     def _generate_breadbox_inc(self) -> None:
         """
-        Generate the master include file (breadbox.inc).
+        Generate the main include file (breadbox.inc).
 
         Pulls in hardware definitions, core assembly, and all
         component-generated include files.
@@ -196,14 +184,6 @@ class CodeGenerator:
         template = self._template_env.get_template("breadbox.inc")
         rendered = template.render(component_includes=self._component_includes)
         self._write_generated_output(Path("breadbox.inc"), rendered)
-
-    def _generate_hardware_inc(self) -> None:
-        """
-        Generate hardware definitions (constants, macros) from component tree.
-        """
-        template = self._template_env.get_template("hardware.inc")
-        rendered = template.render(components=self.breadbox.config.components)
-        self._write_generated_output(Path("hardware.inc"), rendered)
 
     def _generate_linker_cfg(self) -> None:
         """
@@ -215,15 +195,7 @@ class CodeGenerator:
         """
         project_cfg = self.breadbox.project_dir / "linker.cfg"
         if project_cfg.is_file():
-            env = Environment(
-                loader=FileSystemLoader(str(self.breadbox.project_dir)),
-                undefined=StrictUndefined,
-                keep_trailing_newline=True,
-                lstrip_blocks=True,
-                trim_blocks=True,
-            )
-            env.filters["hex"] = _hex_filter
-            env.filters["bin"] = _bin_filter
+            env = self._create_jinja2_env(self.breadbox.project_dir)
             template = env.get_template("linker.cfg")
         else:
             template = self._template_env.get_template("linker.cfg")
@@ -258,16 +230,7 @@ class CodeGenerator:
         if not src_dir.is_dir():
             return
 
-        env = Environment(
-            loader=FileSystemLoader(str(src_dir)),
-            undefined=StrictUndefined,
-            keep_trailing_newline=True,
-            lstrip_blocks=True,
-            trim_blocks=True,
-        )
-        env.filters["hex"] = _hex_filter
-        env.filters["bin"] = _bin_filter
-
+        env = self._create_jinja2_env(src_dir)
         context = self._build_context(component)
 
         # Phase 1: render all files except api.inc (collecting api/exportzp metadata).
@@ -278,23 +241,32 @@ class CodeGenerator:
             template = env.get_template(src_file.name)
             rendered = template.render(context)
             if src_file.suffix == ".s":
-                rendered = self._inject_exports(rendered, component, context)
+                rendered = self._inject_exports(
+                    rendered, component,
+                    context["_file_api_defs"], context["_file_zp_defs"],
+                )
+                context["_file_api_defs"].clear()
+                context["_file_zp_defs"].clear()
             relative_path = component.component_path / src_file.name
             self._write_generated_output(relative_path, rendered)
+            if src_file.name.endswith("macros.inc"):
+                context["_macro_includes"].append(relative_path)
 
         # Phase 2: auto-generate api.inc from collected metadata.
-        api_inc = self._generate_api_inc(component, context)
-        if api_inc is not None:
-            relative_path = component.component_path / "api.inc"
-            self._write_generated_output(relative_path, api_inc)
-            self._component_includes.append(relative_path)
-        elif (src_dir / "api.inc").is_file():
-            # Fallback: render template-based api.inc (e.g. CORE component).
+        # If the component contains an api.inc file, that one is used.
+        # Otherwise, an api.inc is generated, based on the collected data.
+        if (src_dir / "api.inc").is_file():
             template = env.get_template("api.inc")
             rendered = template.render(context)
             relative_path = component.component_path / "api.inc"
             self._write_generated_output(relative_path, rendered)
             self._component_includes.append(relative_path)
+        else:
+            api_inc = self._generate_api_inc(component, context)
+            if api_inc is not None:
+                relative_path = component.component_path / "api.inc"
+                self._write_generated_output(relative_path, api_inc)
+                self._component_includes.append(relative_path)
 
     @staticmethod
     def _generate_api_inc(component: Component, context: dict) -> str | None:
@@ -304,9 +276,16 @@ class CodeGenerator:
         lines: list[str] = []
         api_defs: list[str] = context["_api_defs"]
         zp_defs: list[str] = context["_zp_defs"]
+        macro_includes: list[Path] = context["_macro_includes"]
 
-        if not api_defs and not zp_defs:
+        if not api_defs and not zp_defs and not macro_includes:
             return None
+
+        # Include macro files so they are available to all consumers.
+        for inc_path in macro_includes:
+            lines.append(f'.include "{inc_path}"')
+        if macro_includes:
+            lines.append("")
 
         # Import directives go outside the scope so the raw symbols
         # (e.g. __LCD_DATA_write) are globally visible. This allows both
@@ -333,16 +312,19 @@ class CodeGenerator:
         return "\n".join(lines)
 
     @staticmethod
-    def _inject_exports(rendered: str, component: Component, context: dict) -> str:
+    def _inject_exports(
+        rendered: str,
+        component: Component,
+        api_defs: list[str],
+        zp_defs: list[str],
+    ) -> str:
         """
         Inject .export/.exportzp directives into a rendered .s file.
 
-        Uses metadata collected by api_def() and zp_def() during rendering.
-        Directives are inserted before the first .segment directive to match
-        the project convention (includes → exports → code).
+        Only injects exports for symbols defined during this file's
+        rendering. Directives are inserted before the first .segment
+        directive to match the project convention (includes → exports → code).
         """
-        api_defs: list[str] = context["_api_defs"]
-        zp_defs: list[str] = context["_zp_defs"]
 
         if not api_defs and not zp_defs:
             return rendered
@@ -378,7 +360,7 @@ class CodeGenerator:
         content with .ifndef include guards derived from the output path.
         """
         prefix = "#" if relative_path.suffix == ".cfg" else ";"
-        content = f"{prefix} {self._BANNER}\n{content}"
+        content = f"{prefix} {self._BANNER}\n\n{content}"
         if relative_path.suffix == ".inc":
             content = self._wrap_include_guard(content, relative_path)
         dest = self.breadbox.generated_dir / relative_path
@@ -395,7 +377,6 @@ class CodeGenerator:
         a __ prefix to avoid collisions with user-defined symbols:
 
             core/boot.inc -> __CORE_BOOT_INC
-            hardware.inc  -> __HARDWARE_INC
         """
         guard = "__" + str(relative_path).replace("/", "_").replace(".", "_").upper()
         content = content.rstrip()
@@ -415,7 +396,8 @@ class CodeGenerator:
 
         return {"symbol": symbol}
 
-    def _build_context(self, component: Component) -> dict:
+    @staticmethod
+    def _build_context(component: Component) -> dict:
         """
         Build the Jinja2 template context for a component.
 
@@ -426,6 +408,9 @@ class CodeGenerator:
         """
         _api_defs: list[str] = []
         _zp_defs: list[str] = []
+        _file_api_defs: list[str] = []
+        _file_zp_defs: list[str] = []
+        _macro_includes: list[Path] = []
         _defined_symbols: dict[str, str] = {}  # symbol → source helper
 
         def _register_def(symbol: str, source: str) -> None:
@@ -448,6 +433,8 @@ class CodeGenerator:
             _register_def(sym, "api_def")
             if name not in _api_defs:
                 _api_defs.append(name)
+            if name not in _file_api_defs:
+                _file_api_defs.append(name)
             return sym
 
         def my_def(name: str) -> str:
@@ -470,6 +457,8 @@ class CodeGenerator:
             _register_def(sym, "zp_def")
             if name not in _zp_defs:
                 _zp_defs.append(name)
+            if name not in _file_zp_defs:
+                _file_zp_defs.append(name)
             return sym
 
         context: dict = {
@@ -486,6 +475,9 @@ class CodeGenerator:
             "symbol": component.var,  # backward compat for CORE templates
             "_api_defs": _api_defs,
             "_zp_defs": _zp_defs,
+            "_file_api_defs": _file_api_defs,
+            "_file_zp_defs": _file_zp_defs,
+            "_macro_includes": _macro_includes,
         }
         for f in dataclasses.fields(component):
             if f.name not in component._internal_fields:
