@@ -1,18 +1,18 @@
 ; =========================================================================
-; Check if a ticker timer was triggered, and reset the timer + run code
-; block if it is.
+; Run a code block when a ticker timer has triggered.
+;
+; Checks the trigger flag and, if set, clears it and runs the code
+; block that follows. The timer keeps running and will trigger again
+; after its configured interval.
 ;
 ; Prerequisite:
-;   The timer to check must have been created in the YAML config.
+;   The timer must be defined in the project's YAML config.
 ;
 ; Usage:
 ;     IF_TIMER_TRIGGERED TICKER::my_timer
-;         ; Perform actions for triggered timer.
-;         ; The macro resets the trigger, so the timer will
-;         ; automatically re-trigger after this.
+;         ; Handle the timer event.
 ;     ENDIF
-;     ; Code jumps here, if timer was not triggered.
-;
+;     ; Execution continues here when the timer has not triggered.
 
 .macro IF_TIMER_TRIGGERED _timer
     lda _timer
@@ -21,23 +21,23 @@
 .endmacro
 
 ; =========================================================================
-; Set an ad-hoc timer deadline.
+; Set a deadline for an ad-hoc timer.
 ;
-; This can be used to implement an ad-hoc timer, using a ticks counter.
-; After setting a deadline, the `TIMER_EXPIRED` macro can be used to
-; check if the timer deadline has been reached.
+; Computes a future tick count by adding a delay to the current ticks
+; value. Use `ADHOC_TIMER_EXPIRED` to check whether the deadline has
+; passed.
 ;
 ; Usage:
-;     future: .res 3                            ; deadline is stored in RAM
-;     TIME = 6000                               ; 60x when using 10ms / tick
-;     TIMER_SET TICKER::ticks, future, TIME     ; store deadline in `future`
+;     future: .res 3                            ; deadline stored in RAM
+;     TIME = 6000                               ; 60s at 10 ms/tick
+;     SET_ADHOC_TIMER TICKER::ticks, future, TIME
 ;   loop:
-;     TIMER_EXPIRED TICKER::ticks, future, TIME ; same arguments as before
-;     bcc loop                                  ; Loop until `future` is reached
+;     ADHOC_TIMER_EXPIRED TICKER::ticks, future, TIME
+;     bcc loop                                  ; loop until deadline passes
 ;
 ; In:
 ;   _ticks    = current counter (3 bytes)
-;   _deadline = variable to hold target tick (3 bytes)
+;   _deadline = variable to hold the target tick (3 bytes)
 ;   _delay    = number of ticks to wait (1, 2 or 3 bytes)
 ; Out:
 ;   A         = clobbered
@@ -58,16 +58,15 @@
 .endmacro
 
 ; -----------------------------------------------------------------------------
-; Check if an ad-hoc timer deadline has been reached.
+; Check whether an ad-hoc timer deadline has passed.
 ;
-; See the `ADHOC_TIMER_SET` documentation for a usage example.
+; See `SET_ADHOC_TIMER` for a usage example.
 ;
 ; In:
 ;   _ticks    = current counter (3 bytes)
 ;   _deadline = previously set deadline (3 bytes)
-;   _delay    = delay as used for TIMER_SET (1, 2 or 3 bytes)
 ; Out:
-;   Carry     = 1 if timer expired (ticks >= deadline), 0 otherwise
+;   Carry     = set if expired (ticks >= deadline), clear otherwise
 ;   A         = clobbered
 
 .macro ADHOC_TIMER_EXPIRED _ticks, _deadline, _delay
@@ -83,36 +82,31 @@
 .endmacro
 
 ; =========================================================================
-; Check if an ad-hoc timer has expired, and reset the timer + run code
-; block if it is.
+; Run a code block when an ad-hoc timer has expired.
+;
+; Checks whether the deadline has passed. If so, resets the deadline
+; and executes the code block that follows. To check expiry without
+; automatic reset, use `ADHOC_TIMER_EXPIRED` directly.
 ;
 ; Prerequisite:
-;   The ad-hoc timer must have been initialized using `SET_ADHOC_TIMER`.
+;   The deadline must have been set with `SET_ADHOC_TIMER`.
 ;
 ; Usage:
 ;     IF_ADHOC_TIMER_EXPIRED TICKER::ticks, future, TIME
-;         ; Perform actions for expired timer.
-;         ; The macro resets the  the ad-hoc timer, so the timer will
-;         ; automatically re-trigger after this. If you do not want this
-;         ; reset behavior, then use `ADHOC_TIMER_EXPIRED` directly instead.
+;         ; Handle the timer event.
 ;     ENDIF
-;     ; Code jumps here, if timer has not expired.
+;     ; Execution continues here when the timer has not expired.
 ;
 ; In:
 ;   _ticks    = current counter (3 bytes)
 ;   _deadline = previously set deadline (3 bytes)
-;   _delay    = delay as used for TIMER_SET (1, 2 or 3 bytes)
+;   _delay    = delay as used for `SET_ADHOC_TIMER` (1, 2 or 3 bytes)
 ; Out:
-;   Carry     = 1 if timer expired (ticks >= deadline), 0 otherwise
-;   _deadline = Reset if timer expired
+;   _deadline = reset to a new deadline when expired
 ;   A         = clobbered
 
 .macro IF_ADHOC_TIMER_EXPIRED _ticks, _deadline, _delay
     ADHOC_TIMER_EXPIRED _ticks, _deadline, _delay
     bcc @endif
     SET_ADHOC_TIMER _ticks, _deadline, _delay
-.endmacro
-
-.macro ENDIF
-    @endif:
 .endmacro
