@@ -22,7 +22,12 @@ class ConfigPrinter:
             if f.name in component._internal_fields:
                 continue
             value = getattr(component, f.name)
-            self.console.print(f"{indent}  [bold]{f.name}[/bold]: {value}")
+            if isinstance(value, list):
+                self.console.print(f"{indent}  [bold]{f.name}[/bold]:")
+                for item in value:
+                    self.console.print(f"{indent}    - {item}")
+            else:
+                self.console.print(f"{indent}  [bold]{f.name}[/bold]: {value}")
 
         self._depth += 1
         for sub in component.children:
