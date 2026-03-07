@@ -25,6 +25,7 @@
     @loop:
         jsr update_led_task
         jsr update_lcd_task
+        jsr update_console_task
         jmp @loop
     .endproc
 
@@ -59,4 +60,11 @@
         ENDIF
     @done:
         rts
+    .endproc
+
+    .proc update_console_task
+        jsr CONSOLE::read
+        bcc :+
+        jsr CONSOLE::write_terminal
+    :   rts
     .endproc
