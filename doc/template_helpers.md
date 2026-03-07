@@ -134,6 +134,6 @@ lda {{ var("rx_buffer,X") }}      {# wrong #}
 ## CORE Component Exception
 
 The CORE component does not use `api_def()` — its `api.inc` is a
-hand-maintained template that includes sub-files (`boot.inc`, `delay.inc`,
+hand-maintained template that includes sub-files (`boot.inc`, `delay_macros.inc`,
 etc.). The generator falls back to rendering this template when no
 `api_def()` calls are registered.

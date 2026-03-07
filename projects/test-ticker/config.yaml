@@ -11,8 +11,8 @@ TICKER:
   provider: VIA
   ms_per_tick: 10
   timers:
-    led_toggle: 250
-    lcd_update: 3000
+    led_toggle: 1000
+    lcd_update: 100
 
 LCD:
   component: lcd_hd44780

@@ -7,3 +7,10 @@
 - Move macros for ticker timing to a better place (out of VIA driver code)
 - Let enabling interrupse with cli be a task of BREADBOX. Now it's in various
   places in driver code, but this should be a global concern instead.
+- Fix a scary case-insensitive filesystem issue: when creating a TICKER device,
+  code generation will create build/breadbox/TICKER, but also (to include the
+  ticker implementation's macros.inc file) build/breadbox/ticker. They are on
+  macOS the same directory though, and the source files get mixed up in a single
+  directory. It does work, but only because there are no overlapping files in the
+  two source directories. This can easily go wrong, and we need config-time
+  checks for this (or maybe code-generation-time).

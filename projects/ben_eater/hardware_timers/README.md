@@ -38,8 +38,9 @@ what this code could look like, using BREADBOX:
 .endproc
 ```
 
-When I computed things correctly, the delay loop takes 457ms when running at a 1MHz clock speed.
-Yet another way to implement this, is to make use of the delay functionality as provided by BREADBOX:
+If I computed things correctly, this delay loop takes 457ms when running at a 1MHz clock speed.
+Yet another way to implement this, is to make use of the delay functionality (based on the same
+principle of a busy loop on the CPU) as provided by BREADBOX:
 
 ```6502 assembly
 .include "breadbox.inc"
@@ -60,4 +61,4 @@ Yet another way to implement this, is to make use of the delay functionality as 
 The delay is split up into two separate delay calls. The delay as implemented in BREADBOX,
 uses fewer cycles per iteration than Ben's delay loop. This provides a higher resolution for
 timing, at the cost of a lower maximum delay time (max 327ms when running at 1MHz).
-Therefore, to get to 457ms, two delay calls have to be used.
+Therefore, to get to 457ms, two delay calls have to be used here.
