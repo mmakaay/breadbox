@@ -34,7 +34,7 @@
 .CODE
 
     main:
-        PRINT SERIAL::write_terminal, introduction
+        PRINT CONSOLE::write_terminal, introduction
 
         PRINT LCD::write, lcd_text1
         PRINT LCD::write, lcd_text2

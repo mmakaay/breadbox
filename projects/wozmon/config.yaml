@@ -18,7 +18,7 @@ LCD:
     mode: 4bit
     port: B
 
-SERIAL:
+CONSOLE:
   component: uart_6551
   type: um6551
   address: $5000
