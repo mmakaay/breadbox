@@ -72,9 +72,6 @@
         lda #CMD_TX_IDLE
         sta CMD
 
-        ; Enable CPU interrupts. The IRQ handler is registered at link time
-        ; via .interruptor and dispatched by the core interruptor table.
-        cli
 
         rts
     .endproc

@@ -20,10 +20,12 @@
     ; is built on top of BREADBOX.
 
     .proc {{ api_def("boot") }}
+        sei                                    ; Disable interrupts.
         ldx #$ff                               ; Initialize stack pointer.
         txs
         cld                                    ; Disable decimal mode.
         jsr {{ my("call_constructors") }}      ; Call registered constructors.
+        cli                                    ; Enable interrupts.
         jmp main                               ; Call main (exported by project).
     .endproc
 

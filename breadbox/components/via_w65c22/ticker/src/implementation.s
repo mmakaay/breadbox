@@ -72,7 +72,6 @@
         ; Enable T1 interrupts.
         STORE IER, #(IER_TURN_ON | IER_T1)
 
-        cli                       ; Enable interrupts.
 
         rts
     .endproc

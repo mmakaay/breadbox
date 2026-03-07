@@ -16,9 +16,9 @@
 ; =========================================================================
 ; Set the address of the IRQ (Interrupt ReQuest) handler.
 ;
-; Note that interrupts are disabled (using `sei`) by default during boot.
-; You will have to call `cli` to enable interrupt handling after setting
-; the IRQ handler.
+; Note that interrupts are automatically enabled by the boot sequence when
+; interruptors are registered. Use SET_IRQ to override the default IRQ
+; handler, which dispatches through the CONDES interruptor table.
 ;
 ; In:
 ;   _handler: subroutine that must handle IRQ

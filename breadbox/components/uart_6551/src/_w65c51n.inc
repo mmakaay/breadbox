@@ -73,9 +73,6 @@ _CHAR_TIME_US = 10000000 / {{ baudrate }}
         lda #(CMD_TIC2 | CMD_DTR)
         sta CMD
 
-        ; Enable CPU interrupts. The IRQ handler is registered at link time
-        ; via .interruptor and dispatched by the core interruptor table.
-        cli
 
         rts
     .endproc

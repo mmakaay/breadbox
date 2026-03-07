@@ -34,9 +34,9 @@
 .CODE
 
     main:
+        PRINT SERIAL::write_terminal, introduction
+
         PRINT LCD::write, lcd_text1
         PRINT LCD::write, lcd_text2
-
-        PRINT SERIAL::write_terminal, introduction
 
         jmp WOZMON
