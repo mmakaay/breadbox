@@ -113,6 +113,13 @@ class CodeGenerator:
         """
         seen: set[str] = set()
         for output_prefix, src_dir in self.breadbox.config.extra_source_dirs:
+            # Avoid directory collisions on case-insensitive file systems.
+            # A `TICKER` device would otherwise conflict with the `ticker` component,
+            # since both write sources under `build/breadbox/...`. Without the added
+            # underscores we could end up with `ticker` and `TICKER`, which resolve
+            # to the same directory on systems like macOS.
+            output_prefix = f"__{output_prefix}"
+
             if output_prefix in seen:
                 continue
             seen.add(output_prefix)

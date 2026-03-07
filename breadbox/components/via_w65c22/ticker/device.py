@@ -22,6 +22,8 @@ class TimerSlot:
             return 3
         raise ValueError(f"Timer '{self.name}' period {self.ticks} ticks exceeds 24-bit range")
 
+    def __str__(self) -> str:
+        return f"[bold]{self.name}[/bold]: {self.ms}ms interval"
 
 @dataclass(kw_only=True)
 class ViaW65c22TickerDevice(Device):
