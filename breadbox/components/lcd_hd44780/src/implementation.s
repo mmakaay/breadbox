@@ -9,8 +9,7 @@
 {% set RS_BIT = ctrl_pins.pin_bit(ctrl_pins.pins[0]) %}
 {% set RWB_BIT = ctrl_pins.pin_bit(ctrl_pins.pins[1]) %}
 
-.include "hardware.inc"
-.include "CORE/delay.inc"
+.include "CORE/delay_macros.inc"
 .include "{{ component_path }}/constants.inc"
 .include "{{ data_pins.component_path }}/api.inc"
 .include "{{ ctrl_pins.component_path }}/api.inc"

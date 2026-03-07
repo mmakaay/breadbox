@@ -6,7 +6,7 @@
 {% endfor %}
 {% endif %}
 
-.include "CORE/macros.inc"
+.include "CORE/coding_macros.inc"
 .include "{{ provider_device.component_path }}/constants.inc"
 
 ; Add constructor to BREADBOX, using a high prio, to allow other components

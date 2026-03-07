@@ -15,9 +15,8 @@
 {% endif %}
 ; Baud rate: {{ baudrate }}
 
-.include "hardware.inc"
-.include "CORE/delay.inc"
-.include "CORE/macros.inc"
+.include "CORE/delay_macros.inc"
+.include "CORE/coding_macros.inc"
 .include "{{ component_path }}/constants.inc"
 {% if rts_pin %}
 .include "{{ rts_pin.component_path }}/api.inc"
