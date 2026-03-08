@@ -4,7 +4,7 @@
 ; Differences with the original:
 ; - No hard-coded memory addresses, but using the linker for
 ;   assigning these automatically.
-; - Serial console is used for output, via CONSOLE::write_terminal
+; - Serial console is used for output, via CONSOLE::write
 ;   which automatically expands CR to CR+LF for correct terminal
 ;   line endings.
 ; - The Apple II only supports upper case, resulting in the
@@ -65,7 +65,7 @@
         bmi GETLINE            ; Beyond start of line, reinitialize.
 
     NEXTCHAR:
-        jsr CONSOLE::read       ; Wait for a character.
+        jsr SERIAL::read       ; Wait for a character.
         bcc NEXTCHAR           ; No character read? Try again.
         cmp #$7F               ; DEL? (backspace on many terminals)
         bne @not_del
@@ -215,7 +215,7 @@
     ECHO:
         pha
         phx
-        jsr CONSOLE::write_terminal
+        jsr CONSOLE::write
         plx
         pla
         rts

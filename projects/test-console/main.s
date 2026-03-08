@@ -6,20 +6,22 @@
 
 .segment "DATA"
 
-    banner: .asciiz "\rBREADBOX console test\r"
+    banner: .asciiz "\nBREADBOX console test\n"
 
 .segment "CODE"
 
     .proc main
         jsr LCD::cursor_on
-        PRINT SERIAL::write_terminal, banner
+
+        jsr SERIAL_CONSOLE::clr
+        PRINT SERIAL_CONSOLE::write, banner
 
     @wait_for_input:
         jsr SERIAL::read
         bcc @wait_for_input
 
         pha
-        jsr SERIAL::write_terminal
+        jsr SERIAL_CONSOLE::write
         pla
         jsr LCD_CONSOLE::write
 

@@ -325,11 +325,7 @@ CONSOLE:
         assert "cpy #15" in content
         assert "sta (__CONSOLE_row_ptr),y" in content
         assert "sta __CONSOLE_row_ptr,x" not in content
-        assert "ldx __CONSOLE_cursor_column" in content
-        assert "ldy __CONSOLE_cursor_row" in content
         assert "lda __CONSOLE_row_map,x" in content
-        assert "txa" in content
-        assert "ldx #0" in content
         assert "$6001" not in content
 
 

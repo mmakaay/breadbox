@@ -85,11 +85,7 @@ class Builder:
         """
         object_file = source.with_suffix(".o")
         result = subprocess.run(
-            [
-                str(self.ca65),
-                "-I", str(self.project.generated_dir),
-                str(source)
-            ],
+            [str(self.ca65), "--cpu", self.project.config.core.cpu, "-I", str(self.project.generated_dir), str(source)],
             capture_output=True,
             text=True,
         )
@@ -97,9 +93,7 @@ class Builder:
             raise BuildError(f"Assembly failed for {source.name}:\n{result.stderr}")
         return object_file
 
-    def _link(
-        self, object_files: list[Path], rom_path: Path, map_path: Path
-    ) -> None:
+    def _link(self, object_files: list[Path], rom_path: Path, map_path: Path) -> None:
         """
         Link object files into a ROM binary with ld65.
 

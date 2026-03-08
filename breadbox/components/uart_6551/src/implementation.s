@@ -39,27 +39,6 @@
         rts
     .endproc
 
-    ; =====================================================================
-    ; Write a byte to a terminal.
-    ;
-    ; Handles CR → CR+LF conversion for terminal-style output.
-    ;
-    ; In:
-    ;   A = data byte to transmit
-    ; Out:
-    ;   A = clobbered
-
-    .proc {{ api_def("write_terminal") }}
-        cmp #$0d
-        bne @raw
-
-        ; Send CR first, then queue LF.
-        jsr {{ api("write") }}
-        lda #$0a
-    @raw:
-        jmp {{ api("write") }}
-    .endproc
-
 ; =========================================================================
 ; IC-specific driver code.
 ; =========================================================================

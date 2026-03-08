@@ -138,9 +138,7 @@
     ; feed (\n) characters. These are normalized and presented as a newline
     ; on the display. When combined like "\r\n", only a single newline is
     ; presented on the display.
-    ;
-    ; Only printable characters are printed.
-    ;
+    ;;
     ; In:
     ;   A = the character to write
     ;   cursor_column = the current cursor position in the active row
@@ -173,13 +171,6 @@
 
         ; The cursor was at the end of the row. Wrap to the next row.
         jsr {{ api("newline") }}
-        rts
-
-    @move_cursor_down:
-        ldx {{ var("cursor_row") }}
-        inx       ; Next row
-        ldy #0    ; Column 0
-        jsr {{ api("move_cursor") }}
         rts
 
     @move_cursor_right:

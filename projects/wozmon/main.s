@@ -18,25 +18,25 @@
         .asciiz "Running @ serial"
 
     introduction:
-        .byte "\r"
-        .byte "\r"
-        .byte "** Welcome to BREADBOX WozMon **\r"
-        .byte "\r"
-        .byte "Commands:\r"
-        .byte "-------------+------------------------------------------------\r"
-        .byte "- XXXX       | Select and display value of $XXXX\r"
-        .byte "- XXXX.YYYY  | Select $XXXX and display all values up to $YYYY\r"
-        .byte "- XXXX:ZZ    | Store $ZZ in $XXXX\r"
-        .byte "- XXXXR      | JMP to code at $XXXX\r"
-        .byte "- R          } JMP to code at last selected address\r"
-        .byte "-------------+------------------------------------------------\r"
-        .byte "\r"
+        .byte "\n"
+        .byte "\n"
+        .byte "** Welcome to BREADBOX WozMon **\n"
+        .byte "\n"
+        .byte "Commands:\n"
+        .byte "-------------+------------------------------------------------\n"
+        .byte "- XXXX       | Select and display value of $XXXX\n"
+        .byte "- XXXX.YYYY  | Select $XXXX and display all values up to $YYYY\n"
+        .byte "- XXXX:ZZ    | Store $ZZ in $XXXX\n"
+        .byte "- XXXXR      | JMP to code at $XXXX\n"
+        .byte "- R          } JMP to code at last selected address\n"
+        .byte "-------------+------------------------------------------------\n"
+        .byte "\n"
         .byte END
 
 .CODE
 
     main:
-        PRINT CONSOLE::write_terminal, introduction
+        PRINT CONSOLE::write, introduction
 
         PRINT LCD::write, lcd_text1
         PRINT LCD::write, lcd_text2

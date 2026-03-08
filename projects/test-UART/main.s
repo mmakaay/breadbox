@@ -76,7 +76,7 @@ CTRL_D = $04
     @echo:
         ; Echo byte back via UART transmitter.
         lda rxbyte
-        jsr CONSOLE::write_terminal
+        jsr CONSOLE::write
         jmp @loop
 
     @toggle:

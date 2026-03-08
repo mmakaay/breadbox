@@ -18,7 +18,7 @@ DISPLAY:
     mode: 4bit
     port: B
 
-CONSOLE:
+SERIAL:
   component: uart_6551
   type: um6551
   address: $5000
@@ -26,3 +26,6 @@ CONSOLE:
   rts:
     provider: VIA
     pin: PA0
+
+CONSOLE:
+  provider: SERIAL
