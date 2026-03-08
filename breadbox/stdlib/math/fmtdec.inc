@@ -1,3 +1,4 @@
+.include "CORE/coding_macros.inc"
 .include "stdlib/math/divmod.inc"
 
 .segment "KERNALRAM"
@@ -30,7 +31,6 @@
 .segment "KERNALROM"
 
 .proc fmtdec
-
     value   = {{ symbol("value") }}
     decimal = {{ symbol("decimal") }}
     padded  = {{ symbol("padded") }}

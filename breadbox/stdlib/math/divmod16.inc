@@ -1,3 +1,5 @@
+.include "CORE/coding_macros.inc"
+
 .segment "KERNALRAM"
 
     {{ symbol("dividend") }}:  .res 2

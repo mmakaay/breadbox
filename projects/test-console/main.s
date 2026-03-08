@@ -21,7 +21,7 @@
         pha
         jsr SERIAL::write_terminal
         pla
-        jsr CONSOLE::write
+        jsr LCD_CONSOLE::write
 
         jmp @wait_for_input
     .endproc

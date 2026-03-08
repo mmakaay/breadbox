@@ -1,3 +1,4 @@
+.include "CORE/coding_macros.inc"
 .include "stdlib/math/divmod16.inc"
 
 .segment "KERNALRAM"
