@@ -21,9 +21,9 @@
 
     .proc main
         ; Write the banner to the second line of the display.
-        ldx #0
-        ldy #1
-        jsr LCD::cursor_move
+        ldx #1
+        ldy #0
+        jsr LCD::move_cursor
         PRINT LCD::write, banner
 
         ; Initialize the variables to zero.
@@ -47,9 +47,9 @@
         jsr write_counter_to_display
 
         ; Show debounce marker.
-        ldy #0
-        ldx #8
-        jsr LCD::cursor_move
+        ldy #8
+        ldx #0
+        jsr LCD::move_cursor
         sei
         PRINT LCD::write, debounce_on
         cli
@@ -65,9 +65,9 @@
         jmp @debounce_countdown      ; and debounce a bit longer.
 
     @debounce_done:
-        ldy #0
-        ldx #8
-        jsr LCD::cursor_move
+        ldy #8
+        ldx #0
+        jsr LCD::move_cursor
         sei
         PRINT LCD::write, debounce_off
         cli

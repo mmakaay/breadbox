@@ -11,15 +11,14 @@
 
 .include "CORE/delay_macros.inc"
 .include "{{ component_path }}/constants.inc"
-.include "{{ data_pins.component_path }}/api.inc"
-.include "{{ ctrl_pins.component_path }}/api.inc"
-.include "{{ en_pin.component_path }}/api.inc"
 
 ; Select register + read or write mode                                      RS RWB
 CTRL_CMD_WR  = $00                                       ; 0  0  write command
 CTRL_CMD_RD  = {{ RWB_BIT | bin }}                       ; 0  1  read status
 CTRL_DATA_WR = {{ RS_BIT | bin }}                        ; 1  0  write data
 CTRL_DATA_RD = {{ RS_BIT | bin }} | {{ RWB_BIT | bin }}  ; 1  1  read data
+
+.constructor {{ my("init") }}
 
 ; =========================================================================
 ; Shadow registers for composite commands.
@@ -208,18 +207,14 @@ CTRL_DATA_RD = {{ RS_BIT | bin }} | {{ RWB_BIT | bin }}  ; 1  1  read data
         rts
     .endproc
 
-; =========================================================================
-; DDRAM row offset table ({{ height }} rows, {{ width }} columns)
-; =========================================================================
+    ; =========================================================================
+    ; DDRAM row offset table ({{ height }} rows, {{ width }} columns)
+    ; =========================================================================
 
-{{ my("row_offsets") }}:
-{% for offset in row_offsets %}
-    .byte {{ offset | hex }}
-{% endfor %}
-
-; =========================================================================
-; Public API
-; =========================================================================
+    {{ my("row_offsets") }}:
+    {% for offset in row_offsets %}
+        .byte {{ offset | hex }}
+    {% endfor %}
 
     ; =====================================================================
     ; Initialize the LCD display.
@@ -231,7 +226,7 @@ CTRL_DATA_RD = {{ RS_BIT | bin }} | {{ RWB_BIT | bin }}  ; 1  1  read data
     ; Out:
     ;   A, X, Y = clobbered
 
-    .proc {{ api_def("init") }}
+    .proc {{ my("init") }}
         ; Set data pins to output.
         jsr {{ data_pins.api("set_output") }}
 
@@ -268,7 +263,10 @@ CTRL_DATA_RD = {{ RS_BIT | bin }} | {{ RWB_BIT | bin }}  ; 1  1  read data
 
         rts
     .endproc
-    .constructor {{ my("init") }}
+
+; =========================================================================
+; Output API
+; =========================================================================
 
     ; =====================================================================
     ; Write a command byte to the LCD.
@@ -337,15 +335,15 @@ CTRL_DATA_RD = {{ RS_BIT | bin }} | {{ RWB_BIT | bin }}  ; 1  1  read data
     ; Set cursor position by column and row.
     ;
     ; In:
-    ;   X = column (0-based)
-    ;   Y = row (0-based)
+    ;   X = row (0-based)
+    ;   Y = column (0-based)
     ; Out:
     ;   A = clobbered
 
-    .proc {{ api_def("cursor_move") }}
-        txa
+    .proc {{ api_def("move_cursor") }}
+        tya
         clc
-        adc {{ my("row_offsets") }},y
+        adc {{ my("row_offsets") }},x
         ora #CMD_SETDDRAM
         jsr {{ api("write_cmnd") }}
         rts
@@ -355,7 +353,7 @@ CTRL_DATA_RD = {{ RS_BIT | bin }} | {{ RWB_BIT | bin }}  ; 1  1  read data
     ; Set CGRAM address for custom character definition.
     ;
     ; After this call, subsequent write() calls store data into CGRAM.
-    ; Use cursor_move() to return to DDRAM when done.
+    ; Use move_cursor() to return to DDRAM when done.
     ;
     ; In:
     ;   A = CGRAM address (6-bit, $00-$3F)

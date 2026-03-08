@@ -10,7 +10,7 @@ from breadbox.mapfile import write_memory_map
 from breadbox.project import BreadboxProject
 
 app = typer.Typer(no_args_is_help=True)
-console = Console(stderr=True)
+console = Console()
 
 
 @app.command()

@@ -23,10 +23,13 @@ class TimerSlot:
         raise ValueError(f"Timer '{self.name}' period {self.ticks} ticks exceeds 24-bit range")
 
     def __str__(self) -> str:
-        return f"[bold]{self.name}[/bold]: {self.ms}ms interval"
+        return f"[bold]{self.name}[/bold]: {self.ms}ms interval ({self.ticks} tick{'' if self.ticks == 1 else 's'})"
 
 @dataclass(kw_only=True)
 class ViaW65c22TickerDevice(Device):
+    """
+    A ticker that makes use of the free-running mode of the VIA T1 pin.
+    """
     provider: str
     provider_device: ViaW65c22Device
     clock_hz: int
@@ -40,8 +43,8 @@ class ViaW65c22TickerDevice(Device):
             raise ValueError(f"Device {self.id!r}: ms_per_tick must be >= 1")
 
         # Compute the timeout value to use for T1, to honor the ms_per_tick.
-        cycles_per_ms = self.clock_hz // 1000
-        cycles_per_tick = self.ms_per_tick * cycles_per_ms - 2  # data sheet says: timer N -> N + 2 delay.
+        cycles_per_ms = self.clock_hz / 1000
+        cycles_per_tick = int(self.ms_per_tick * cycles_per_ms) - 2  # data sheet says: timer N -> N + 2 delay.
         if cycles_per_tick > 0xFFFF:
             raise ValueError(
                 f"Device {self.id!r}: ms_per_tick too high "

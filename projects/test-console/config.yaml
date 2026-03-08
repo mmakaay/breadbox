@@ -1,18 +1,17 @@
 CORE:
-  cpu: "65c02"
+  cpu: 65c02
   clock_mhz: 1.000
 
 VIA:
   component: via_w65c22
   address: $6000
 
-TICKER:
-  component: ticker
+LED:
+  component: gpio_pin
   provider: VIA
-  ms_per_tick: 10
-  timers:
-    led_toggle_timer: 1000
-    lcd_update_timer: 100
+  pin: PA1
+  default: off
+  direction: out
 
 LCD:
   component: lcd_hd44780
@@ -26,14 +25,7 @@ LCD:
     mode: 4bit
     port: B
 
-LED:
-  component: gpio_pin
-  provider: VIA
-  pin: PA1
-  direction: out
-  default: off
-
-CONSOLE:
+SERIAL:
   component: uart_6551
   type: um6551
   address: $5000
@@ -41,3 +33,7 @@ CONSOLE:
   rts:
     provider: VIA
     pin: PA0
+
+CONSOLE:
+  provider: LCD
+

@@ -10,6 +10,7 @@
 ;   iterations: word value, containing the number of iterations to perform
 
 .macro DELAY _iterations
+    .assert _iterations > 0, error, "DELAY count must be > 0"
     .assert _iterations <= 65535, error, "DELAY overflow: iteration count exceeds 16-bit max (65535)."
     pha
     STORE16 {{ zp("delay_iterations") }}, _iterations

@@ -15,9 +15,9 @@ main:
     PRINT LCD::write, fmtdec16::padded
 
     ; Move to the second line.
-    ldx #0
-    ldy #1
-    jsr LCD::cursor_move
+    ldx #1
+    ldy #0
+    jsr LCD::move_cursor
 
     ; Print the pointer that points at the start of the first significant digit, "1729".
     PRINT_PTR LCD::write, fmtdec16::decimal

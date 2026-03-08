@@ -152,6 +152,7 @@ class TestBuildMinimal:
 
         ld65_map_path = project.build_dir / "ld65.map"
         map_path = project.build_dir / "memory.map"
+        assert project.config.memory_layout is not None
         segments = write_memory_map(
             ld65_map_path, map_path, project.config.memory_layout
         )
@@ -172,6 +173,7 @@ class TestBuildMinimal:
 
         ld65_map_path = project.build_dir / "ld65.map"
         map_path = project.build_dir / "memory.map"
+        assert project.config.memory_layout is not None
         segments = write_memory_map(
             ld65_map_path, map_path, project.config.memory_layout
         )

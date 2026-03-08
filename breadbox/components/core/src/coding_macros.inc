@@ -58,9 +58,9 @@
 ;   A = clobbered
 
 .macro STORE16 _target, _value
-    lda #<_value
-    sta _target
-    lda #>_value
+    lda #<(_value)    ; parentheses make sure that macro computations
+    sta _target       ; will be evaluated, before extracting the lo/hi bytes.
+    lda #>(_value)
     sta _target + 1
 .endmacro
 

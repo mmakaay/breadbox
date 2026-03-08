@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import dataclasses
 import shutil
-import warnings
 from functools import cached_property
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -11,9 +10,10 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from rich.console import Console
 
 from breadbox.project import BreadboxProject
+from breadbox.types.component import Component
 
 if TYPE_CHECKING:
-    from breadbox.types.component import Component
+    pass
 
 COMPONENTS_DIR = Path(__file__).parent / "components"
 TEMPLATES_DIR = Path(__file__).parent / "templates"
@@ -140,7 +140,6 @@ class CodeGenerator:
                 if src_file.name.endswith("macros.inc"):
                     self._component_includes.append(output_path)
 
-
     def _process_project_sources(self) -> None:
         """
         Discover and copy project source files to the build directory.
@@ -237,6 +236,8 @@ class CodeGenerator:
         if not src_dir.is_dir():
             return
 
+        self._reset_render_tracking()
+
         env = self._create_jinja2_env(src_dir)
         context = self._build_context(component)
 
@@ -248,12 +249,16 @@ class CodeGenerator:
             template = env.get_template(src_file.name)
             rendered = template.render(context)
             if src_file.suffix == ".s":
-                rendered = self._inject_exports(
-                    rendered, component,
-                    context["_file_api_defs"], context["_file_zp_defs"],
+                import_api_defs, import_zp_defs = self._collect_render_imports(component)
+                rendered = self._inject_directives(
+                    rendered,
+                    component,
+                    import_api_defs,
+                    import_zp_defs,
+                    component._render_file_api_defs,
+                    component._render_file_zp_defs,
                 )
-                context["_file_api_defs"].clear()
-                context["_file_zp_defs"].clear()
+                self._clear_file_render_tracking()
             relative_path = component.component_path / src_file.name
             self._write_generated_output(relative_path, rendered)
             if src_file.name.endswith("macros.inc"):
@@ -269,21 +274,59 @@ class CodeGenerator:
             self._write_generated_output(relative_path, rendered)
             self._component_includes.append(relative_path)
         else:
-            api_inc = self._generate_api_inc(component, context)
+            api_inc = self._generate_api_inc(component, context["_macro_includes"])
             if api_inc is not None:
                 relative_path = component.component_path / "api.inc"
                 self._write_generated_output(relative_path, api_inc)
                 self._component_includes.append(relative_path)
 
+    def _reset_render_tracking(self) -> None:
+        for component in self._iter_components():
+            component._reset_render_tracking()
+
+    def _clear_file_render_tracking(self) -> None:
+        for component in self._iter_components():
+            component._render_file_api_defs.clear()
+            component._render_file_zp_defs.clear()
+            component._render_api_refs.clear()
+            component._render_zp_refs.clear()
+
+    def _collect_render_imports(
+        self, component: Component
+    ) -> tuple[list[tuple[Component, str]], list[tuple[Component, str]]]:
+        api_defs: list[tuple[Component, str]] = []
+        zp_defs: list[tuple[Component, str]] = []
+        for candidate in self._iter_components():
+            if candidate is component:
+                continue
+            for name in candidate._render_api_refs:
+                api_defs.append((candidate, name))
+            for name in candidate._render_zp_refs:
+                zp_defs.append((candidate, name))
+        return api_defs, zp_defs
+
+    def _iter_components(self) -> list[Component]:
+        seen: set[int] = set()
+        ordered: list[Component] = []
+        stack = list(self.breadbox.config.components.values())
+        while stack:
+            component = stack.pop()
+            identity = id(component)
+            if identity in seen:
+                continue
+            seen.add(identity)
+            ordered.append(component)
+            stack.extend(reversed(component.children))
+        return ordered
+
     @staticmethod
-    def _generate_api_inc(component: Component, context: dict) -> str | None:
+    def _generate_api_inc(component: Component, macro_includes: list[Path]) -> str | None:
         """
         Auto-generate api.inc from metadata collected during template rendering.
         """
         lines: list[str] = []
-        api_defs: list[str] = context["_api_defs"]
-        zp_defs: list[str] = context["_zp_defs"]
-        macro_includes: list[Path] = context["_macro_includes"]
+        api_defs = component._render_api_defs
+        zp_defs = component._render_zp_defs
 
         if not api_defs and not zp_defs and not macro_includes:
             return None
@@ -319,43 +362,47 @@ class CodeGenerator:
         return "\n".join(lines)
 
     @staticmethod
-    def _inject_exports(
+    def _inject_directives(
         rendered: str,
         component: Component,
-        api_defs: list[str],
-        zp_defs: list[str],
+        import_api_defs: list[tuple[Component, str]],
+        import_zp_defs: list[tuple[Component, str]],
+        export_api_defs: list[str],
+        export_zp_defs: list[str],
     ) -> str:
         """
-        Inject .export/.exportzp directives into a rendered .s file.
-
-        Only injects exports for symbols defined during this file's
-        rendering. Directives are inserted before the first .segment
-        directive to match the project convention (includes → exports → code).
+        Inject .import/.export directives into a rendered .s file.
         """
 
-        if not api_defs and not zp_defs:
+        if not import_api_defs and not import_zp_defs and not export_api_defs and not export_zp_defs:
             return rendered
 
-        export_lines: list[str] = []
-        for name in zp_defs:
-            export_lines.append(f".exportzp {component.zp(name)}")
-        if zp_defs and api_defs:
-            export_lines.append("")
-        for name in api_defs:
-            export_lines.append(f".export {component.api(name)}")
+        directive_lines: list[str] = []
+        for imported_component, name in import_zp_defs:
+            directive_lines.append(f".importzp {imported_component.zp(name)}")
+        for imported_component, name in import_api_defs:
+            directive_lines.append(f".import {imported_component.api(name)}")
+        if directive_lines and (export_zp_defs or export_api_defs):
+            directive_lines.append("")
+        for name in export_zp_defs:
+            directive_lines.append(f".exportzp {component.zp(name)}")
+        if export_zp_defs and export_api_defs:
+            directive_lines.append("")
+        for name in export_api_defs:
+            directive_lines.append(f".export {component.api(name)}")
 
-        export_block = "\n".join(export_lines)
+        directive_block = "\n".join(directive_lines)
 
         # Insert before the first .segment directive.
         lines = rendered.split("\n")
         for i, line in enumerate(lines):
             if line.strip().startswith(".segment"):
                 lines.insert(i, "")
-                lines.insert(i, export_block)
+                lines.insert(i, directive_block)
                 return "\n".join(lines)
 
         # No .segment found — append at end.
-        return rendered.rstrip("\n") + "\n\n" + export_block + "\n"
+        return rendered.rstrip("\n") + "\n\n" + directive_block + "\n"
 
     _BANNER = "Auto-generated by breadbox. Do not edit."
 
@@ -407,88 +454,33 @@ class CodeGenerator:
     def _build_context(component: Component) -> dict:
         """
         Build the Jinja2 template context for a component.
-
-        Pure name-formatting methods live on Component (api, my, var, zp,
-        constant). The generator wraps them with *_def variants that track
-        defined names for .export injection and api.inc auto-generation,
-        and warns when different helpers produce the same symbol.
         """
-        _api_defs: list[str] = []
-        _zp_defs: list[str] = []
-        _file_api_defs: list[str] = []
-        _file_zp_defs: list[str] = []
         _macro_includes: list[Path] = []
-        _defined_symbols: dict[str, str] = {}  # symbol → source helper
-
-        def _register_def(symbol: str, source: str) -> None:
-            prev = _defined_symbols.get(symbol)
-            if prev is not None and prev != source:
-                warnings.warn(
-                    f"{component.scope}: symbol '{symbol}' defined by both "
-                    f"{prev}() and {source}() — possible collision",
-                    stacklevel=2,
-                )
-            _defined_symbols[symbol] = source
-
-        def api_def(name: str) -> str:
-            """
-            Define a public API subroutine.
-
-            Registers the name for .export and api.inc auto-generation.
-            """
-            sym = component.api(name)
-            _register_def(sym, "api_def")
-            if name not in _api_defs:
-                _api_defs.append(name)
-            if name not in _file_api_defs:
-                _file_api_defs.append(name)
-            return sym
-
-        def my_def(name: str) -> str:
-            """
-            Define an internal subroutine.
-
-            Registers for duplicate detection but not for export.
-            """
-            sym = component.my(name)
-            _register_def(sym, "my_def")
-            return sym
-
-        def zp_def(name: str) -> str:
-            """
-            Define a user-facing zero-page variable.
-
-            Registers the name for .exportzp and api.inc auto-generation.
-            """
-            sym = component.zp(name)
-            _register_def(sym, "zp_def")
-            if name not in _zp_defs:
-                _zp_defs.append(name)
-            if name not in _file_zp_defs:
-                _file_zp_defs.append(name)
-            return sym
 
         context: dict = {
             "component": component,
             "component_id": str(component.id),
             "component_type": component.component_type,
-            "api_def": api_def,
+            "api_def": component.api_def,
             "api": component.api,
-            "my_def": my_def,
+            "my_def": component.my_def,
             "my": component.my,
-            "zp_def": zp_def,
+            "zp_def": component.zp_def,
             "zp": component.zp,
             "var": component.var,
             "symbol": component.var,  # backward compat for CORE templates
-            "_api_defs": _api_defs,
-            "_zp_defs": _zp_defs,
-            "_file_api_defs": _file_api_defs,
-            "_file_zp_defs": _file_zp_defs,
             "_macro_includes": _macro_includes,
         }
         for f in dataclasses.fields(component):
             if f.name not in component._internal_fields:
                 context[f.name] = getattr(component, f.name)
+
+        for f in dataclasses.fields(component):
+            if f.name in context:
+                continue
+            value = getattr(component, f.name)
+            if isinstance(value, Component):
+                context[f.name] = value
 
         # Expose cached properties (e.g. port, bitmask, exclusive_port).
         for name in dir(type(component)):
@@ -497,10 +489,4 @@ class CodeGenerator:
                 and name not in component._internal_fields
             ):
                 context[name] = getattr(component, name)
-
-        # Expose the provider device reference for register name generation.
-        provider_device = getattr(component, "provider_device", None)
-        if provider_device is not None:
-            context["provider_device"] = provider_device
-
         return context

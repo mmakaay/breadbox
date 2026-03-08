@@ -66,9 +66,9 @@ CTRL_D = $04
         jsr clear_line1
 
     @display:
-        ldx cursor
-        ldy #0
-        jsr DISPLAY::cursor_move
+        ldy cursor
+        ldx #0
+        jsr DISPLAY::move_cursor
         lda rxbyte
         jsr DISPLAY::write
         inc cursor
@@ -104,18 +104,18 @@ CTRL_D = $04
     .proc show_normal_screen
         jsr DISPLAY::clr
         PRINT DISPLAY::write, msg_title
-        ldx #0
-        ldy #1
-        jsr DISPLAY::cursor_move
+        ldx #1
+        ldy #0
+        jsr DISPLAY::move_cursor
         PRINT DISPLAY::write, msg_hint
         rts
     .endproc
 
     ; Show the UART status register bits on LCD line 2.
     .proc show_status
-        ldx #0
-        ldy #1
-        jsr DISPLAY::cursor_move
+        ldx #1
+        ldy #0
+        jsr DISPLAY::move_cursor
 
         ; Display "S:" prefix.
         lda #'S'

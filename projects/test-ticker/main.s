@@ -15,9 +15,9 @@
     .proc main
         ; Print messages on the display.
         PRINT LCD::write, message1
-        ldx #0
-        ldy #1
-        jsr LCD::cursor_move
+        ldx #1
+        ldy #0
+        jsr LCD::move_cursor
         PRINT LCD::write, message2
 
         ; Run the execution loop, giving each task, in turn, a chance
@@ -30,7 +30,7 @@
     .endproc
 
     .proc update_led_task
-        IF_TIMER_TRIGGERED TICKER::led_toggle
+        IF_TIMER_TRIGGERED TICKER::led_toggle_timer
             jsr LED::toggle
         ENDIF
     @done:
@@ -38,11 +38,11 @@
     .endproc
 
     .proc update_lcd_task
-        IF_TIMER_TRIGGERED TICKER::lcd_update
+        IF_TIMER_TRIGGERED TICKER::lcd_update_timer
             ; Place the cursor after "ticker" on the display.
-            ldx #7
-            ldy #0
-            jsr LCD::cursor_move
+            ldx #0
+            ldy #7
+            jsr LCD::move_cursor
 
             ; Print the decimal value for bits 16-23 of the ticks counter.
             COPY fmtdec::value, TICKER::ticks + 2

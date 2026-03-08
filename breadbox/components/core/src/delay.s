@@ -22,13 +22,25 @@
 
         ldy {{ zp("delay_iterations") }}    ; Low byte: partial first pass
         ldx {{ zp("delay_iterations") }}+1  ; High byte: number of full 256 passes
-        inx                                 ; Always run at least the low-byte pass
-    @loop:
-        dey
-        bne @loop
-        dex
-        bne @loop
 
+        ; Run low-byte pass first when non-zero.
+        cpy #0
+        beq @full_passes
+    @low_pass:
+        dey
+        bne @low_pass
+
+        ; Then run X full 256-count passes.
+    @full_passes:
+        cpx #0
+        beq @done
+    @full_loop:
+        dey
+        bne @full_loop
+        dex
+        bne @full_loop
+
+    @done:
         ply
         plx
         rts

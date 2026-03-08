@@ -16,7 +16,7 @@ communicates the **intent** of the usage site.
 | `zp(n)`        | `__{P}_{n}`          | No        | `lda`/`sta` — exported ZP reference  |
 | `var(n)`       | `__{P}_{n}`          | No        | label/`lda`/`sta` — internal data    |
 
-`P` is the component's `scope` (e.g. `UART`, `SCHERMPJE`).
+`P` is the component's `scope` (e.g. `UART`, `DISPLAY`, `LED_PIN`).
 
 ## What the Generator Auto-Generates
 

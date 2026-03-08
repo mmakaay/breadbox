@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
+import warnings
 from abc import ABC
 from functools import cached_property
 from pathlib import Path
@@ -52,7 +53,31 @@ class Component(ABC):
 
     def __post_init__(self) -> None:
         self._children: list[Component] = []
+        self._reset_render_tracking()
         self._coerce_fields()
+
+    def _reset_render_tracking(self) -> None:
+        self._render_api_defs: list[str] = []
+        self._render_zp_defs: list[str] = []
+        self._render_file_api_defs: list[str] = []
+        self._render_file_zp_defs: list[str] = []
+        self._render_api_refs: list[str] = []
+        self._render_zp_refs: list[str] = []
+        self._render_defined_symbols: dict[str, str] = {}
+
+    def _register_render_def(self, symbol: str, source: str) -> None:
+        prev = self._render_defined_symbols.get(symbol)
+        if prev is not None and prev != source:
+            warnings.warn(
+                f"{self.scope}: symbol '{symbol}' defined by both {prev}() and {source}() -- possible collision",
+                stacklevel=2,
+            )
+        self._render_defined_symbols[symbol] = source
+
+    @staticmethod
+    def _append_unique(names: list[str], name: str) -> None:
+        if name not in names:
+            names.append(name)
 
     def _coerce_fields(self) -> None:
         """
@@ -100,11 +125,24 @@ class Component(ABC):
 
     def api(self, name: str) -> str:
         """Reference a public API subroutine: __{scope}_{name}."""
+        self._append_unique(self._render_api_refs, name)
         return f"__{self.scope}_{name}"
+
+    def api_def(self, name: str) -> str:
+        sym = f"__{self.scope}_{name}"
+        self._register_render_def(sym, "api_def")
+        self._append_unique(self._render_api_defs, name)
+        self._append_unique(self._render_file_api_defs, name)
+        return sym
 
     def my(self, name: str) -> str:
         """Reference an internal subroutine: __{scope}_{name}."""
         return f"__{self.scope}_{name}"
+
+    def my_def(self, name: str) -> str:
+        sym = f"__{self.scope}_{name}"
+        self._register_render_def(sym, "my_def")
+        return sym
 
     def var(self, name: str) -> str:
         """Reference or define an internal data symbol: __{scope}_{name}."""
@@ -112,8 +150,15 @@ class Component(ABC):
 
     def zp(self, name: str) -> str:
         """Reference a user-facing zero-page variable: __{scope}_{name}."""
+        self._append_unique(self._render_zp_refs, name)
         return f"__{self.scope}_{name}"
 
+    def zp_def(self, name: str) -> str:
+        sym = f"__{self.scope}_{name}"
+        self._register_render_def(sym, "zp_def")
+        self._append_unique(self._render_zp_defs, name)
+        self._append_unique(self._render_file_zp_defs, name)
+        return sym
 
     def accept(self, visitor: ComponentVisitor) -> None:
         visitor.visit(self)

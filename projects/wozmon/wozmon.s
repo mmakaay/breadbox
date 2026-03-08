@@ -214,6 +214,8 @@
     ; Output the character in A to the serial console.
     ECHO:
         pha
+        phx
         jsr CONSOLE::write_terminal
+        plx
         pla
         rts

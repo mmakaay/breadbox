@@ -12,25 +12,6 @@ PORTS = {
 
 PINS = {pin: port for port, pins in PORTS.items() for pin in pins}
 
-REGISTERS = [
-    ("PORTB", 0x00),
-    ("PORTA", 0x01),
-    ("DDRB", 0x02),
-    ("DDRA", 0x03),
-    ("T1CL", 0x04),
-    ("T1CH", 0x05),
-    ("T1LL", 0x06),
-    ("T1LH", 0x07),
-    ("T2CL", 0x08),
-    ("T2CH", 0x09),
-    ("SR", 0x0A),
-    ("ACR", 0x0B),
-    ("PCR", 0x0C),
-    ("IFR", 0x0D),
-    ("IER", 0x0E),
-    ("PORTA_NH", 0x0F),
-]
-
 
 @dataclass(kw_only=True)
 class ViaW65c22Device(Device):
@@ -40,6 +21,7 @@ class ViaW65c22Device(Device):
     def __post_init__(self) -> None:
         super().__post_init__()
         self._internal_fields.add("_clients")
+
     def register_client(self, device: Device) -> None:
         """
         Track a device that uses this VIA as its provider.

@@ -1,0 +1,33 @@
+#!/bin/bash
+#
+# Start minicom for UM6551 serial communication (19200 8N1).
+# Finds USB serial devices and lets you pick one if multiple are connected.
+
+set -euo pipefail
+
+# Find FTDI-style USB serial devices (cu.* doesn't block on carrier detect).
+found=()
+for dev in /dev/cu.usbserial-* /dev/cu.usbmodem-*; do
+    [[ -c "$dev" ]] && found+=("$dev")
+done
+
+if [[ ${#found[@]} -eq 0 ]]; then
+    echo "No USB serial devices found." >&2
+    exit 1
+fi
+
+if [[ ${#found[@]} -eq 1 ]]; then
+    SERIAL_DEVICE="${found[0]}"
+else
+    echo "Multiple USB serial devices found:"
+    for i in "${!found[@]}"; do
+        echo "  $((i + 1))) ${found[$i]}"
+    done
+    printf "Select device [1]: "
+    read -r choice
+    choice="${choice:-1}"
+    SERIAL_DEVICE="${found[$((choice - 1))]}"
+fi
+
+echo "Connecting to ${SERIAL_DEVICE} at 19200 8N1..."
+minicom -8 --baudrate 19200 -D "${SERIAL_DEVICE}"

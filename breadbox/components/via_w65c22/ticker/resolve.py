@@ -18,7 +18,12 @@ def resolve(
 
     timers = []
     for name, ms in timers_raw.items():
-        ticks = ms // ms_per_tick
+        ticks, mismatch = divmod(ms, ms_per_tick)
+        if mismatch:
+            raise ValueError(
+                f"Timer '{name}' in {component_id!r}: period {ms}ms cannot be created "
+                f"using {ms_per_tick}ms/tick resolution"
+            )
         if ticks < 1:
             raise ValueError(
                 f"Timer '{name}' in {component_id!r}: period {ms}ms is less than one tick ({ms_per_tick}ms/tick)"

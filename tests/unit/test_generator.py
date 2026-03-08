@@ -64,6 +64,17 @@ def make_project(tmp_path, config):
     return project
 
 
+def generate_from_yaml(tmp_path, config_yaml: str) -> BreadboxProject:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(config_yaml)
+    (tmp_path / "main.s").write_text('.include "breadbox.inc"\n.export main\n.proc main\n    HALT\n.endproc\n')
+
+    project = BreadboxProject(config_path)
+    generator = CodeGenerator(project)
+    generator.generate()
+    return project
+
+
 class TestOutputDirectory:
     def test_creates_output_directory(self, tmp_path):
         project = make_project(tmp_path, make_core_config())
@@ -164,6 +175,25 @@ class TestCoreGeneration:
                 source_content = src_file.read_text().strip()
                 assert source_content in generated_content, f"Source content missing from generated {src_file.name}"
 
+    def test_delay_loop_handles_exact_256_multiples(self, tmp_path):
+        project = make_project(tmp_path, make_core_config())
+        generator = CodeGenerator(project)
+        generator.generate()
+
+        content = (project.generated_dir / "CORE" / "delay.s").read_text()
+        assert "cpy #0" in content
+        assert "@full_passes:" in content
+        assert "inx" not in content
+
+    def test_store16_parenthesizes_value_expression(self, tmp_path):
+        project = make_project(tmp_path, make_core_config())
+        generator = CodeGenerator(project)
+        generator.generate()
+
+        content = (project.generated_dir / "CORE" / "coding_macros.inc").read_text()
+        assert "lda #<(_value)" in content
+        assert "lda #>(_value)" in content
+
 
 class TestIncludeGuards:
     def test_inc_files_have_auto_guards(self, tmp_path):
@@ -260,6 +290,65 @@ class TestBreadboxInc:
 
         content = (output_dir / "breadbox.inc").read_text()
         assert '.include "CORE/api.inc"' in content
+
+
+class TestConsoleGeneration:
+    def test_console_write_wraps_and_writes_via_row_pointer(self, tmp_path):
+        project = generate_from_yaml(
+            tmp_path,
+            """\
+CORE:
+  cpu: 65c02
+  clock_mhz: 1.0
+VIA:
+  component: via_w65c22
+  address: $6000
+LCD:
+  component: lcd_hd44780
+  width: 16
+  height: 2
+  cmnd_pins:
+    provider: VIA
+    rs_pin: PB0
+    rwb_pin: PB1
+    en_pin: PB2
+  data_pins:
+    provider: VIA
+    mode: 4bit
+    port: B
+CONSOLE:
+  provider: LCD
+""",
+        )
+
+        content = (project.generated_dir / "CONSOLE" / "implementation.s").read_text()
+        assert "cpx #16" in content
+        assert "sta (__CONSOLE_row_ptr),y" in content
+        assert "sta __CONSOLE_row_ptr,x" not in content
+
+
+class TestViaGeneration:
+    def test_generates_via_files(self, tmp_path):
+        project = make_project(tmp_path, make_core_via_config())
+        output_dir = project.generated_dir
+        generator = CodeGenerator(project)
+        generator.generate()
+
+        via_dir = output_dir / "VIA"
+        assert via_dir.is_dir()
+        assert (via_dir / "constants.inc").exists()
+        assert (via_dir / "implementation.s").exists()
+
+    def test_via_implementation_initializes_irq_state(self, tmp_path):
+        project = make_project(tmp_path, make_core_via_config())
+        generator = CodeGenerator(project)
+        generator.generate()
+
+        content = (project.generated_dir / "VIA" / "implementation.s").read_text()
+        assert ".proc __VIA_init" in content
+        assert "sta IER" in content
+        assert "sta IFR" in content
+        assert ".constructor __VIA_init" in content
 
 
 class TestBreadboxCfg:
@@ -362,10 +451,7 @@ class TestBreadboxCfg:
         project = make_project(tmp_path, make_core_config())
         custom_cfg = tmp_path / "linker.cfg"
         custom_cfg.write_text(
-            "# Custom linker config\n"
-            "{% for region in regions %}\n"
-            "REGION: {{ region.name }}\n"
-            "{% endfor %}\n"
+            "# Custom linker config\n{% for region in regions %}\nREGION: {{ region.name }}\n{% endfor %}\n"
         )
         generator = CodeGenerator(project)
         generator.generate()

@@ -21,16 +21,13 @@
     ; =========================================================================
     ; Setup the default vectors and interrupt handling.
     ;
-    ; - Interrupts enabled by boot if interruptors are registered
-    ; - Reset vector pointing to boot subroutine
-    ; - Null NMI handler
-    ; - IRQ handler: interruptor table dispatcher
+    ; - NMI: Null handler
+    ; - IRQ: .interruptor table dispatcher
     ;
     ; Out:
     ;   A = clobbered
 
     .proc {{ my("init_vectors") }}
-        sei
         SET_POINTER {{ zp("nmi_vector") }}, {{ my("null_interrupt_handler") }}
         SET_POINTER {{ zp("irq_vector") }}, {{ my("dispatch_interruptors") }}
         rts
