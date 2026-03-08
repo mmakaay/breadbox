@@ -1,3 +1,5 @@
+.feature string_escapes
+
 .include "CORE/coding_macros.inc"
 
 .constructor {{ my("init") }}
@@ -39,7 +41,10 @@
 .segment "ZEROPAGE"
 
     ; A pointer too the start of the currently selected row in the frame buffer.
-    {{ var("row_ptr") }}:       .res 2
+    {{ var("row_ptr") }}:         .res 2
+
+    ; A register for tracking "\r" state.
+    {{ var("previous_was_cr") }}: .res 1
 
 .segment "KERNALROM"
 
@@ -52,6 +57,9 @@
     .proc {{ my("init") }}
         jsr {{ my("clear_frame_buffer") }}
         jsr {{ api("home") }}
+
+        lda #0
+        sta {{ var("previous_was_cr") }}
 
         ; Initialize the logical -> frame buffer row mapping:
         ;   row 0 -> framebuffer row 0
@@ -126,14 +134,32 @@
     ; =====================================================================
     ; Write a character to the display at the current cursor position.
     ;
+    ; Special handling is implemented for carriage return (\r) and line
+    ; feed (\n) characters. These are normalized and presented as a newline
+    ; on the display. When combined like "\r\n", only a single newline is
+    ; presented on the display.
+    ;
+    ; Only printable characters are printed.
+    ;
     ; In:
     ;   A = the character to write
     ;   cursor_column = the current cursor position in the active row
     ;   row_ptr = the start of the current row in the frame buffer
     ; Out:
-    ;   A = clobbered
+    ;   A, X, Y = clobbered
 
     .proc {{ api_def("write") }}
+        ; Jump forward when handling CR or LF character.
+        cmp #'\r'
+        beq @cr
+        cmp #'\n'
+        beq @lf
+
+        ; Handle a standard character.
+    @char:
+        ldx #0
+        stx {{ var("previous_was_cr") }}
+
         ; Write the character to the currently active row in the frame buffer.
         ldy {{ var("cursor_column") }}
         sta ({{ var("row_ptr") }}),y
@@ -146,9 +172,49 @@
         bne @move_cursor_right
 
         ; The cursor was at the end of the row. Wrap to the next row.
+        jsr {{ api("newline") }}
+        rts
+
+    @move_cursor_down:
         ldx {{ var("cursor_row") }}
-        cpx #{{ height - 1 }}
-        bne @move_cursor_down
+        inx       ; Next row
+        ldy #0    ; Column 0
+        jsr {{ api("move_cursor") }}
+        rts
+
+    @move_cursor_right:
+        inc {{ var("cursor_column") }}
+        rts
+
+    @cr:
+        jsr {{ api("newline") }}
+        ldx #1
+        stx {{ var("previous_was_cr") }}
+        rts
+
+    @lf:
+        ldx {{ var("previous_was_cr") }}
+        beq @lone_lf
+        ldx #0
+        stx {{ var("previous_was_cr") }}
+        rts
+
+    @lone_lf:
+        jsr {{ api("newline") }}
+        rts
+
+    .endproc
+
+    ; =====================================================================
+    ; Move the cursor to the new line.
+    ;
+    ; Out:
+    ;   X, Y: clobbered
+
+    .proc {{ api_def("newline") }}
+        ldx {{ var("cursor_row") }}             ; Get the current row.
+        cpx #{{ height - 1 }}                   ; On the last row?
+        bne @move_cursor_down                   ; No, the cursor can be moved down.
 
         ; Already on the last row, scrolling the screen up.
         jsr {{ my("scroll_rows") }}             ; Scroll the rows within the frame buffer.
@@ -164,15 +230,11 @@
         rts
 
     @move_cursor_down:
-        ldx {{ var("cursor_row") }}
         inx       ; Next row
         ldy #0    ; Column 0
         jsr {{ api("move_cursor") }}
         rts
 
-    @move_cursor_right:
-        inc {{ var("cursor_column") }}
-        rts
     .endproc
 
     ; =====================================================================
