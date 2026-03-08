@@ -78,11 +78,14 @@
     ;   A = clobbered
 
     .proc {{ api_def("move_cursor") }}
+        ; Store logical coordinates.
+        stx {{ var("cursor_row") }}
+        sty {{ var("cursor_column") }}
+
         ; Move the cursor on the physical display.
         jsr {{ provider_device.api("move_cursor") }}
 
-        ; Map the logical row to the framebuffer row.
-        lda {{ var("row_map") }},x
+        ; Map the logical row to the framebufferfislda {{ var("row_map") }},x
         tax
 
         ; Move the row_ptr to the start of the requested row.
@@ -90,10 +93,6 @@
         sta {{ var("row_ptr") }}
         lda {{ var("row_table_hi") }},X
         sta {{ var("row_ptr") }}+1
-
-        ; Store the new coordinates.
-        stx {{ var("cursor_row") }}
-        sty {{ var("cursor_column") }}
 
         rts
     .endproc
@@ -127,12 +126,12 @@
 
         ; Move the cursor right when not at the end of the row.
         cpy #{{ width - 1 }}
-        bcc @move_cursor_right
+        bne @move_cursor_right
 
         ; The cursor was at the end of the row. Wrap to the next row.
         ldx {{ var("cursor_row") }}
         cpx #{{ height - 1 }}
-        bcc @move_cursor_down
+        bne @move_cursor_down
 
         ; Already on the last row, scrolling the screen up.
         jsr {{ my("scroll_rows") }}             ; Scroll the rows within the frame buffer.
@@ -142,17 +141,14 @@
         jsr {{ my("refresh") }}                 ; Redraw the display from the frame buffer.
 
         ; Move cursor to the start of the last row.
-        ldy #0
         ldx #{{ height - 1 }}
+        ldy #0
         jsr {{ api("move_cursor") }}
-
-        lda $6001
-        eor #$FF
-        sta $6001
 
         rts
 
     @move_cursor_down:
+        ldx {{ var("cursor_row") }}
         inx       ; Next row
         ldy #0    ; Column 0
         jsr {{ api("move_cursor") }}
@@ -240,7 +236,11 @@
     ;   row_ptr, A, X, Y = clobbered
 
     .proc {{ my("refresh") }}
-        ldx #0                         ; Row index
+        lda $6001
+        eor #$ff
+        sta $6001 ; TODO debug
+
+        ldx #0
     @row_loop:
         ; Map the logical row to the framebuffer row.
         lda {{ var("row_map") }},x
