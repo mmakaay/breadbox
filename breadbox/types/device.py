@@ -14,7 +14,7 @@ class Device(Component):
     concerns like pin conflicts.
     """
 
-    def register_client(self, device: Device) -> None:  # noqa: B027
+    def register_client(self, device: Device) -> None:
         """
         Called when a device declares this device as its provider.
 
@@ -22,7 +22,7 @@ class Device(Component):
         The default implementation is a no-op.
         """
 
-    def validate_clients(self) -> None:  # noqa: B027
+    def validate_clients(self) -> None:
         """
         Validate registered clients for conflicts.
 

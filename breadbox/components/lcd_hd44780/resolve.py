@@ -1,6 +1,5 @@
 from typing import Any
 
-from breadbox.components.core.device import CoreDevice
 from breadbox.components.gpio_group import resolve as gpio_group_resolve
 from breadbox.components.gpio_pin import resolve as gpio_pin_resolve
 from breadbox.components.lcd_hd44780.device import CmndSettings, DataSettings, LcdHd44780Device

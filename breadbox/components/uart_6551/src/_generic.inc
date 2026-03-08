@@ -119,7 +119,7 @@
 
         lda DATA
         ldx {{ var("rx_w_ptr") }}
-        sta {{ var("rx_buffer") }},X
+        sta {{ var("rx_buffer") }},x
         inc {{ var("rx_w_ptr") }}
         inc {{ var("rx_pending") }}
 {% if rts_pin %}
@@ -149,7 +149,7 @@
         beq @tx_stop
 
         ldx {{ var("tx_r_ptr") }}
-        lda {{ var("tx_buffer") }},X
+        lda {{ var("tx_buffer") }},x
         sta DATA
         inc {{ var("tx_r_ptr") }}
         dec {{ var("tx_pending") }}
@@ -232,7 +232,7 @@
         beq @done
 
         ldx {{ var("rx_r_ptr") }}
-        lda {{ var("rx_buffer") }},X
+        lda {{ var("rx_buffer") }},x
 {% if rts_pin %}
         pha
 {% endif %}
@@ -271,7 +271,7 @@
 
         pla
         ldx {{ var("tx_w_ptr") }}
-        sta {{ var("tx_buffer") }},X
+        sta {{ var("tx_buffer") }},x
         inc {{ var("tx_w_ptr") }}
         inc {{ var("tx_pending") }}
 

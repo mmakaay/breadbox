@@ -6,6 +6,7 @@ from breadbox.types.address16 import Address16
 from breadbox.types.device import Device
 from breadbox.types.memory_size import MemorySize
 
+
 @dataclass(kw_only=True)
 class RomDevice(Device):
     """

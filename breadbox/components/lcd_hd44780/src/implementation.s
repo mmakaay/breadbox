@@ -332,7 +332,7 @@ CTRL_DATA_RD = {{ RS_BIT | bin }} | {{ RWB_BIT | bin }}  ; 1  1  read data
     .endproc
 
     ; =====================================================================
-    ; Set cursor position by column and row.
+    ; Set cursor position by row and column.
     ;
     ; In:
     ;   X = row (0-based)
@@ -353,7 +353,7 @@ CTRL_DATA_RD = {{ RS_BIT | bin }} | {{ RWB_BIT | bin }}  ; 1  1  read data
     ; Set CGRAM address for custom character definition.
     ;
     ; After this call, subsequent write() calls store data into CGRAM.
-    ; Use move_cursor() to return to DDRAM when done.
+    ; Use `move_cursor` to return to DDRAM when done.
     ;
     ; In:
     ;   A = CGRAM address (6-bit, $00-$3F)

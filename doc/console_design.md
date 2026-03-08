@@ -194,7 +194,7 @@ The console requires a minimal device API:
 
 ```
 device_putc(A)        ; Output character
-device_set_cursor(X,Y)
+device_set_cursor(X,y)
 device_clear()
 ```
 

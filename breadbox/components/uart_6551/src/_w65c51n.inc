@@ -115,7 +115,7 @@ _CHAR_TIME_US = 10000000 / {{ baudrate }}
 
         lda DATA
         ldx {{ var("rx_w_ptr") }}
-        sta {{ var("rx_buffer") }},X
+        sta {{ var("rx_buffer") }},x
         inc {{ var("rx_w_ptr") }}
         inc {{ var("rx_pending") }}
 {% if rts_pin %}
@@ -194,7 +194,7 @@ _CHAR_TIME_US = 10000000 / {{ baudrate }}
         beq @done
 
         ldx {{ var("rx_r_ptr") }}
-        lda {{ var("rx_buffer") }},X
+        lda {{ var("rx_buffer") }},x
 {% if rts_pin %}
         pha
 {% endif %}

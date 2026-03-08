@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import cached_property
-from breadbox.types.device import Device
+
 from breadbox.types.component_identifier import ComponentIdentifier
+from breadbox.types.device import Device
 
 
 @dataclass(kw_only=True)

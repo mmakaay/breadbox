@@ -4,26 +4,42 @@
 
 .segment "KERNALRAM"
 
-    {{ var("framebuffer") }}:   .res {{ width * height }}
-    {{ var("row_map") }}:       .res {{ height }}   ; logical row -> framebuffer row
+    ; The frame buffer is used to store the printed characters in a memory buffer,
+    ; making this a shadow of the characters that are visible on the physical display.
+    ; This buffer can be used to referesh the full display, exmaple when the text in
+    ; the display display must be scrolled.
+    {{ var("frame_buffer") }}:  .res {{ width * height }}
+
+    ; To make scrolling a light-weight operation, a mapping is used between logical
+    ; row numbers (as visible on the display), and rows numbers in the frame buffer.
+    ; This map makes it possible to change the order of logical rows, without having
+    ; to swap out data in the frame buffer. E.g. when the `row_map` starts out as
+    ; [0, 1, 2, 3], the rows can be scrolled by updating the `row_map` to
+    ; [1, 2, 3, 0] and then redrawing the display output.
+    {{ var("row_map") }}:       .res {{ height }}
+
+    ; Keeps track of the active cursor position.
     {{ var("cursor_column") }}: .res 1
     {{ var("cursor_row") }}:    .res 1
 
 .segment "KERNALROM"
 
+    ; These tables provide a mapping from a given row number (0-indexed)
+    ; to the start of that row in the frame buffer. This is used as a quick
+    ; lookup table, instead of having to compute the offsets on-the-fly.
     {{ var("row_table_lo") }}:
         {% for y in range(height) %}
-        .byte .lobyte({{ var("framebuffer") }} + {{ y * width }})
+        .byte .lobyte({{ var("frame_buffer") }} + {{ y * width }})
         {% endfor %}
-
     {{ var("row_table_hi") }}:
         {% for y in range(height) %}
-        .byte .hibyte({{ var("framebuffer") }} + {{ y * width }})
+        .byte .hibyte({{ var("frame_buffer") }} + {{ y * width }})
         {% endfor %}
 
 .segment "ZEROPAGE"
 
-    {{ var("row_ptr") }}: .res 2  ; The 16-bit address of current Y
+    ; A pointer too the start of the currently selected row in the frame buffer.
+    {{ var("row_ptr") }}:       .res 2
 
 .segment "KERNALROM"
 
@@ -34,16 +50,21 @@
     ;   A, X = clobbered
 
     .proc {{ my("init") }}
+        jsr {{ my("clear_frame_buffer") }}
         jsr {{ api("home") }}
-        jsr {{ my("clear_framebuffer") }}
 
-        ; Initialize the logical -> framebuffer row mapping.
+        ; Initialize the logical -> frame buffer row mapping:
+        ;   row 0 -> framebuffer row 0
+        ;   row 1 -> framebuffer row 1
+        ;   ...
+        ;   row n -> framebuffer row n
         ldx #0
-    :   txa
+    @loop:
+        txa
         sta {{ var("row_map") }},x
         inx
         cpx #{{ height }}
-        bne :-
+        bne @loop
 
         rts
     .endproc
@@ -52,7 +73,7 @@
     ; Clear the screen.
 
     .proc {{ api_def("clr") }}
-        jsr {{ my("clear_framebuffer") }}
+        jsr {{ my("clear_frame_buffer") }}
         jsr {{ provider_device.api("clr") }}
         rts
     .endproc
@@ -62,10 +83,8 @@
 
     .proc {{ api_def("home") }}
         ldx #0
-        stx {{ var("cursor_column") }}
-        stx {{ var("cursor_row") }}
-        SET_POINTER {{ var("row_ptr") }}, {{ var("framebuffer") }}
-        rts
+        ldy #0
+        jmp {{ api_def("move_cursor") }}
     .endproc
 
     ; =====================================================================
@@ -85,14 +104,8 @@
         ; Move the cursor on the physical display.
         jsr {{ provider_device.api("move_cursor") }}
 
-        ; Map the logical row to the framebufferfislda {{ var("row_map") }},x
-        tax
-
-        ; Move the row_ptr to the start of the requested row.
-        lda {{ var("row_table_lo") }},X
-        sta {{ var("row_ptr") }}
-        lda {{ var("row_table_hi") }},X
-        sta {{ var("row_ptr") }}+1
+        ; Map the logical row to the framebuffer.
+        jsr {{ my("select_frame_buffer_row") }}
 
         rts
     .endproc
@@ -115,13 +128,17 @@
     ;
     ; In:
     ;   A = the character to write
+    ;   cursor_column = the current cursor position in the active row
+    ;   row_ptr = the start of the current row in the frame buffer
     ; Out:
     ;   A = clobbered
 
     .proc {{ api_def("write") }}
-        ; Write the character to the current cursor position.
-        ldy {{ var("cursor_column") }}          ; Store character in frame buffer.
+        ; Write the character to the currently active row in the frame buffer.
+        ldy {{ var("cursor_column") }}
         sta ({{ var("row_ptr") }}),y
+
+        ; Write the character to the display at the current cursor position.
         jsr {{ provider_device.api("write") }}  ; Write character to the display.
 
         ; Move the cursor right when not at the end of the row.
@@ -137,7 +154,6 @@
         jsr {{ my("scroll_rows") }}             ; Scroll the rows within the frame buffer.
         ldx #{{ height - 1 }}
         jsr {{ my("clear_row") }}               ; Clear the last row in the frame buffer.
-        ldx #{{ height - 1 }}
         jsr {{ my("refresh") }}                 ; Redraw the display from the frame buffer.
 
         ; Move cursor to the start of the last row.
@@ -160,17 +176,37 @@
     .endproc
 
     ; =====================================================================
+    ; Set the row_ptr to the start of the provided row index.
+    ;
+    ; In:
+    ;   X = the row to look up
+    ; Out:
+    ;   row_ptr = pointing to the start of the row in the frame buffer
+    ;   A, Y = clobbered
+
+    .proc {{ my("select_frame_buffer_row") }}
+        lda {{ var("row_map") }},x
+        tay
+        lda {{ var("row_table_lo") }},y
+        sta {{ var("row_ptr") }}
+        lda {{ var("row_table_hi") }},y
+        sta {{ var("row_ptr") }} + 1
+        rts
+    .endproc
+
+    ; =====================================================================
     ; Clear the framebuffer, by filling it with spaces.
     ;
     ; Out:
     ;   A, X = clobbered
 
-    .proc {{ my("clear_framebuffer") }}
-        lda #' '
+    .proc {{ my("clear_frame_buffer") }}
+        lda #'1'
         ldx #{{ width * height - 1 }}
-    :   sta {{ var("framebuffer") }},X
+    @loop:
+        sta {{ var("frame_buffer") }},x
         dex
-        bpl :-
+        bpl @loop
         rts
     .endproc
 
@@ -213,16 +249,11 @@
     ;   row_ptr, A, X, Y = clobbered
 
     .proc {{ my("clear_row") }}
-        lda {{ var("row_map") }},X
-        tax
-        lda {{ var("row_table_lo") }},X
-        sta {{ var("row_ptr") }}
-        lda {{ var("row_table_hi") }},X
-        sta {{ var("row_ptr") }} + 1
+        jsr {{ my("select_frame_buffer_row") }}   ; Point at row X in the frame buffer.
 
-        lda #' '
+        lda #' '                      ; Fill the row with spaces.
         ldy #{{ width - 1}}
-    :   sta ({{ var("row_ptr") }}),Y
+    :   sta ({{ var("row_ptr") }}),y
         dey
         bpl :-
 
@@ -236,21 +267,9 @@
     ;   row_ptr, A, X, Y = clobbered
 
     .proc {{ my("refresh") }}
-        lda $6001
-        eor #$ff
-        sta $6001 ; TODO debug
-
         ldx #0
     @row_loop:
-        ; Map the logical row to the framebuffer row.
-        lda {{ var("row_map") }},x
-        tay
-
-        ; Move the row_ptr to the start of the logical row.
-        lda {{ var("row_table_lo") }},Y
-        sta {{ var("row_ptr") }}
-        lda {{ var("row_table_hi") }},Y
-        sta {{ var("row_ptr") }}+1
+        jsr {{ my("select_frame_buffer_row") }}
 
         ; Move LCD cursor to start of this logical row.
         ldy #0
@@ -258,11 +277,12 @@
 
         ; Write row characters.
         ldy #0
-    :   lda ({{ var("row_ptr") }}),Y
+    @column_loop:
+        lda ({{ var("row_ptr") }}),y
         jsr {{ provider_device.api("write") }}
         iny
         cpy #{{ width }}
-        bne :-
+        bne @column_loop
 
         ; Move to next logical row.
         inx

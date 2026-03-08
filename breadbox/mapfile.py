@@ -103,10 +103,7 @@ def format_memory_map(segments: list[SegmentEntry], layout: MemoryLayout) -> str
                 lines.append(f"  {entry.name:<20s}  (empty)")
 
         # Calculate free space at end of region
-        if placed:
-            last_end = max(e.end + 1 for e in placed if e.size > 0)
-        else:
-            last_end = r_start
+        last_end = max(e.end + 1 for e in placed if e.size > 0) if placed else r_start
         free = r_end - last_end
         if free > 0:
             lines.append(f"  {'(free)':<20s}  ${last_end:04X}-${r_end - 1:04X}  ({free} bytes)")

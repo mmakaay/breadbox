@@ -95,7 +95,7 @@ is not a subroutine and not part of the public API.
 {{ var("tmp") }}: .res 1
 
 {# reference: #}
-lda {{ var("rx_buffer") }},X
+lda {{ var("rx_buffer") }},x
 sta {{ var("tmp") }}
 
 {# internal export for macro use (manual, not auto-generated): #}
@@ -122,8 +122,8 @@ sta STATUS
 Index registers go **outside** the helper call:
 
 ```jinja2
-lda {{ var("rx_buffer") }},X      {# correct #}
-lda {{ var("rx_buffer,X") }}      {# wrong #}
+lda {{ var("rx_buffer") }},x      {# correct #}
+lda {{ var("rx_buffer,x") }}      {# wrong #}
 ```
 
 ## ld65 CONDES Symbols

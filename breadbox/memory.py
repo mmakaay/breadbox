@@ -195,16 +195,13 @@ def resolve_memory_layout(ram_devices: list, rom_devices: list) -> MemoryLayout:
         ram_start = addr
         ram_size = size
         if device.covers(0x0000, 0x0100):
-            # Skip ZP portion
             carved = 0x0100 - addr
             ram_start = 0x0100
             ram_size -= carved
-        if device.covers(0x0100, 0x0200):
-            # Skip STACK portion
-            if ram_start < 0x0200:
-                carved = 0x0200 - ram_start
-                ram_start = 0x0200
-                ram_size -= carved
+        if device.covers(0x0100, 0x0200) and ram_start < 0x0200:
+            carved = 0x0200 - ram_start
+            ram_start = 0x0200
+            ram_size -= carved
 
         if ram_size > 0:
             layout.regions.append(
