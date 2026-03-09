@@ -48,7 +48,7 @@ CTRL_D = $04
 
     @wait_for_rx:
         ; Try to read a byte from the receive buffer.
-        jsr CONSOLE::read
+        jsr SERIAL::read
         bcc @loop
         sta rxbyte               ; Save received byte.
 
@@ -68,15 +68,15 @@ CTRL_D = $04
     @display:
         ldy cursor
         ldx #0
-        jsr DISPLAY::move_cursor
+        jsr LCD::move_cursor
         lda rxbyte
-        jsr DISPLAY::write
+        jsr LCD::write
         inc cursor
 
     @echo:
         ; Echo byte back via UART transmitter.
         lda rxbyte
-        jsr CONSOLE::write
+        jsr TERMINAL::write
         jmp @loop
 
     @toggle:
@@ -86,7 +86,7 @@ CTRL_D = $04
         beq @to_normal
 
         ; Switching to debug mode.
-        jsr DISPLAY::clr
+        jsr LCD::clr
         lda #16                  ; Force line 1 clear on first byte.
         sta cursor
         jmp @loop
@@ -97,17 +97,17 @@ CTRL_D = $04
     .endproc
 
     ; ------------------------------------------------------------------
-    ; LCD display helpers
+    ; LCD helpers
     ; ------------------------------------------------------------------
 
     ; Display the normal mode screen (title + hint).
     .proc show_normal_screen
-        jsr DISPLAY::clr
-        PRINT DISPLAY::write, msg_title
+        jsr LCD::clr
+        PRINT LCD::write, msg_title
         ldx #1
         ldy #0
-        jsr DISPLAY::move_cursor
-        PRINT DISPLAY::write, msg_hint
+        jsr LCD::move_cursor
+        PRINT LCD::write, msg_hint
         rts
     .endproc
 
@@ -115,17 +115,17 @@ CTRL_D = $04
     .proc show_status
         ldx #1
         ldy #0
-        jsr DISPLAY::move_cursor
+        jsr LCD::move_cursor
 
-        ; Display "S:" prefix.
+        ; LCD "S:" prefix.
         lda #'S'
-        jsr DISPLAY::write
+        jsr LCD::write
         lda #':'
-        jsr DISPLAY::write
+        jsr LCD::write
 
         ; Display 8 status bits, MSB first.
         ; Bit meaning: IRQ DSR DCD TXE RXF OVR FRM PAR
-        jsr CONSOLE::load_status ; A = status byte
+        jsr SERIAL::load_status ; A = status byte
         ldx #8
     @loop:
         ; Rotate MSB into carry, keeping all bits for next iteration.
@@ -133,7 +133,7 @@ CTRL_D = $04
         pha
         lda #'0'
         adc #0                   ; '0' + carry = '0' or '1'
-        jsr DISPLAY::write
+        jsr LCD::write
         pla
         dex
         bne @loop
@@ -143,11 +143,11 @@ CTRL_D = $04
 
     ; Clear LCD line 1: write spaces and reset cursor to start.
     .proc clear_line1
-        jsr DISPLAY::home
+        jsr LCD::home
         ldx #16
     @loop:
         lda #' '
-        jsr DISPLAY::write
+        jsr LCD::write
         dex
         bne @loop
         ZERO cursor

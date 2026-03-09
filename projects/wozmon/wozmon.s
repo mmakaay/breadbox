@@ -4,7 +4,7 @@
 ; Differences with the original:
 ; - No hard-coded memory addresses, but using the linker for
 ;   assigning these automatically.
-; - Serial console is used for output, via CONSOLE::write
+; - Serial console is used for output, via TERMINAL::write
 ;   which automatically expands CR to CR+LF for correct terminal
 ;   line endings.
 ; - The Apple II only supports upper case, resulting in the
@@ -77,7 +77,6 @@
     @upper:
         sta IN,y               ; Add to text buffer.
         jsr ECHO               ; Display character.
-        lda IN,y               ; Reload character (ECHO clobbers A).
         cmp #$0D               ; CR?
         bne NOTCR              ; No.
 
@@ -211,11 +210,9 @@
         bcc ECHO               ; Yes, output it.
         adc #$06               ; Add offset for letter.
 
-    ; Output the character in A to the serial console.
+    ; Output the character in A to the terminal.
     ECHO:
-        pha
-        phx
-        jsr CONSOLE::write
-        plx
-        pla
+        PUSH_AXY
+        jsr TERMINAL::write
+        PULL_AXY
         rts

@@ -65,6 +65,6 @@
     .proc update_console_task
         jsr SERIAL::read
         bcc :+
-        jsr CONSOLE::write
+        jsr TERMINAL::write
     :   rts
     .endproc

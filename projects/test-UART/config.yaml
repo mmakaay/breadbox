@@ -6,7 +6,7 @@ VIA:
   component: via_w65c22
   address: $6000
 
-DISPLAY:
+LCD:
   component: lcd_hd44780
   cmnd_pins:
     provider: VIA
@@ -27,5 +27,5 @@ SERIAL:
     provider: VIA
     pin: PA0
 
-CONSOLE:
+TERMINAL:
   provider: SERIAL

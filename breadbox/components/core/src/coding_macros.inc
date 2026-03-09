@@ -44,8 +44,12 @@
 ;   A = clobbered
 
 .macro ZERO _target
-    lda #0
-    sta _target
+    .if .ismnemonic(stz)
+        stz _target
+    .else
+        lda #0
+        sta _target
+    .endif
 .endmacro
 
 ; =========================================================================
@@ -88,9 +92,14 @@
 ;   A = clobbered
 
 .macro ZERO16 _target
-    lda #0
-    sta _target
-    sta _target + 1
+    .if .ismnemonic(stz)
+        stz _target
+        stz _target + 1
+    .else
+        lda #0
+        sta _target
+        sta _target + 1
+    .endif
 .endmacro
 
 ; =========================================================================
@@ -102,10 +111,16 @@
 ;   A = clobbered
 
 .macro ZERO24 _target
-    lda #0
-    sta _target
-    sta _target + 1
-    sta _target + 2
+    .if .ismnemonic(stz)
+        stz _target
+        stz _target + 1
+        stz _target + 2
+    .else
+        lda #0
+        sta _target
+        sta _target + 1
+        sta _target + 2
+    .endif
 .endmacro
 
 ; =========================================================================
@@ -162,6 +177,9 @@
 
 ; =========================================================================
 ; Push X onto the stack
+;
+; Out:
+;   A = consider it clobbered (depends on CPU type)
 
 .macro PUSH_X
     .if .ismnemonic(phx)
@@ -174,6 +192,9 @@
 
 ; =========================================================================
 ; Push Y onto the stack
+;
+; Out:
+;   A = consider it clobbered (depends on CPU type)
 
 .macro PUSH_Y
     .if .ismnemonic(phy)
@@ -186,6 +207,9 @@
 
 ; =========================================================================
 ; Pull X from the stack
+;
+; Out:
+;   A = consider it clobbered (depends on CPU type)
 
 .macro PULL_X
     .if .ismnemonic(plx)
@@ -198,6 +222,9 @@
 
 ; =========================================================================
 ; Pull Y from the stack
+;
+; Out:
+;   A = consider it clobbered (depends on CPU type)
 
 .macro PULL_Y
     .if .ismnemonic(ply)
@@ -210,6 +237,9 @@
 
 ; =========================================================================
 ; Push A, X and Y onto the stack.
+;
+; Out:
+;   A = consider it clobbered (depends on CPU type)
 
 .macro PUSH_AXY
     pha

@@ -36,9 +36,8 @@
 .CODE
 
     main:
-        PRINT CONSOLE::write, introduction
-
         PRINT LCD::write, lcd_text1
         PRINT LCD::write, lcd_text2
 
+        PRINT TERMINAL::write, introduction
         jmp WOZMON

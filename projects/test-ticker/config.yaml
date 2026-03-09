@@ -42,5 +42,6 @@ SERIAL:
     provider: VIA
     pin: PA0
 
-CONSOLE:
+TERMINAL:
+  component: terminal
   provider: SERIAL
