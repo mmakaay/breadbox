@@ -5,7 +5,7 @@ from breadbox.types.device import Device
 
 
 @dataclass(kw_only=True)
-class LcdHc44780Console(Device):
+class LcdHc44780Terminal(Device):
     provider_device: LcdHd44780Device
     provider: str
     width: int = field(init=False)

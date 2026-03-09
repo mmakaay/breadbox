@@ -13,17 +13,17 @@
     .proc main
         jsr LCD::cursor_on
 
-        jsr SERIAL_CONSOLE::clr
-        PRINT SERIAL_CONSOLE::write, banner
+        jsr SERIAL_TERMINAL::clr
+        PRINT SERIAL_TERMINAL::write, banner
 
     @wait_for_input:
         jsr SERIAL::read
         bcc @wait_for_input
 
         pha
-        jsr SERIAL_CONSOLE::write
+        jsr SERIAL_TERMINAL::write
         pla
-        jsr LCD_CONSOLE::write
+        jsr LCD_TERMINAL::write
 
         jmp @wait_for_input
     .endproc

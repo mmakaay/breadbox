@@ -4,6 +4,18 @@
 .include "stdlib/math/fmtdec.inc"
 .include "stdlib/io/print.inc"
 
+.macro SEND _character
+    ; Send the provided character.
+    lda #_character
+    jsr {{ provider_device.api("write") }}
+.endmacro
+
+.macro ESCAPE
+    ; Send the preamble of a VT100 escape sequence.
+    SEND $1b  ; escape key
+    SEND '['
+.endmacro
+
 .segment "KERNALRAM"
 
     {{ var("previous_was_cr") }}: .res 1
@@ -21,14 +33,9 @@
     ;   A = clobbered
 
     .proc {{ api_def("clr") }}
-        lda #$1b
-        jsr {{ provider_device.api("write") }}
-        lda #'['
-        jsr {{ provider_device.api("write") }}
-        lda #'2'
-        jsr {{ provider_device.api("write") }}
-        lda #'J'
-        jsr {{ provider_device.api("write") }}
+        ESCAPE
+        SEND '2'
+        SEND 'J'
         rts
     .endproc
 
@@ -36,20 +43,13 @@
     ; Move the cursor to the home position.
 
     .proc {{ api_def("home") }}
-        lda #$1b
-        jsr {{ provider_device.api("write") }}
-        lda #'['
-        jsr {{ provider_device.api("write") }}
-        lda #'H'
-        jsr {{ provider_device.api("write") }}
+        ESCAPE
+        SEND 'H'
         rts
     .endproc
 
     ; =====================================================================
     ; Move the cursor position.
-    ;
-    ; With a serial console we don't really have a width and height for
-    ; the screen. It's up to the caller to use sensible values.
     ;
     ; In:
     ;   X = the row to move to
@@ -66,13 +66,9 @@
         jsr fmtdec
 
         ; Send escape code up to the column number.
-        lda #$1b
-        jsr {{ provider_device.api("write") }}
-        lda #'['
-        jsr {{ provider_device.api("write") }}
+        ESCAPE
         PRINT_PTR {{ provider_device.api("write") }}, fmtdec::decimal
-        lda #';'
-        jsr {{ provider_device.api("write") }}
+        SEND ';'
 
         ; Format the column number (1-indexed).
         ply
@@ -82,8 +78,7 @@
 
         ; Finish the escape code with the column number.
         PRINT_PTR {{ provider_device.api("write") }}, fmtdec::decimal
-        lda #'H'
-        jsr {{ provider_device.api("write") }}
+        SEND 'H'
 
         rts
     .endproc
@@ -95,11 +90,8 @@
     ;   A = clobbered
 
     .proc {{ api_def("newline") }}
-        lda #'\r'
-        jsr {{ provider_device.api("write") }}
-        lda #'\n'
-        jsr {{ provider_device.api("write") }}
-
+        SEND '\r'
+        SEND '\n'
         rts
     .endproc
 

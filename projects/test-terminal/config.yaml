@@ -25,8 +25,8 @@ LCD:
     mode: "4bit"
     port: "B"
 
-LCD_CONSOLE:
-  component: "console"
+LCD_TERMINAL:
+  component: "terminal"
   provider: "LCD"
 
 SERIAL:
@@ -38,7 +38,6 @@ SERIAL:
     provider: "VIA"
     pin: "PA0"
 
-SERIAL_CONSOLE:
-  component: "console"
+SERIAL_TERMINAL:
+  component: "terminal"
   provider: "SERIAL"
-

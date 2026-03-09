@@ -49,7 +49,7 @@
 .segment "KERNALROM"
 
     ; =====================================================================
-    ; Initialize the console.
+    ; Initialize the terminal.
     ;
     ; Out:
     ;   A, X = clobbered
