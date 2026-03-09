@@ -1,5 +1,4 @@
 .include "{{ component_path }}/coding_macros.inc"
-.include "{{ component_path }}/cpu_shims_macros.inc"
 
 .segment "ZEROPAGE"
 
@@ -17,8 +16,8 @@
     ;   iterations = 16-bit iteration counter, in zeropage
 
     .proc {{ api_def("delay") }}
-        phx
-        phy
+        PUSH_X
+        PUSH_Y
 
         ldy {{ zp("delay_iterations") }}    ; Low byte: partial first pass
         ldx {{ zp("delay_iterations") }}+1  ; High byte: number of full 256 passes
@@ -41,7 +40,7 @@
         bne @full_loop
 
     @done:
-        ply
-        plx
+        PULL_Y
+        PULL_X
         rts
     .endproc

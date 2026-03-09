@@ -55,11 +55,9 @@
         sta {{ my("constructor_ptr") }} + 1
 
         ; Save counter, call constructor, restore counter.
-        txa
-        pha
+        PUSH_X
         jsr {{ my("constructor_trampoline") }}
-        pla
-        tax
+        PULL_X
 
         ; Advance pointer by 2 bytes (next entry).
         clc

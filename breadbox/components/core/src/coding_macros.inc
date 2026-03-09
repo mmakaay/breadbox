@@ -161,20 +161,68 @@
 .endmacro
 
 ; =========================================================================
+; Push X onto the stack
+
+.macro PUSH_X
+    .if .ismnemonic(phx)
+        phx
+    .else
+        txa
+        pha
+    .endif
+.endmacro
+
+; =========================================================================
+; Push Y onto the stack
+
+.macro PUSH_Y
+    .if .ismnemonic(phy)
+        phy
+    .else
+        tya
+        pha
+    .endif
+.endmacro
+
+; =========================================================================
+; Pull X from the stack
+
+.macro PULL_X
+    .if .ismnemonic(plx)
+        plx
+    .else
+        pla
+        tax
+    .endif
+.endmacro
+
+; =========================================================================
+; Pull Y from the stack
+
+.macro PULL_Y
+    .if .ismnemonic(ply)
+        ply
+    .else
+        pla
+        tay
+    .endif
+.endmacro
+
+; =========================================================================
 ; Push A, X and Y onto the stack.
 
 .macro PUSH_AXY
     pha
-    phx
-    phy
+    PUSH_X
+    PUSH_Y
 .endmacro
 
 ; =========================================================================
 ; Pull A, X and Y from the stack (reverse order of PUSH_AXY).
 
 .macro PULL_AXY
-    ply
-    plx
+    PULL_Y
+    PULL_X
     pla
 .endmacro
 
