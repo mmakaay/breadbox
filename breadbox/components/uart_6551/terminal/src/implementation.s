@@ -16,13 +16,13 @@
     SEND '['
 .endmacro
 
-.segment "KERNALRAM"
+;.segment "KERNALRAM"
+;
+;    {{ var("previous_was_cr") }}: .res 1
 
-    {{ var("previous_was_cr") }}: .res 1
-
-.segment "ZEROPAGE"
-
-    {{ var("decimal_ptr") }}: .res 2
+;.segment "ZEROPAGE"
+;
+;    {{ var("decimal_ptr") }}: .res 2
 
 .segment "KERNALROM"
 
@@ -96,6 +96,19 @@
     .endproc
 
     ; =====================================================================
+    ; Delete character before cursor position.
+    ;
+
+    .proc {{ api_def("delete") }}
+        ESCAPE      ; Move cursor left.
+        SEND 'D'
+        SEND ' '    ; Delete character by typing a space over it.
+        ESCAPE      ; Move cursor left.
+        SEND 'D'
+        rts
+    .endproc
+
+    ; =====================================================================
     ; Write a character to the display at the current cursor position.
     ;
     ; Special handling is implemented for carriage return (\r) and line
@@ -109,35 +122,35 @@
     ;   A, X, Y = clobbered
 
     .proc {{ api_def("write") }}
-        ; Jump forward when handling CR or LF character.
-        cmp #'\r'
-        beq @cr
-        cmp #'\n'
-        beq @lf
-
-        ; Handle a standard character.
-    @char:
-        ldx #0
-        stx {{ var("previous_was_cr") }}
-        ; Write the character to the display at the current cursor positoinr.
+;        ; Jump forward when handling CR or LF character.
+;        cmp #'\r'
+;        beq @cr
+;        cmp #'\n'
+;        beq @lf
+;
+;        ; Handle a standard character.
+;    @char:
+;        ldx #0
+;        stx {{ var("previous_was_cr") }}
+;         Write the character to the display at the current cursor positoinr.
         jsr {{ provider_device.api("write") }}
         rts
-
-    @cr:
-        jsr {{ api("newline") }}
-        ldx #1
-        stx {{ var("previous_was_cr") }}
-        rts
-
-    @lf:
-        ldx {{ var("previous_was_cr") }}
-        beq @lone_lf
-        ldx #0
-        stx {{ var("previous_was_cr") }}
-        rts
-
-    @lone_lf:
-        jsr {{ api("newline") }}
-        rts
+;
+;    @cr:
+;        jsr {{ api("newline") }}
+;        ldx #1
+;        stx {{ var("previous_was_cr") }}
+;        rts
+;
+;    @lf:
+;        ldx {{ var("previous_was_cr") }}
+;        beq @lone_lf
+;        ldx #0
+;        stx {{ var("previous_was_cr") }}
+;        rts
+;
+;    @lone_lf:
+;        jsr {{ api("newline") }}
+;        rts
 
     .endproc

@@ -1,0 +1,58 @@
+CORE:
+  cpu: "65c02"
+  clock_mhz: 1.000
+
+VIA:
+  component: "via_w65c22"
+  address: $6000
+
+LED:
+  component: "gpio_pin"
+  provider: "VIA"
+  pin: "PA1"
+  default: off
+  direction: "out"
+
+LCD:
+  component: "lcd_hd44780"
+  cmnd_pins:
+    provider: "VIA"
+    rs_pin: "PB0"
+    rwb_pin: "PB1"
+    en_pin: "PB2"
+  data_pins:
+    provider: "VIA"
+    mode: "4bit"
+    port: "B"
+
+LCD_TERMINAL:
+  component: "terminal"
+  provider: LCD
+
+SERIAL:
+  component: "uart_6551"
+  type: "um6551"
+  address: $5000
+  irq: on
+  rts:
+    provider: "VIA"
+    pin: "PA0"
+
+SERIAL_TERMINAL:
+  component: "terminal"
+  provider: "SERIAL"
+
+#TTY:
+#  component: "tty"
+#  input: SERIAL
+#  output: SERIAL_TERMINAL
+
+TTY:
+  component: "tty"
+  input: SERIAL
+  output: LCD_TERMINAL
+
+TTY2:
+  component: "tty"
+  input: SERIAL
+  output: SERIAL_TERMINAL

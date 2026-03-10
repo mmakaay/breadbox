@@ -43,8 +43,8 @@
     ; A pointer too the start of the currently selected row in the frame buffer.
     {{ var("row_ptr") }}:         .res 2
 
-    ; A register for tracking "\r" state.
-    {{ var("previous_was_cr") }}: .res 1
+;    ; A register for tracking "\r" state.
+;    {{ var("previous_was_cr") }}: .res 1
 
 .segment "KERNALROM"
 
@@ -58,8 +58,8 @@
         jsr {{ my("clear_frame_buffer") }}
         jsr {{ api("home") }}
 
-        lda #0
-        sta {{ var("previous_was_cr") }}
+;        lda #0
+;        sta {{ var("previous_was_cr") }}
 
         ; Initialize the logical -> frame buffer row mapping:
         ;   row 0 -> framebuffer row 0
@@ -147,16 +147,16 @@
     ;   A, X, Y = clobbered
 
     .proc {{ api_def("write") }}
-        ; Jump forward when handling CR or LF character.
-        cmp #'\r'
-        beq @cr
-        cmp #'\n'
-        beq @lf
+;        ; Jump forward when handling CR or LF character.
+;        cmp #'\r'
+;        beq @cr
+;        cmp #'\n'
+;        beq @lf
 
         ; Handle a standard character.
-    @char:
-        ldx #0
-        stx {{ var("previous_was_cr") }}
+;    @char:
+;        ldx #0
+;        stx {{ var("previous_was_cr") }}
 
         ; Write the character to the currently active row in the frame buffer.
         ldy {{ var("cursor_column") }}
@@ -176,23 +176,23 @@
     @move_cursor_right:
         inc {{ var("cursor_column") }}
         rts
-
-    @cr:
-        jsr {{ api("newline") }}
-        ldx #1
-        stx {{ var("previous_was_cr") }}
-        rts
-
-    @lf:
-        ldx {{ var("previous_was_cr") }}
-        beq @lone_lf
-        ldx #0
-        stx {{ var("previous_was_cr") }}
-        rts
-
-    @lone_lf:
-        jsr {{ api("newline") }}
-        rts
+;
+;    @cr:
+;        jsr {{ api("newline") }}
+;        ldx #1
+;        stx {{ var("previous_was_cr") }}
+;        rts
+;
+;    @lf:
+;        ldx {{ var("previous_was_cr") }}
+;        beq @lone_lf
+;        ldx #0
+;        stx {{ var("previous_was_cr") }}
+;        rts
+;
+;    @lone_lf:
+;        jsr {{ api("newline") }}
+;        rts
 
     .endproc
 
@@ -226,6 +226,27 @@
         jsr {{ api("move_cursor") }}
         rts
 
+    .endproc
+
+    ; =====================================================================
+    ; Delete character before cursor position.
+    ;
+
+    .proc {{ api_def("delete") }}
+        ldx {{ var("cursor_row") }}
+        ldy {{ var("cursor_column") }}
+        cpy #0      ; Already at the start of the line?
+        beq @done
+
+        dey
+        jsr {{ provider_device.api("move_cursor") }}
+        lda #' '
+        sta ({{ var("row_ptr") }}),y
+        jsr {{ provider_device.api("write") }}
+        dey
+        jsr {{ provider_device.api("move_cursor") }}
+    @done:
+        rts
     .endproc
 
     ; =====================================================================

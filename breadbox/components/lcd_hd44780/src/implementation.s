@@ -308,7 +308,7 @@ CTRL_DATA_RD = {{ RS_BIT | bin }} | {{ RWB_BIT | bin }}  ; 1  1  read data
     .endproc
 
     ; =====================================================================
-    ; Clear the display and return cursor to home.
+    ; Clear the screen and return cursor to home.
     ;
     ; Out:
     ;   A = clobbered

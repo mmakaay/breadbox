@@ -9,6 +9,12 @@
     ; =========================================================================
     ; Delay for approximately a number of iterations * 5 CPU cycles.
     ;
+    ; This provides a crude delay, by busy-looping the CPU for the requested
+    ; amount of iterations. This does mean that during the wait time, the CPU
+    ; is unable to perform any other work. For more accurate and async timer
+    ; operations, consider using the `ticker` component, for example using
+    ; the W65C22 VIA IC as the provider of timing interrupts.
+    ;
     ; This subroutine can be called using the macros as provided by the
     ; `core/delay_macros.inc` include file, e.g. `DELAY_MS 250`.
     ;
