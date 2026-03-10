@@ -1,5 +1,7 @@
 .feature string_escapes
 
+.include "CORE/coding_macros.inc"
+
 .segment "ZEROPAGE"
 
     {{ var("previous_was_cr") }}: .res 1
@@ -21,30 +23,47 @@
     ; Clear the screen.
     ;
     ; Out:
-    ;   A = clobbered on no input, or character byte when input was read
-    ;   C = clear on no input, set when input was read
+    ;   A, X, Y = consider clobbered (depends on driver implementation)
 
-    .proc {{ api_def("clr") }}
-        jsr {{ output_device.api("clr") }}
-    .endproc
+    {{ api_def("clr") }} = {{ output_device.api("clr") }}
 
     ; =====================================================================
     ; Process character input.
     ;
     ; Out:
-    ;   A = clobbered
+    ;   A = character read, when carry is set, otherwise clobbered
+    ;   C = set when character was read, clear otherwise
+    ;   X, Y = preserved
 
     .proc {{ api_def("read") }}
+        PUSH_X
+        PUSH_Y
         jsr {{ input_device.api("read") }}
-        bcs @got_input
-        ; Return clobbered A + clear carry is set to flag no input.
+        bcc @done
+
+        ; Input received, send it to the output.
+        PULL_Y
+        PULL_X
+        jmp {{ api_def("write") }}
+
+    @done:
+        ; Return with carry clear to indicate "no input".
+        PULL_Y
+        PULL_X
         rts
-    @got_input:
-        ; NOTE: FALLTHROUGH TO `write` FROM HERE.
     .endproc
 
+    ; =====================================================================
+    ; Process character output.
+    ;
+    ; In:
+    ;   A = the byte to write
+    ; Out:
+    ;   A = the byte that was written
+    ;   X, Y = preserved
+
     .proc {{ api_def("write") }}
-        pha
+        PUSH_AXY
 
         ; Handle CR/N, by normalizing \r, \n and \r\n to a newline call to the terminal.
         cmp #'\r'
@@ -54,9 +73,9 @@
 
         ; Handle DEL (delete) / BS (backspace)
         cmp #DELETE            ; DEL? (backspace on many terminals)
-        beq @delete
+        beq @backspace
         cmp #BACKSPACE         ; BS?
-        beq @delete
+        beq @backspace
 
         ; Echo the input to the TTY output.
         jsr {{ output_device.api("write") }}
@@ -64,11 +83,11 @@
     @return:
         ; Return read character + set carry to flag input.
         sec
-        pla
+        PULL_AXY
         rts
 
-    @delete:
-        jsr {{ output_device.api("delete") }}
+    @backspace:
+        jsr {{ output_device.api("backspace") }}
         jmp @return
 
     @cr:

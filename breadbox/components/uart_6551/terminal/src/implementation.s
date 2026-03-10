@@ -11,18 +11,10 @@
 .endmacro
 
 .macro ESCAPE
-    ; Send the preamble of a VT100 escape sequence.
+    ; Send the preamble of an ANSI escape sequence.
     SEND $1b  ; escape key
     SEND '['
 .endmacro
-
-;.segment "KERNALRAM"
-;
-;    {{ var("previous_was_cr") }}: .res 1
-
-;.segment "ZEROPAGE"
-;
-;    {{ var("decimal_ptr") }}: .res 2
 
 .segment "KERNALROM"
 
@@ -98,8 +90,10 @@
     ; =====================================================================
     ; Delete character before cursor position.
     ;
+    ; Out:
+    ;   A = clobbered
 
-    .proc {{ api_def("delete") }}
+    .proc {{ api_def("backspace") }}
         ESCAPE      ; Move cursor left.
         SEND 'D'
         SEND ' '    ; Delete character by typing a space over it.
@@ -111,46 +105,7 @@
     ; =====================================================================
     ; Write a character to the display at the current cursor position.
     ;
-    ; Special handling is implemented for carriage return (\r) and line
-    ; feed (\n) characters. These are normalized and presented as a newline
-    ; on the display. When combined like "\r\n", only a single newline is
-    ; presented on the display.
-    ;
-    ; In:
-    ;   A = the character to write
     ; Out:
-    ;   A, X, Y = clobbered
+    ;   A = clobbered
 
-    .proc {{ api_def("write") }}
-;        ; Jump forward when handling CR or LF character.
-;        cmp #'\r'
-;        beq @cr
-;        cmp #'\n'
-;        beq @lf
-;
-;        ; Handle a standard character.
-;    @char:
-;        ldx #0
-;        stx {{ var("previous_was_cr") }}
-;         Write the character to the display at the current cursor positoinr.
-        jsr {{ provider_device.api("write") }}
-        rts
-;
-;    @cr:
-;        jsr {{ api("newline") }}
-;        ldx #1
-;        stx {{ var("previous_was_cr") }}
-;        rts
-;
-;    @lf:
-;        ldx {{ var("previous_was_cr") }}
-;        beq @lone_lf
-;        ldx #0
-;        stx {{ var("previous_was_cr") }}
-;        rts
-;
-;    @lone_lf:
-;        jsr {{ api("newline") }}
-;        rts
-
-    .endproc
+    {{ api_def("write") }} = {{ provider_device.api("write") }}

@@ -1,3 +1,5 @@
+.feature string_escapes
+
 .include "breadbox.inc"
 .include "stdlib/io/print.inc"
 .include "stdlib/math/fmtdec.inc"
@@ -6,16 +8,20 @@
 
 .segment "DATA"
 
-    message: .asciiz "BREADBOX TTYtest"
+    message: .asciiz "\nBREADBOX TTY tester\n\n"
 
 .segment "CODE"
 
     .proc main
-        jsr TTY::clr
-        PRINT LCD::write, message
+        jsr SERIAL_TTY::clr
+        PRINT SERIAL_TTY::write, message
+
+        jsr LCD::cursor_on
+        jsr LCD_TTY::clr
 
     @loop:
-        jsr TTY::read
-        jsr TTY2::write
+        jsr LCD_TTY::read
         bcc @loop
+        jsr SERIAL_TTY::write
+        jmp @loop
     .endproc

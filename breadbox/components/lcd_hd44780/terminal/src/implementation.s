@@ -134,11 +134,6 @@
     ; =====================================================================
     ; Write a character to the display at the current cursor position.
     ;
-    ; Special handling is implemented for carriage return (\r) and line
-    ; feed (\n) characters. These are normalized and presented as a newline
-    ; on the display. When combined like "\r\n", only a single newline is
-    ; presented on the display.
-    ;;
     ; In:
     ;   A = the character to write
     ;   cursor_column = the current cursor position in the active row
@@ -147,16 +142,8 @@
     ;   A, X, Y = clobbered
 
     .proc {{ api_def("write") }}
-;        ; Jump forward when handling CR or LF character.
-;        cmp #'\r'
-;        beq @cr
-;        cmp #'\n'
-;        beq @lf
-
-        ; Handle a standard character.
-;    @char:
-;        ldx #0
-;        stx {{ var("previous_was_cr") }}
+        cmp #$20  ; First printable ASCII character.
+        bcc @done
 
         ; Write the character to the currently active row in the frame buffer.
         ldy {{ var("cursor_column") }}
@@ -175,24 +162,8 @@
 
     @move_cursor_right:
         inc {{ var("cursor_column") }}
+    @done:
         rts
-;
-;    @cr:
-;        jsr {{ api("newline") }}
-;        ldx #1
-;        stx {{ var("previous_was_cr") }}
-;        rts
-;
-;    @lf:
-;        ldx {{ var("previous_was_cr") }}
-;        beq @lone_lf
-;        ldx #0
-;        stx {{ var("previous_was_cr") }}
-;        rts
-;
-;    @lone_lf:
-;        jsr {{ api("newline") }}
-;        rts
 
     .endproc
 
@@ -231,21 +202,29 @@
     ; =====================================================================
     ; Delete character before cursor position.
     ;
+    ; A = clobbered
+    ; X, Y = preserved
 
-    .proc {{ api_def("delete") }}
+    .proc {{ api_def("backspace") }}
+        PUSH_X
+        PUSH_Y
         ldx {{ var("cursor_row") }}
         ldy {{ var("cursor_column") }}
         cpy #0      ; Already at the start of the line?
         beq @done
 
-        dey
-        jsr {{ provider_device.api("move_cursor") }}
+        dey                                ; Move cursor to previous column.
+        sty {{ var("cursor_column") }}
+
+
+        jsr {{ provider_device.api("move_cursor") }}  ; Move to character to wipe on LCD.
         lda #' '
-        sta ({{ var("row_ptr") }}),y
-        jsr {{ provider_device.api("write") }}
-        dey
-        jsr {{ provider_device.api("move_cursor") }}
+        sta ({{ var("row_ptr") }}),y                  ; Wipe character in frame buffer.
+        jsr {{ provider_device.api("write") }}        ; Wipe character on LCD; moves cursor forward.
+        jsr {{ provider_device.api("move_cursor") }}  ; Move cursor back to wipe position.
     @done:
+        PULL_Y
+        PULL_X
         rts
     .endproc
 

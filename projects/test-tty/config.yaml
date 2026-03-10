@@ -47,12 +47,13 @@ SERIAL_TERMINAL:
 #  input: SERIAL
 #  output: SERIAL_TERMINAL
 
-TTY:
+SERIAL_TTY:
+  component: "tty"
+  input: SERIAL
+  output: SERIAL_TERMINAL
+
+LCD_TTY:
   component: "tty"
   input: SERIAL
   output: LCD_TERMINAL
 
-TTY2:
-  component: "tty"
-  input: SERIAL
-  output: SERIAL_TERMINAL
