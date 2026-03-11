@@ -10,8 +10,13 @@ class CoreDevice(Device):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        if self.id != "CORE":
-            raise ValueError(f"The core device must always have id 'CORE', not {str(self.id)!r}")
+        #if self.id != "CORE":
+        #    raise ValueError(f"The core device must always have id 'CORE', not {str(self.id)!r}")
+
+        # Allow settings 6502 without quotes around it (which YAML interprets as int instead of str).
+        if not isinstance(self.cpu, str):
+            self.cpu = str(self.cpu)
+
         self.clock_mhz = float(self.clock_mhz)
         if self.clock_mhz <= 0:
             raise ValueError(f"clock_mhz must be positive, got {self.clock_mhz}")

@@ -41,7 +41,7 @@
 ; In:
 ;   _target = target address
 ; Out:
-;   A = clobbered
+;   A = consider it clobbered (depends on CPU type)
 
 .macro ZERO _target
     .if .ismnemonic(stz)
@@ -89,7 +89,7 @@
 ; In:
 ;   _target = address of the low byte
 ; Out:
-;   A = clobbered
+;   A = consider it clobbered (depends on CPU type)
 
 .macro ZERO16 _target
     .if .ismnemonic(stz)
@@ -108,7 +108,7 @@
 ; In:
 ;   _target = address of the low byte
 ; Out:
-;   A = clobbered
+;   A = consider it clobbered (depends on CPU type)
 
 .macro ZERO24 _target
     .if .ismnemonic(stz)
