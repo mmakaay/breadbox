@@ -25,35 +25,33 @@ LCD:
     mode: "4bit"
     port: "B"
 
-LCD_TERMINAL:
-  component: "terminal"
+LCD_SCREEN:
+  component: "screen"
   provider: LCD
 
 SERIAL:
   component: "uart_6551"
-  type: "um6551"
+  type: "r6551"
   address: $5000
   irq: on
   rts:
     provider: "VIA"
     pin: "PA0"
 
-SERIAL_TERMINAL:
-  component: "terminal"
+SERIAL_SCREEN:
+  component: "screen"
   provider: "SERIAL"
 
-#TTY:
-#  component: "tty"
-#  input: SERIAL
-#  output: SERIAL_TERMINAL
+SERIAL_KEYBOARD:
+  component: "keyboard"
+  provider: "SERIAL"
 
 SERIAL_TTY:
   component: "tty"
-  input: SERIAL
-  output: SERIAL_TERMINAL
+  keyboard: SERIAL_KEYBOARD
+  screen: SERIAL_SCREEN
 
 LCD_TTY:
   component: "tty"
-  input: SERIAL
-  output: LCD_TERMINAL
-
+  keyboard: SERIAL_KEYBOARD
+  screen: LCD_SCREEN

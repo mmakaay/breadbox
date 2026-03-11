@@ -1,6 +1,7 @@
 from typing import Any
 
-from breadbox.components.tty.device import TtyDevice
+from breadbox.components.uart_6551.device import Uart6551Device
+from breadbox.components.uart_6551.keyboard.device import Uart6551Keyboard
 from breadbox.config import BreadboxConfig
 from breadbox.types.component import Component
 from breadbox.types.component_identifier import ComponentIdentifier
@@ -9,8 +10,7 @@ from breadbox.types.component_identifier import ComponentIdentifier
 def resolve(
     breadbox: BreadboxConfig,
     component_id: ComponentIdentifier,
+    provider_device: Uart6551Device,
     device_settings: dict[str, Any],
 ) -> Component:
-    input_device = breadbox.get(device_settings["keyboard"])
-    output_device = breadbox.get(device_settings["screen"])
-    return TtyDevice(id=component_id, keyboard_device=input_device, screen_device=output_device, **device_settings)
+    return Uart6551Keyboard(id=component_id, provider_device=provider_device, **device_settings)

@@ -1,7 +1,7 @@
 import pytest
 
-from breadbox.components.uart_6551.device import Uart6551Device
-from breadbox.components.uart_6551.resolve import resolve
+from breadbox.components.uart_6551 import Uart6551Device
+from breadbox.components.uart_6551 import resolve
 from breadbox.components.via_w65c22.device import ViaW65c22Device
 from breadbox.config import BreadboxConfig
 from breadbox.types.address16 import Address16

@@ -5,7 +5,7 @@ from breadbox.types.device import Device
 
 
 @dataclass(kw_only=True)
-class Uart6551Terminal(Device):
+class Uart6551Keyboard(Device):
     provider_device: Uart6551Device
     provider: str
 

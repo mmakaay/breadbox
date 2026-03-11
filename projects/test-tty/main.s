@@ -22,6 +22,12 @@
     @loop:
         jsr LCD_TTY::read
         bcc @loop
+
+        sta fmtdec::value
+        jsr fmtdec
+        PRINT_PTR SERIAL_TTY::write, fmtdec::decimal
+        lda #'\n'
         jsr SERIAL_TTY::write
+
         jmp @loop
     .endproc

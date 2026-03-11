@@ -1,7 +1,7 @@
 from typing import Any
 
-from breadbox.components.uart_6551.terminal.device import Uart6551Terminal
-from breadbox.components.uart_6551.device import Uart6551Device
+from breadbox.components.lcd_hd44780.screen.device import LcdHc44780Terminal
+from breadbox.components.lcd_hd44780.device import LcdHd44780Device
 from breadbox.config import BreadboxConfig
 from breadbox.types.component import Component
 from breadbox.types.component_identifier import ComponentIdentifier
@@ -10,7 +10,7 @@ from breadbox.types.component_identifier import ComponentIdentifier
 def resolve(
     breadbox: BreadboxConfig,
     component_id: ComponentIdentifier,
-    provider_device: Uart6551Device,
+    provider_device: LcdHd44780Device,
     device_settings: dict[str, Any],
 ) -> Component:
-    return Uart6551Terminal(id=component_id, provider_device=provider_device, **device_settings)
+    return LcdHc44780Terminal(id=component_id, provider_device=provider_device, **device_settings)

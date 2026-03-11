@@ -8,15 +8,7 @@
 
 .segment "KERNALROM"
 
-    CtRL_A          = 1         ; SOH - Start Of Heading
-    CTRL_D          = 4         ; EOT - End Of Transmission
     BACKSPACE       = 8
-    TAB             = 9
-    CTRL_U          = 21        ; NAK - Negative Acknowledge
-    CURSOR_UP       = 65
-    CURSOR_DOWN     = 66
-    CURSOR_RIGHT    = 67
-    CURSOR_LEFT     = 68
     DELETE          = 127
 
     ; =====================================================================
@@ -25,7 +17,7 @@
     ; Out:
     ;   A, X, Y = consider clobbered (depends on driver implementation)
 
-    {{ api_def("clr") }} = {{ output_device.api("clr") }}
+    {{ api_def("clr") }} = {{ screen_device.api("clr") }}
 
     ; =====================================================================
     ; Process character input.
@@ -38,7 +30,7 @@
     .proc {{ api_def("read") }}
         PUSH_X
         PUSH_Y
-        jsr {{ input_device.api("read") }}
+        jsr {{ keyboard_device.api("read") }}
         bcc @done
 
         ; Input received, send it to the output.
@@ -78,7 +70,7 @@
         beq @backspace
 
         ; Echo the input to the TTY output.
-        jsr {{ output_device.api("write") }}
+        jsr {{ screen_device.api("write") }}
 
     @return:
         ; Return read character + set carry to flag input.
@@ -87,11 +79,11 @@
         rts
 
     @backspace:
-        jsr {{ output_device.api("backspace") }}
+        jsr {{ screen_device.api("backspace") }}
         jmp @return
 
     @cr:
-        jsr {{ output_device.api("newline") }}
+        jsr {{ screen_device.api("newline") }}
         ldx #1
         stx {{ var("previous_was_cr") }}
         jmp @return
@@ -104,6 +96,6 @@
         jmp @return
 
     @lone_lf:
-        jsr {{ output_device.api("newline") }}
+        jsr {{ screen_device.api("newline") }}
         jmp @return
     .endproc

@@ -7,4 +7,4 @@ from breadbox.types.component_identifier import ComponentIdentifier
 
 
 def resolve(breadbox: BreadboxConfig, component_id: ComponentIdentifier, device_settings: dict[str, Any]) -> Component:
-    return resolve_via_provider(breadbox, component_id, device_settings, interface_name="terminal")
+    return resolve_via_provider(breadbox, component_id, device_settings, interface_name="screen")
