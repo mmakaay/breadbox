@@ -80,11 +80,15 @@
         iny
 
         ; Save table offset and counter across handler call.
-        PUSH_Y
-        PUSH_X
+        txa
+        pha
+        tya
+        pha
         jsr {{ my("irq_trampoline") }}
-        PULL_X
-        PULL_Y
+        pla
+        tay
+        pla
+        tax
 
         dex
         bne @loop

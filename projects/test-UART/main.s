@@ -48,7 +48,7 @@ CTRL_D = $04
 
     @wait_for_rx:
         ; Try to read a byte from the receive buffer.
-        jsr SERIAL::read
+        jsr KEYBOARD::read
         bcc @loop
         sta rxbyte               ; Save received byte.
 
@@ -76,7 +76,7 @@ CTRL_D = $04
     @echo:
         ; Echo byte back via UART transmitter.
         lda rxbyte
-        jsr TERMINAL::write
+        jsr SCREEN::write
         jmp @loop
 
     @toggle:

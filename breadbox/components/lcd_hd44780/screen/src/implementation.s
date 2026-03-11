@@ -206,8 +206,10 @@
     ; X, Y = preserved
 
     .proc {{ api_def("backspace") }}
-        PUSH_X
-        PUSH_Y
+        txa
+        pha
+        tya
+        pha
         ldx {{ var("cursor_row") }}
         ldy {{ var("cursor_column") }}
         cpy #0      ; Already at the start of the line?
@@ -223,8 +225,10 @@
         jsr {{ provider_device.api("write") }}        ; Wipe character on LCD; moves cursor forward.
         jsr {{ provider_device.api("move_cursor") }}  ; Move cursor back to wipe position.
     @done:
-        PULL_Y
-        PULL_X
+        pla
+        tay
+        pla
+        tax
         rts
     .endproc
 
@@ -254,7 +258,7 @@
     ;   A, X = clobbered
 
     .proc {{ my("clear_frame_buffer") }}
-        lda #'1'
+        lda #' '
         ldx #{{ width * height - 1 }}
     @loop:
         sta {{ var("frame_buffer") }},x

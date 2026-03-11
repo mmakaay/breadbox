@@ -22,8 +22,10 @@
     ;   iterations = 16-bit iteration counter, in zeropage
 
     .proc {{ api_def("delay") }}
-        PUSH_X
-        PUSH_Y
+        txa
+        pha
+        tya
+        pha
 
         ldy {{ zp("delay_iterations") }}    ; Low byte: partial first pass
         ldx {{ zp("delay_iterations") }}+1  ; High byte: number of full 256 passes
@@ -46,7 +48,9 @@
         bne @full_loop
 
     @done:
-        PULL_Y
-        PULL_X
+        pla
+        tay
+        pla
+        tax
         rts
     .endproc

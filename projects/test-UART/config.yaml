@@ -1,5 +1,5 @@
 CORE:
-  cpu: 65c02
+  cpu: 6502
   clock_mhz: 1.000
 
 VIA:
@@ -27,5 +27,10 @@ SERIAL:
     provider: VIA
     pin: PA0
 
-TERMINAL:
+SCREEN:
+  component: screen
+  provider: SERIAL
+
+KEYBOARD:
+  component: keyboard
   provider: SERIAL

@@ -176,83 +176,24 @@
 .endmacro
 
 ; =========================================================================
-; Push X onto the stack
-;
-; Out:
-;   A = consider it clobbered (depends on CPU type)
-
-.macro PUSH_X
-    .if .ismnemonic(phx)
-        phx
-    .else
-        txa
-        pha
-    .endif
-.endmacro
-
-; =========================================================================
-; Push Y onto the stack
-;
-; Out:
-;   A = consider it clobbered (depends on CPU type)
-
-.macro PUSH_Y
-    .if .ismnemonic(phy)
-        phy
-    .else
-        tya
-        pha
-    .endif
-.endmacro
-
-; =========================================================================
-; Pull X from the stack
-;
-; Out:
-;   A = consider it clobbered (depends on CPU type)
-
-.macro PULL_X
-    .if .ismnemonic(plx)
-        plx
-    .else
-        pla
-        tax
-    .endif
-.endmacro
-
-; =========================================================================
-; Pull Y from the stack
-;
-; Out:
-;   A = consider it clobbered (depends on CPU type)
-
-.macro PULL_Y
-    .if .ismnemonic(ply)
-        ply
-    .else
-        pla
-        tay
-    .endif
-.endmacro
-
-; =========================================================================
 ; Push A, X and Y onto the stack.
-;
-; Out:
-;   A = consider it clobbered (depends on CPU type)
 
 .macro PUSH_AXY
     pha
-    PUSH_X
-    PUSH_Y
+    txa
+    pha
+    tya
+    pha
 .endmacro
 
 ; =========================================================================
 ; Pull A, X and Y from the stack (reverse order of PUSH_AXY).
 
 .macro PULL_AXY
-    PULL_Y
-    PULL_X
+    pla
+    tay
+    pla
+    tax
     pla
 .endmacro
 

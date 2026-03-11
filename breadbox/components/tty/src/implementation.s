@@ -5,6 +5,7 @@
 .segment "ZEROPAGE"
 
     {{ var("previous_was_cr") }}: .res 1
+    {{ var("options") }}: .res 1
 
 .segment "KERNALROM"
 
@@ -20,7 +21,7 @@
     {{ api_def("clr") }} = {{ screen_device.api("clr") }}
 
     ; =====================================================================
-    ; Process character input.
+    ; Read from the keyboard.
     ;
     ; Out:
     ;   A = character read, when carry is set, otherwise clobbered
@@ -28,35 +29,33 @@
     ;   X, Y = preserved
 
     .proc {{ api_def("read") }}
-        PUSH_X
-        PUSH_Y
+        txa
+        pha
+        tya
+        pha
+
         jsr {{ keyboard_device.api("read") }}
-        bcc @done
-
-        ; Input received, send it to the output.
-        PULL_Y
-        PULL_X
-        jmp {{ api_def("write") }}
-
+        bcc @done                   ; Return with carry clear.
+        jsr {{ api_def("write") }}  ; Echo received input to the screen.
+        sec                         ; Set carry to indicate "got input".
     @done:
-        ; Return with carry clear to indicate "no input".
-        PULL_Y
-        PULL_X
+        pla
+        tay
+        pla
+        tax
         rts
     .endproc
 
     ; =====================================================================
-    ; Process character output.
+    ; Write to the screen.
     ;
     ; In:
     ;   A = the byte to write
     ; Out:
     ;   A = the byte that was written
-    ;   X, Y = preserved
+    ;   X, Y = consider clobbered (depends on driver implementation)
 
     .proc {{ api_def("write") }}
-        PUSH_AXY
-
         ; Handle CR/N, by normalizing \r, \n and \r\n to a newline call to the terminal.
         cmp #'\r'
         beq @cr
@@ -70,32 +69,24 @@
         beq @backspace
 
         ; Echo the input to the TTY output.
-        jsr {{ screen_device.api("write") }}
-
-    @return:
-        ; Return read character + set carry to flag input.
-        sec
-        PULL_AXY
-        rts
+        jmp {{ screen_device.api("write") }}
 
     @backspace:
-        jsr {{ screen_device.api("backspace") }}
-        jmp @return
+        jmp {{ screen_device.api("backspace") }}
 
     @cr:
         jsr {{ screen_device.api("newline") }}
         ldx #1
         stx {{ var("previous_was_cr") }}
-        jmp @return
+        rts
 
     @lf:
         ldx {{ var("previous_was_cr") }}
         beq @lone_lf
         ldx #0
         stx {{ var("previous_was_cr") }}
-        jmp @return
+        rts
 
     @lone_lf:
-        jsr {{ screen_device.api("newline") }}
-        jmp @return
+        jmp {{ screen_device.api("newline") }}
     .endproc

@@ -50,7 +50,8 @@
     ;   A, X, Y = clobbered
 
     .proc {{ api_def("move_cursor") }}
-        PUSH_Y
+        tya
+        pha
 
         ; Format the row number (1-indexed).
         inx
@@ -63,7 +64,8 @@
         SEND ';'
 
         ; Format the column number (1-indexed).
-        PULL_Y
+        pla
+        tay
         iny
         sty fmtdec::value
         jsr fmtdec
