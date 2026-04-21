@@ -5,6 +5,7 @@
       <sourceFolder url="file://$MODULE_DIR$/tests" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/cc65" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/test-UART/build" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (breadbox)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

@@ -1,6 +1,8 @@
 ; ----------------------------------------------------------------
-; Codes for special key presses.
+; Codes for expressing key presses.
 ; ----------------------------------------------------------------
+
+MODIFIER_CTRL = %00000001
 
 KEY_SOH         = 1        ; Start Of Heading
 KEY_CTRL_A      = KEY_SOH
@@ -16,11 +18,12 @@ KEY_CTRL_E      = KEY_ENQUIRY
 KEY_ACK         =  6       ; Acknowledge
 KEY_RIGHT       = KEY_ACK
 KEY_CTRL_F      = KEY_ACK
+KEY_CTRL_G      = 7
 KEY_BS          = 8        ; Backspace
 KEY_CTRL_H      = KEY_BS
 KEY_HTAB        = 9        ; Horizontal tab
 KEY_CTRL_I      = KEY_HTAB
-KEY_LF          =  10      ; Line Feed
+KEY_LF          = 10       ; Line Feed
 KEY_CTRL_J      = KEY_LF
 KEY_VTAB        = 11
 KEY_CTRL_K      = KEY_VTAB
