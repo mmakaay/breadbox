@@ -6,6 +6,7 @@
 
     {{ var("previous_was_cr") }}: .res 1
     {{ var("options") }}: .res 1
+    {{ var("read_byte") }}: .res 1
 
 .segment "KERNALROM"
 
@@ -36,6 +37,7 @@
 
         jsr {{ keyboard_device.api("read") }}
         bcc @done                   ; Return with carry clear.
+        sta {{ var("read_byte") }}  ; Save received byte before echo.
         jsr {{ api_def("write") }}  ; Echo received input to the screen.
         sec                         ; Set carry to indicate "got input".
     @done:
@@ -43,6 +45,7 @@
         tay
         pla
         tax
+        lda {{ var("read_byte") }}  ; Restore received byte into A.
         rts
     .endproc
 
