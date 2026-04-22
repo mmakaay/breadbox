@@ -11,7 +11,7 @@
     CR = $0d
     END = $00
 
-    lcd_text1: .asciiz "BREADBOX  WozMon\n"
+    lcd_text1: .asciiz "BREADBOX  WozMon"
     lcd_text2: .asciiz "Running @ serial"
 
     introduction:
@@ -33,8 +33,11 @@
 .CODE
 
     main:
-        PRINT LCD_SCREEN::write, lcd_text1
-        PRINT LCD_SCREEN::write, lcd_text2
+        PRINT LCD::write, lcd_text1
+        ldx #1
+        ldy #0
+        jsr LCD::move_cursor
+        PRINT LCD::write, lcd_text2
 
         PRINT TERMINAL::write, introduction
 

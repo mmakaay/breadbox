@@ -18,10 +18,6 @@ LCD:
     mode: 4bit
     port: B
 
-LCD_SCREEN:
-  component: screen
-  provider: LCD
-
 SERIAL:
   component: uart_6551
   type: um6551

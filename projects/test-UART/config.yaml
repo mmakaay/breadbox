@@ -28,9 +28,12 @@ SERIAL:
     pin: PA0
 
 SCREEN:
-  component: screen
   provider: SERIAL
 
 KEYBOARD:
-  component: keyboard
   provider: SERIAL
+
+TTY:
+  keyboard: KEYBOARD
+  screen: SCREEN
+

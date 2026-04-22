@@ -1,9 +1,11 @@
 ; ----------------------------------------------------------------------------
 ; UART test
 ;
-; Echo test for serial communication. Received bytes are echoed back over
-; the serial connection. The LCD shows status information.
+; Test for serial communication, using the TTY component to combine the
+; serial input as keyboard and the serial output as screen. Received bytes
+; are echoed back over the serial connection by the TTY component.
 ;
+; The LCD shows status information.
 ; Two display modes, toggled at runtime with CTRL+D:
 ;
 ; Normal mode (default):
@@ -47,8 +49,10 @@ CTRL_D = $04
         jsr show_status
 
     @wait_for_rx:
-        ; Try to read a byte from the receive buffer.
-        jsr KEYBOARD::read
+        ; Try to read a byte from the input.
+        ; The TTY component takes care of echoing the byte back to
+        ; the connected serial client.
+        jsr TTY::read
         bcc @loop
         sta rxbyte               ; Save received byte.
 
@@ -57,7 +61,7 @@ CTRL_D = $04
 
         ; In debug mode, display the byte on LCD line 1.
         lda debug_mode
-        beq @echo
+        beq @loop
 
         ; Wrap cursor at end of LCD line 1.
         lda cursor
@@ -73,10 +77,6 @@ CTRL_D = $04
         jsr LCD::write
         inc cursor
 
-    @echo:
-        ; Echo byte back via UART transmitter.
-        lda rxbyte
-        jsr SCREEN::write
         jmp @loop
 
     @toggle:

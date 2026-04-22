@@ -11,8 +11,8 @@ greeting_message: .asciiz "!!dlroW ,olleH"
 .proc main
     ; Move the cursor to coordinate (14, 0)
     ; This is towards the end of line 1 one a 2x16 display.
-    ldy #0
-    ldx #14
+    ldx #0
+    ldy #14
     jsr LCD::move_cursor
 
     ; Set the text direction from right to left.

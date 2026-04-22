@@ -59,7 +59,7 @@
     ;   X, Y = consider clobbered (depends on driver implementation)
 
     .proc {{ api_def("write") }}
-        ; Handle CR/N, by normalizing \r, \n and \r\n to a newline call to the terminal.
+        ; Handle CR/LF, by normalizing \r, \n and \r\n to a newline call to the terminal.
         cmp #'\r'
         beq @cr
         cmp #'\n'
