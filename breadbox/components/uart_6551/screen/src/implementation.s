@@ -3,6 +3,7 @@
 .include "CORE/coding_macros.inc"
 .include "stdlib/math/fmtdec.inc"
 .include "stdlib/io/print.inc"
+.include "__keyboard/constants.inc"
 
 .macro SEND _character
     ; Send the provided character.
@@ -12,7 +13,7 @@
 
 .macro ESCAPE
     ; Send the preamble of an ANSI escape sequence.
-    SEND $1b  ; escape key
+    SEND KEY_ESC  ; escape key
     SEND '['
 .endmacro
 
@@ -107,7 +108,35 @@
     ; =====================================================================
     ; Write a character to the display at the current cursor position.
     ;
+    ; In:
+    ;   A = data byte to write
     ; Out:
     ;   A = clobbered
 
-    {{ api_def("write") }} = {{ provider_device.api("write") }}
+    .proc {{ api_def("write") }}
+        cmp #KEY_LEFT
+        bne @right
+        ESCAPE
+        SEND 'D'
+        rts
+    @right:
+        cmp #KEY_RIGHT
+        bne @up
+        ESCAPE
+        SEND 'C'
+        rts
+    @up:
+        cmp #KEY_UP
+        bne @down
+        ESCAPE
+        SEND 'A'
+        rts
+    @down:
+        cmp #KEY_DOWN
+        bne @regular
+        ESCAPE
+        SEND 'B'
+        rts
+    @regular:
+        jmp {{ provider_device.api("write") }}
+    .endproc
