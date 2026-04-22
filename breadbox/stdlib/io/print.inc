@@ -29,8 +29,9 @@
 
 .segment "ZEROPAGE"
 
-    {{ symbol("string") }}: .res 2     ; Pointer to null-terminated string
-    {{ symbol("writer") }}: .res 2     ; Pointer to output function
+    {{ symbol("string") }}:  .res 2     ; Pointer to null-terminated string
+    {{ symbol("writer") }}:  .res 2     ; Pointer to output function
+    {{ symbol("print_y") }}: .res 1     ; Store Y register during write call
 
 .segment "KERNALROM"
 
@@ -52,7 +53,9 @@
     @loop:
         lda (string),y
         beq @done
+        sty {{ symbol("print_y") }}
         jsr _call_writer
+        ldy {{ symbol("print_y") }}
         iny
         bne @loop
         inc string+1             ; Page crossing: bump high byte

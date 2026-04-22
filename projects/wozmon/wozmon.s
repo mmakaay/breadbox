@@ -21,14 +21,16 @@
 
 .segment "ZEROPAGE"
 
-    XAML: .res 1                ; Last "opened" location Low
-    XAMH: .res 1                ; Last "opened" location High
-    STL:  .res 1                ; Store address Low
-    STH:  .res 1                ; Store address High
-    L:    .res 1                ; Hex value parsing Low
-    H:    .res 1                ; Hex value parsing High
-    YSAV: .res 1                ; Used to see if hex value is given
-    MODE: .res 1                ; $00=XAM, $7F=STOR, $AE=BLOCK XAM
+    XAML:   .res 1              ; Last "opened" location Low
+    XAMH:   .res 1              ; Last "opened" location High
+    STL:    .res 1              ; Store address Low
+    STH:    .res 1              ; Store address High
+    L:      .res 1              ; Hex value parsing Low
+    H:      .res 1              ; Hex value parsing High
+    YSAV:   .res 1              ; Used to see if hex value is given
+    MODE:   .res 1              ; $00=XAM, $7F=STOR, $AE=BLOCK XAM
+    ECHO_X: .res 1              ; Saved X for ECHO
+    ECHO_Y: .res 1              ; Saved Y for ECHO
 
 .segment "RAM"
 
@@ -212,7 +214,11 @@
 
     ; Output the character in A to the terminal.
     ECHO:
-        PUSH_AXY
-        jsr TERMINAL::write
-        PULL_AXY
+        stx ECHO_X              ; Save X (does not touch A).
+        sty ECHO_Y              ; Save Y (does not touch A).
+        pha                     ; Save A (does not change A).
+        jsr TERMINAL::write     ; A is still the character.
+        pla                     ; Restore A.
+        ldx ECHO_X              ; Restore X.
+        ldy ECHO_Y              ; Restore Y.
         rts

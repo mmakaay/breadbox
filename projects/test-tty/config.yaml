@@ -32,6 +32,7 @@ LCD_SCREEN:
 SERIAL:
   component: uart_6551
   type: r6551
+  #type: w65c51n
   address: $5000
   irq: on
   rts:

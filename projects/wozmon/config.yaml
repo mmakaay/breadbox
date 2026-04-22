@@ -18,6 +18,10 @@ LCD:
     mode: 4bit
     port: B
 
+LCD_SCREEN:
+  component: screen
+  provider: LCD
+
 SERIAL:
   component: uart_6551
   type: um6551
@@ -27,7 +31,17 @@ SERIAL:
   rts:
     provider: VIA
     pin: PA0
+    
+SERIAL_SCREEN:
+  component: screen
+  provider: SERIAL
+
+SERIAL_KEYBOARD:
+  component: keyboard
+  provider: SERIAL
 
 TERMINAL:
-  component: terminal
-  provider: SERIAL
+  component: tty
+  keyboard: SERIAL_KEYBOARD
+  screen: SERIAL_SCREEN
+
