@@ -56,6 +56,9 @@ CTRL_D = $04
         bcc @loop
         sta rxbyte               ; Save received byte.
 
+        cmp #KEY_ESC
+        beq @toggle
+
         cmp #CTRL_D
         beq @toggle
 

@@ -133,11 +133,10 @@ class CodeGenerator:
                 output_path = Path(output_prefix) / src_file.name
                 self._write_generated_output(output_path, rendered)
 
-                # Automatically add *macros.inc to the breadbox.inc includes.
-                # Normally, "macros.inc" is used, but if there are many macros that need
-                # some separation, they can be split up in multiple files, ending in
-                # "macros.inc", which is good for developer sanity.
-                if src_file.name.endswith("macros.inc"):
+                # Automatically add shared include files to breadbox.inc:
+                #   *macros.inc  — assembly macros shared across implementations
+                #   constants.inc — interface-level constants (e.g. keyboard key codes)
+                if src_file.name.endswith("macros.inc") or src_file.name == "constants.inc":
                     self._component_includes.append(output_path)
 
     def _process_project_sources(self) -> None:

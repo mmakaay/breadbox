@@ -20,7 +20,7 @@
 ; With a local serial connection, sequence bytes arrive near-instantly
 ; in the IRQ ring buffer. A modest poll count provides enough margin
 ; without any noticeable delay on a standalone ESC keypress.
-_ESC_POLLS = 20
+_ESC_POLLS = 200
 
 .segment "KERNALROM"
 
