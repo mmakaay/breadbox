@@ -26,7 +26,7 @@ class BreadboxConfig:
         self._inject_default_memory()
         self._validate()
 
-    def get(self, component_id: ComponentIdentifier) -> Component:
+    def get_component(self, component_id: ComponentIdentifier) -> Component:
         try:
             return self.components[component_id]
         except KeyError:
@@ -34,7 +34,7 @@ class BreadboxConfig:
 
     @property
     def core(self) -> CoreDevice:
-        core = self.get(ComponentIdentifier("CORE"))
+        core = self.get_component(ComponentIdentifier("CORE"))
         assert isinstance(core, CoreDevice)
         return core
 

@@ -113,30 +113,27 @@
     ; Out:
     ;   A = clobbered
 
+    arrow_escapes:
+        .byte 'A'   ; KEY_UP    (128, index 0)
+        .byte 'B'   ; KEY_DOWN  (129, index 1)
+        .byte 'C'   ; KEY_RIGHT (130, index 2)
+        .byte 'D'   ; KEY_LEFT  (131, index 3)
+
     .proc {{ api_def("write") }}
-        cmp #KEY_LEFT
-        bne @right
+        tax                   ; sets N from bit 7 of A
+        bpl @regular          ; bit 7 clear → not a special key, fast path
+
+        cmp #KEY_LEFT+1       ; past the arrow key codes?
+        bcs @regular          ; handle as regular
+
+        and #$03              ; mask to 0..3 (since arrow key codes are $80..$83)
+        tax                   ; make value available in x for indexing the table
+        lda arrow_escapes,x   ; look up the escape letter for the arrow key
+        pha                   ; write the escape key code, before writing the arrow key code,
         ESCAPE
-        SEND 'D'
-        rts
-    @right:
-        cmp #KEY_RIGHT
-        bne @up
-        ESCAPE
-        SEND 'C'
-        rts
-    @up:
-        cmp #KEY_UP
-        bne @down
-        ESCAPE
-        SEND 'A'
-        rts
-    @down:
-        cmp #KEY_DOWN
-        bne @regular
-        ESCAPE
-        SEND 'B'
-        rts
+        pla
+        ; fallthrough for the final write
+
     @regular:
         jmp {{ provider_device.api("write") }}
     .endproc

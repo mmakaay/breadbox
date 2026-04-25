@@ -13,4 +13,8 @@ def resolve(
     provider_device: Uart6551Device,
     device_settings: dict[str, Any],
 ) -> Component:
-    return Uart6551Keyboard(id=component_id, provider_device=provider_device, **device_settings)
+    return Uart6551Keyboard(
+        id=component_id,
+        provider_device=provider_device,
+        **device_settings,
+    )

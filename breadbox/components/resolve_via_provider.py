@@ -22,7 +22,7 @@ def resolve_via_provider(
 
     # The provider implementation must provide a resolver module in
     # `<provider's package>.<interface name>.resolve`.
-    provider_device = breadbox.get(ComponentIdentifier(provider_id))
+    provider_device = breadbox.get_component(ComponentIdentifier(provider_id))
     provider_type = provider_device.component_type
     module_name = f"breadbox.components.{provider_type}.{interface_name}.resolve"
     try:

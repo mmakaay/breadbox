@@ -13,4 +13,8 @@ def resolve(
     provider_device: LcdHd44780Device,
     device_settings: dict[str, Any],
 ) -> Component:
-    return LcdHc44780Terminal(id=component_id, provider_device=provider_device, **device_settings)
+    return LcdHc44780Terminal(
+        id=component_id,
+        provider_device=provider_device,
+        **device_settings,
+    )

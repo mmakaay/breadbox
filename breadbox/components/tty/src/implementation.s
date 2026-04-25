@@ -1,17 +1,95 @@
 .feature string_escapes
 
 .include "CORE/coding_macros.inc"
+.include "__keyboard/constants.inc"
+
+.constructor {{ my("init") }}
 
 .segment "ZEROPAGE"
 
     {{ var("previous_was_cr") }}: .res 1
-    {{ var("options") }}: .res 1
+    {{ var("flags") }}: .res 1
     {{ var("read_byte") }}: .res 1
 
 .segment "KERNALROM"
 
-    BACKSPACE       = 8
-    DELETE          = 127
+    ; Option flags
+    BIT_CANONICAL_ON = %00000001   ; Enable canonical mode
+    BIT_ECHO_ON      = %00000010   ; Echo input characters
+
+    ; =====================================================================
+    ; Initialize the TTY.
+    ;
+    ; Enables canonical mode and echoing of input characters.
+    ;
+    ; Out:
+    ;   A, X, y = prserved
+
+    .proc {{ my("init") }}
+        jsr {{ api("enable_canonical") }}
+        jsr {{ api("enable_echo") }}
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Enable canonical mode.
+    ;
+    ; Out:
+    ;   A, X, y = prserved
+
+    .proc {{ api("enable_canonical") }}
+        pha
+        lda {{ var("flags") }}
+        and #BIT_CANONICAL_ON
+        sta {{ var("flags") }}
+        pla
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Disable canonical mode.
+    ;
+    ; Out:
+    ;   A, X, y = prserved
+
+    .proc {{ api("disable_canonical") }}
+        pha
+        lda {{ var("flags") }}
+        and #<~BIT_CANONICAL_ON
+        sta {{ var("flags") }}
+        pla
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Enable echoing of input characters.
+    ;
+    ; Out:
+    ;   A, X, y = prserved
+
+    .proc {{ api("enable_echo") }}
+        pha
+        lda {{ var("flags") }}
+        and #BIT_ECHO_ON
+        sta {{ var("flags") }}
+        pla
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Disable echoing of input characters.
+    ;
+    ; Out:
+    ;   A, X, y = prserved
+
+    .proc {{ api("disable_echo") }}
+        pha
+        lda {{ var("flags") }}
+        and #<~BIT_ECHO_ON
+        sta {{ var("flags") }}
+        pla
+        rts
+    .endproc
 
     ; =====================================================================
     ; Clear the screen.
@@ -66,9 +144,9 @@
         beq @lf
 
         ; Handle DEL (delete) / BS (backspace)
-        cmp #DELETE            ; DEL? (backspace on many terminals)
+        cmp #KEY_DEL           ; Delete? (backspace on many terminals)
         beq @backspace
-        cmp #BACKSPACE         ; BS?
+        cmp #KEY_BS            ; Backspace?
         beq @backspace
 
         ; Echo the input to the TTY output.

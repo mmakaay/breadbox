@@ -56,5 +56,5 @@ KEY_DEL         = 127      ; Delete
 ; Custom control codes, outside the ASCII range (>= 128).
 KEY_UP          = 128
 KEY_DOWN        = 129
-KEY_LEFT        = 130
-KEY_RIGHT       = 131
+KEY_RIGHT       = 130
+KEY_LEFT        = 131

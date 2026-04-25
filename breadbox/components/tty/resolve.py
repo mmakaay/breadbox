@@ -11,6 +11,12 @@ def resolve(
     component_id: ComponentIdentifier,
     device_settings: dict[str, Any],
 ) -> Component:
-    input_device = breadbox.get(device_settings["keyboard"])
-    output_device = breadbox.get(device_settings["screen"])
-    return TtyDevice(id=component_id, keyboard_device=input_device, screen_device=output_device, **device_settings)
+    input_device = breadbox.get_component(device_settings["keyboard"])
+    output_device = breadbox.get_component(device_settings["screen"])
+
+    return TtyDevice(
+        id=component_id,
+        keyboard_device=input_device,
+        screen_device=output_device,
+        **device_settings,
+    )
