@@ -6,6 +6,21 @@
       <excludeFolder url="file://$MODULE_DIR$/.venv" />
       <excludeFolder url="file://$MODULE_DIR$/cc65" />
       <excludeFolder url="file://$MODULE_DIR$/projects/test-UART/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/ben_eater/binary_to_decimal/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/ben_eater/hardware_timers/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/ben_eater/interrupt_handling/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/ben_eater/part2_makerom/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/ben_eater/part3_blink/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/ben_eater/part4_hello_world/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/ben_eater/part7_hello_world_final/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/blink/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/hello-world-blinking/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/hello-world/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/test-CPU/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/test-terminal/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/test-ticker/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/test-tty/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/wozmon/build" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (breadbox)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
