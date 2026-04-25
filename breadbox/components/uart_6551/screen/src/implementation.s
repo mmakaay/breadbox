@@ -113,12 +113,6 @@
     ; Out:
     ;   A = clobbered
 
-    arrow_escapes:
-        .byte 'A'   ; KEY_UP    (128, index 0)
-        .byte 'B'   ; KEY_DOWN  (129, index 1)
-        .byte 'C'   ; KEY_RIGHT (130, index 2)
-        .byte 'D'   ; KEY_LEFT  (131, index 3)
-
     .proc {{ api_def("write") }}
         tax                   ; sets N from bit 7 of A
         bpl @regular          ; bit 7 clear → not a special key, fast path
@@ -137,3 +131,9 @@
     @regular:
         jmp {{ provider_device.api("write") }}
     .endproc
+
+    @arrow_escapes:
+        .byte 'A'   ; KEY_UP    (128, index 0)
+        .byte 'B'   ; KEY_DOWN  (129, index 1)
+        .byte 'C'   ; KEY_RIGHT (130, index 2)
+        .byte 'D'   ; KEY_LEFT  (131, index 3)

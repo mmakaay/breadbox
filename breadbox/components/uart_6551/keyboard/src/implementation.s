@@ -81,34 +81,20 @@ _ESC_POLLS = 200
         bcc @return_esc
 
     @map_final:
-        cmp #'A'
-        beq @up
-        cmp #'B'
-        beq @down
-        cmp #'C'
-        beq @right
-        cmp #'D'
-        beq @left
+        sec
+        sbc #'A'                ; 'A'→0, 'B'→1, 'C'→2, 'D'→3
+        cmp #4
+        bcs @return_esc         ; out of range → unknown sequence
+        tax
+        lda @key_codes,x
+        sec
+        rts
 
-        ; Unknown final byte → discard, return ESC.
-        bne @return_esc
-
-    @up:
-        lda #KEY_UP
-        sec
-        rts
-    @down:
-        lda #KEY_DOWN
-        sec
-        rts
-    @right:
-        lda #KEY_RIGHT
-        sec
-        rts
-    @left:
-        lda #KEY_LEFT
-        sec
-        rts
+    @key_codes:
+        .byte KEY_UP            ; 'A' → 0
+        .byte KEY_DOWN          ; 'B' → 1
+        .byte KEY_RIGHT         ; 'C' → 2
+        .byte KEY_LEFT          ; 'D' → 3
     .endproc
 
     ; =====================================================================
