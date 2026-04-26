@@ -43,6 +43,17 @@
     ; A pointer too the start of the currently selected row in the frame buffer.
     {{ var("row_ptr") }}:         .res 2
 
+    ; -------------------------------------------------------------------
+    ; Public terminal-geometry state, exposed for screen-agnostic
+    ; consumers (e.g. the TTY layer).
+    ;
+    ; The LCD has fixed dimensions, so these are initialized once at
+    ; boot from the component's `width` / `height` config and never
+    ; change. They exist so the same TTY code can target either an LCD
+    ; or a serial terminal without compile-time branches.
+    {{ zp_def("term_width") }}:  .res 1
+    {{ zp_def("term_height") }}: .res 1
+
 ;    ; A register for tracking "\r" state.
 ;    {{ var("previous_was_cr") }}: .res 1
 
@@ -60,6 +71,12 @@
 
 ;        lda #0
 ;        sta {{ var("previous_was_cr") }}
+
+        ; Publish geometry to the public ZP state.
+        lda #{{ width }}
+        sta {{ zp("term_width") }}
+        lda #{{ height }}
+        sta {{ zp("term_height") }}
 
         ; Initialize the logical -> frame buffer row mapping:
         ;   row 0 -> framebuffer row 0
@@ -128,6 +145,43 @@
     .proc {{ api_def("get_cursor") }}
         ldx {{ var("cursor_row") }}
         ldy {{ var("cursor_column") }}
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Query the terminal for its current cursor row.
+    ;
+    ; The LCD has no DSR mechanism but tracks the cursor row internally,
+    ; so this is just a synchronous read of the tracked value plus the
+    ; 1-indexing convention shared with the serial screen (so the TTY
+    ; layer can use the result interchangeably).
+    ;
+    ; Out:
+    ;   A = 1-indexed cursor row
+    ;   C = 1 (always succeeds)
+    ;   X, Y = clobbered
+
+    .proc {{ api_def("query_cursor_pos") }}
+        lda {{ var("cursor_row") }}
+        clc
+        adc #1                  ; 1-index
+        sec
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Refresh the public terminal-geometry state.
+    ;
+    ; The LCD's dimensions are fixed at compile time, so this is a
+    ; no-op that always succeeds. Exists so screen-agnostic callers
+    ; (the TTY layer) can issue the same query against either backend.
+    ;
+    ; Out:
+    ;   C = 1
+    ;   A, X, Y = clobbered
+
+    .proc {{ api_def("query_size") }}
+        sec
         rts
     .endproc
 

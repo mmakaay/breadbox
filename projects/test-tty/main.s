@@ -19,7 +19,12 @@
 
 .export main
 
-LINE_MAX = 64
+; Caller-side buffer cap. The TTY internally caps at 240 bytes; this
+; sets the demo's ceiling to 200 chars per line. The TTY beeps and
+; refuses to accept further input when the user hits this cap (rather
+; than silently truncating on Enter, which is the legacy POSIX behavior
+; we deliberately don't replicate here).
+LINE_MAX = 200
 
 .segment "ZEROPAGE"
 
@@ -31,7 +36,7 @@ LINE_MAX = 64
 
     msg_banner:    .asciiz "\nTTY readline demo. Type a line and press Enter.\n\n"
     msg_prompt:    .asciiz "> "
-    msg_you_typed: .asciiz "you typed: \""
+    msg_you_typed: .asciiz "\nyou typed: \""
     msg_quote_nl:  .byte '"', '\n', 0
     msg_lcd_label: .asciiz "Lines: "
 
@@ -101,7 +106,7 @@ LINE_MAX = 64
 
     ; ------------------------------------------------------------------
     ; Update the LCD line count (row 0, after the "Lines: " label).
-    ; ------------------------------------------------------------------
+
     .proc update_lcd_count
         ldx #0
         ldy #7                  ; column right after "Lines: " label
@@ -112,9 +117,5 @@ LINE_MAX = 64
         jsr fmtdec
         PRINT_PTR LCD::write, fmtdec::decimal
 
-        ; Pad with a space to wipe a leftover digit when the count
-        ; shrinks (defensive; doesn't happen here).
-        lda #' '
-        jsr LCD::write
         rts
     .endproc
