@@ -5,6 +5,8 @@
 .include "stdlib/io/print.inc"
 .include "__keyboard/constants.inc"
 
+.constructor {{ my("init") }}
+
 .macro SEND _character
     ; Send the provided character.
     lda #_character
@@ -18,6 +20,27 @@
 .endmacro
 
 .segment "KERNALROM"
+
+    ; =====================================================================
+    ; Initialize terminal modes we depend on.
+    ;
+    ; Most terminals (xterm, gnome-terminal, kitty, the macOS Terminal,
+    ; iTerm, etc.) power on with DECAWM (auto-wrap) enabled, but minicom
+    ; in particular starts with auto-wrap off. The TTY layer assumes
+    ; auto-wrap is on (it relies on the terminal to wrap printable bytes
+    ; past the right margin), so we explicitly enable it here. Any
+    ; terminal that doesn't support the sequence will silently ignore it.
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ my("init") }}
+        ESCAPE
+        SEND '?'
+        SEND '7'
+        SEND 'h'   ; DECAWM on
+        rts
+    .endproc
 
     ; =====================================================================
     ; Clear the screen.
@@ -92,6 +115,10 @@
 
     ; =====================================================================
     ; Delete character before cursor position.
+    ;
+    ; In-row only; does not cross visual wrap boundaries. Canonical-mode
+    ; line editing (which needs to cross wraps) is handled in the TTY
+    ; layer via a redraw-from-anchor strategy that bypasses this proc.
     ;
     ; Out:
     ;   A = clobbered

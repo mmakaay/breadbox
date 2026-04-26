@@ -8,8 +8,10 @@
 
 ; Maximum length of the canonical-mode editing buffer.
 ; Any printable input beyond this beeps and is ignored until the user
-; backspaces or presses Enter.
-LINE_BUF_MAX = 80
+; backspaces or presses Enter. Sized for a few rows of an 80-col
+; terminal, which is plenty for typical command lines and lets the
+; editor cross visual wraps comfortably.
+LINE_BUF_MAX = 240
 
 .segment "ZEROPAGE"
 
@@ -34,14 +36,15 @@ LINE_BUF_MAX = 80
     {{ var("read_byte") }}: .res 1
     {{ var("line_len") }}: .res 1            ; Bytes currently in line_buf
     {{ var("cursor_pos") }}: .res 1          ; Edit cursor position (0..line_len)
+    {{ var("drawn_len") }}: .res 1           ; Bytes laid down by the last redraw
     {{ var("readline_active") }}: .res 1     ; 1 while a readline is in progress
     {{ var("scratch_x") }}: .res 1           ; Temp X save during inner calls
     {{ var("scratch_len") }}: .res 1         ; Temp length save during copy
 
 .segment "KERNALRAM"
 
-    ; The internal editing buffer. Lives in RAM (not ZP) since 80 bytes
-    ; is too large to spend on zero page.
+    ; The internal editing buffer. Lives in RAM (not ZP) since 240 bytes
+    ; is too large for zero page.
     {{ var("line_buf") }}: .res LINE_BUF_MAX
 
 .segment "KERNALROM"
@@ -54,9 +57,6 @@ LINE_BUF_MAX = 80
     ; Initialize the TTY.
     ;
     ; Enables canonical mode and echoing of input characters.
-    ;
-    ; Out:
-    ;   A, X, Y = preserved
 
     .proc {{ my("init") }}
         ; Explicitly zero state. The 6502 doesn't clear SRAM at power-on,
@@ -68,6 +68,7 @@ LINE_BUF_MAX = 80
         sta {{ var("previous_was_cr") }}
         sta {{ var("line_len") }}
         sta {{ var("cursor_pos") }}
+        sta {{ var("drawn_len") }}
         sta {{ var("readline_active") }}
 
         jsr {{ api("enable_canonical") }}
@@ -77,9 +78,6 @@ LINE_BUF_MAX = 80
 
     ; =====================================================================
     ; Enable canonical mode.
-    ;
-    ; Out:
-    ;   A, X, Y = preserved
 
     .proc {{ api_def("enable_canonical") }}
         pha
@@ -92,9 +90,6 @@ LINE_BUF_MAX = 80
 
     ; =====================================================================
     ; Disable canonical mode.
-    ;
-    ; Out:
-    ;   A, X, Y = preserved
 
     .proc {{ api_def("disable_canonical") }}
         pha
@@ -107,9 +102,6 @@ LINE_BUF_MAX = 80
 
     ; =====================================================================
     ; Enable echoing of input characters.
-    ;
-    ; Out:
-    ;   A, X, Y = preserved
 
     .proc {{ api_def("enable_echo") }}
         pha
@@ -122,9 +114,6 @@ LINE_BUF_MAX = 80
 
     ; =====================================================================
     ; Disable echoing of input characters.
-    ;
-    ; Out:
-    ;   A, X, Y = preserved
 
     .proc {{ api_def("disable_echo") }}
         pha
@@ -137,9 +126,6 @@ LINE_BUF_MAX = 80
 
     ; =====================================================================
     ; Clear the screen.
-    ;
-    ; Out:
-    ;   A, X, Y = consider clobbered (depends on driver implementation)
 
     {{ api_def("clr") }} = {{ screen_device.api("clr") }}
 
@@ -183,34 +169,45 @@ LINE_BUF_MAX = 80
     ; =====================================================================
     ; Read a line of input with editing (non-blocking, canonical mode).
     ;
-    ; Non-blocking line read with prompt. The caller sets up the public
-    ; ZP variables once, then calls TTY::readline repeatedly. Each call
-    ; drains whatever is currently available from the keyboard, processes
-    ; bytes through the canonical-mode line discipline (printable +
-    ; backspace + ^R/^L/^U), and returns:
+    ; Editing model:
+    ;   On the first readline call we emit ESC[s (save cursor) just
+    ;   before the prompt. That position becomes the *anchor*. After any
+    ;   visible state change (insert, delete, cursor move), we redraw
+    ;   the entire line by:
     ;
-    ;   - C=0 if the line is not yet complete (caller does other work and
-    ;          calls again later)
-    ;   - C=1 with A=length if Enter was pressed (line copied into the
-    ;          caller's buffer)
+    ;       ESC[u                    ; restore to anchor
+    ;       ESC[J                    ; erase from cursor to end of screen
+    ;       emit prompt + line_buf   ; renders the full line; terminal
+    ;                                ; auto-wraps as needed (DECAWM is on
+    ;                                ; by default, and we leave it alone)
+    ;       ESC[u                    ; restore to anchor again
+    ;       emit prompt + line_buf[0..cursor_pos)  ; positions visible cursor
     ;
-    ; The line buffer state persists across calls. The first call (when
-    ; readline_active=0) emits the prompt and then begins draining input.
-    ; Subsequent calls just drain.
+    ;   This sidesteps wrap math entirely: the terminal's natural
+    ;   autowrap places each character correctly, and our notion of
+    ;   "where the cursor is" is reduced to "how many characters past
+    ;   the anchor". No echo_col tracking, no ESC[A row counting, no
+    ;   ESC[<col>G — just emit and restore.
     ;
-    ; Type-ahead is handled "for free": bytes that arrive at the keyboard
-    ; ring buffer before readline is called accumulate there and are
-    ; processed (with echo) on the first readline call after the prompt
-    ; is emitted.
+    ; Non-blocking contract:
+    ;   - Caller sets prompt/line_buffer/line_max once.
+    ;   - Each call drains whatever's in the keyboard ring, processes
+    ;     bytes through the canonical state machine, and either:
+    ;        C=0 — line not complete yet, call again later
+    ;        C=1 — line complete, A=length, line copied to caller's buffer
+    ;
+    ; Type-ahead just works: bytes that arrive at the keyboard before
+    ; readline runs sit in the UART RX ring; the first call after the
+    ; prompt is emitted drains them through the state machine.
     ;
     ; In:
     ;   {{ zp("prompt") }}      = pointer to null-terminated prompt
     ;   {{ zp("line_buffer") }} = pointer to caller's output buffer
     ;   {{ zp("line_max") }}    = max bytes the caller's buffer can hold
-    ;   (Canonical mode must be on. If off, we error out with C=1, A=0.)
+    ;   (Canonical mode must be on. If off, returns C=1, A=0.)
     ; Out:
-    ;   C = 1 with A=length when a complete line has been delivered
-    ;   C = 0 when no complete line is available yet (call again later)
+    ;   C=1 with A=length when a complete line has been delivered
+    ;   C=0 when no complete line is available yet (call again later)
     ;   X, Y = clobbered
 
     .proc {{ api_def("readline") }}
@@ -219,33 +216,48 @@ LINE_BUF_MAX = 80
         bit {{ var("flags") }}
         beq @canonical_off
 
-        ; If readline is not yet active, emit the prompt and replay any
-        ; type-ahead bytes already in the line buffer. Then mark active.
+        ; If readline is not yet active, set the anchor (ESC[s) and do an
+        ; initial redraw so the prompt + any type-ahead bytes appear.
         lda {{ var("readline_active") }}
         bne @drain
 
         lda #1
         sta {{ var("readline_active") }}
 
-        ; Emit the prompt via TTY::write (which translates CR/LF + BS/DEL).
-        PRINT_PTR {{ api("write") }}, {{ zp("prompt") }}
-
-        ; Replay any pre-existing line_buf contents as type-ahead.
-        ; (Usually empty; only relevant if a prior caller stuffed bytes.)
-        ; Set the edit cursor to end-of-line, since after replay the
-        ; visible cursor sits there.
+        ; The "edit cursor" sits at the end of any pre-existing buffer
+        ; content (treated as type-ahead). Usually 0 → empty line.
         lda {{ var("line_len") }}
         sta {{ var("cursor_pos") }}
+
+        ; Set the anchor and emit the initial prompt + any type-ahead.
+        ; We don't call redraw() here because there's nothing to clear
+        ; yet — just lay everything down once. Only when echo is on; if
+        ; echo is off the user wants invisible input.
+        lda #BIT_ECHO_ON
+        bit {{ var("flags") }}
+        beq @drain
+        jsr {{ my("emit_save_cursor") }}
+        PRINT_PTR {{ api("write") }}, {{ zp("prompt") }}
+
+        ; Anchor is set; nothing of the buffer drawn yet (we're about to
+        ; replay any type-ahead).
+        lda #0
+        sta {{ var("drawn_len") }}
+
+        ; Replay any pre-existing line_buf as type-ahead.
+        lda {{ var("line_len") }}
         beq @drain
         ldx #0
-    @replay_typeahead:
+    @replay:
         lda {{ var("line_buf") }},x
         stx {{ var("scratch_x") }}
         jsr {{ api("write") }}
         ldx {{ var("scratch_x") }}
         inx
         cpx {{ var("line_len") }}
-        bne @replay_typeahead
+        bne @replay
+        ; All replayed bytes are now on screen.
+        stx {{ var("drawn_len") }}
 
     @drain:
         ; Pull the next byte from the keyboard, if any.
@@ -282,27 +294,24 @@ LINE_BUF_MAX = 80
     ;   X, Y = clobbered
     ;
     ; Behavior:
-    ;   - CR ($0D) or LF ($0A): emit '\n' to advance cursor; return C=1.
-    ;   - BS ($08) or DEL ($7F): erase the character before the edit
-    ;     cursor (works mid-line; tail is shifted left and redrawn).
-    ;   - KEY_LEFT  ($83): move edit cursor one left (no edit).
-    ;   - KEY_RIGHT ($82): move edit cursor one right (no edit).
-    ;   - ^U ($15): empty buffer + reprint (\r\n + prompt).
-    ;   - ^R ($12): reprint (\r\n + prompt + buffer contents).
-    ;   - ^L ($0C): clear screen + redraw prompt + buffer.
-    ;   - Printable ($20..$7E): insert at cursor + echo, shifting any
-    ;     tail right and redrawing it. Beeps when buffer is full.
-    ;   - Anything else (incl. KEY_UP/DOWN, other ^X codes): ignored.
+    ;   - CR / LF       → emit '\n', signal complete (C=1)
+    ;   - BS / DEL      → erase char before edit cursor (mid-line OK)
+    ;   - KEY_LEFT      → move edit cursor one left
+    ;   - KEY_RIGHT     → move edit cursor one right
+    ;   - ^U (NAK)      → kill line: empty buffer, redraw
+    ;   - ^R (DC2)      → reprint: redraw on a fresh line
+    ;   - ^L (FF)       → clear screen, redraw
+    ;   - $20..$7E      → insert at cursor, redraw
+    ;   - everything else (incl. KEY_UP/DOWN, $80+, other ^X) → ignored
     ;
-    ; Echo is gated on the BIT_ECHO_ON flag: when off, all visible
-    ; feedback is suppressed except Enter, which still emits a newline
-    ; so the cursor advances.
+    ; Echo gating: when BIT_ECHO_ON is off we never call redraw and
+    ; never emit visible feedback, but we still mutate buffer state.
+    ; Enter is special: it always emits a newline so the cursor advances
+    ; even with echo off.
 
     .proc {{ my_def("process_byte") }}
-        ; Dispatch table. The proc body is too long for relative branches
-        ; to reach every handler, so we use bne-skip + jmp pairs for the
-        ; far jumps. The closest handler (printable, fall-through) needs
-        ; no jmp.
+        ; Dispatch table. The proc is too long for a single relative
+        ; branch to reach every handler; use bne-skip + jmp pairs.
         cmp #'\r'
         bne :+
         jmp @enter
@@ -331,13 +340,13 @@ LINE_BUF_MAX = 80
         bne :+
         jmp @clear_redraw
 
-        ; Printable? ($20..$7E). $7F (DEL) and $08 (BS) already handled.
+        ; Printable? ($20..$7E). DEL and BS already handled above.
     :   cmp #' '
-        bcs :+                  ; >= $20: maybe printable, check upper.
-        jmp @ignore             ; < $20: control char (already routed).
+        bcs :+                  ; >= $20
+        jmp @ignore             ; < $20: control char, dropped.
     :   cmp #$7F
-        bcc @printable          ; $20..$7E → printable, fall through.
-        jmp @ignore             ; $7F was DEL (handled); $80+ are special keys.
+        bcc @printable
+        jmp @ignore             ; $80+ are special keys; ignore.
 
     @printable:
         sta {{ var("read_byte") }}
@@ -345,13 +354,41 @@ LINE_BUF_MAX = 80
         cpx #LINE_BUF_MAX
         bcs @full
 
-        ; Insert at cursor_pos: shift line_buf[cursor_pos..line_len) right
-        ; by one, then drop the new char into the gap.
-        ;
-        ;   Before: [ a b c | d e ]   cursor_pos=3, line_len=5
-        ;   After:  [ a b c X d e ]   cursor_pos=4, line_len=6
-        ;
-        ; Shift right-to-left to avoid overwriting source data.
+        ; Fast path: append at end of line. cursor_pos == line_len means
+        ; there's no tail to shift, and the visible result of inserting
+        ; here is just "advance the cursor by one character on screen".
+        ; That's exactly what `write`-ing the byte does: the terminal's
+        ; natural autowrap (DECAWM, on by default) places it correctly
+        ; even at the right margin. No redraw needed → no cursor flicker
+        ; while typing, no \r\n scaffolding, just one byte per keystroke.
+        cpx {{ var("cursor_pos") }}
+        bne @insert_middle
+
+        sta {{ var("line_buf") }},x
+        inc {{ var("line_len") }}
+        inc {{ var("cursor_pos") }}
+
+        ; Echo if echo on.
+        lda #BIT_ECHO_ON
+        bit {{ var("flags") }}
+        beq @ignore
+        lda {{ var("read_byte") }}
+        jsr {{ api("write") }}
+        ; Track that one more cell has been drawn (only when echo is on,
+        ; since we only actually wrote to the screen in that case).
+        ldx {{ var("drawn_len") }}
+        cpx {{ var("line_len") }}
+        bcs @typed_done             ; drawn_len already covers the new char.
+        inc {{ var("drawn_len") }}
+    @typed_done:
+        clc
+        rts
+
+    @insert_middle:
+        ; Mid-line insert: shift line_buf[cursor_pos..line_len) right by
+        ; one, drop the new char into the gap, then full redraw. Redraw
+        ; is the only sane way to reflect the inserted-and-shifted tail
+        ; correctly across row wraps.
         ldx {{ var("line_len") }}
     @shift_right_loop:
         cpx {{ var("cursor_pos") }}
@@ -367,27 +404,17 @@ LINE_BUF_MAX = 80
         inc {{ var("line_len") }}
         inc {{ var("cursor_pos") }}
 
-        ; Echo: write the new char (advances visible cursor by 1), then
-        ; redraw the tail and back the visible cursor up to where it
-        ; logically belongs.
-        lda #BIT_ECHO_ON
-        bit {{ var("flags") }}
-        beq @ignore
-        lda {{ var("read_byte") }}
-        jsr {{ api("write") }}
-        jsr {{ my("redraw_tail") }}
-    @ignore:
-        clc
-        rts
+        jmp @redraw_if_echo
 
     @full:
-        ; Buffer full: beep and ignore. The bell is suppressed when echo
-        ; is off, since "echo" is what the user perceives as feedback.
+        ; Buffer full: beep and ignore. The bell only sounds when echo
+        ; is on (consistent with "echo = visible feedback").
         lda #BIT_ECHO_ON
         bit {{ var("flags") }}
         beq @ignore
         lda #KEY_BEL
         jsr {{ api("write") }}
+    @ignore:
         clc
         rts
 
@@ -396,10 +423,7 @@ LINE_BUF_MAX = 80
         beq @ignore             ; At line start: nothing to erase.
 
         ; Shift line_buf[cursor_pos..line_len) left by one, drop the
-        ; character before the cursor.
-        ;
-        ;   Before: [ a b c | d e ]   cursor_pos=3, line_len=5
-        ;   After:  [ a b | d e ]     cursor_pos=2, line_len=4
+        ; char before the cursor.
         ldx {{ var("cursor_pos") }}
     @shift_left_loop:
         cpx {{ var("line_len") }}
@@ -411,191 +435,239 @@ LINE_BUF_MAX = 80
     @shift_left_done:
         dec {{ var("cursor_pos") }}
         dec {{ var("line_len") }}
-
-        lda #BIT_ECHO_ON
-        bit {{ var("flags") }}
-        beq @ignore
-        ; SCREEN::backspace = left + space + left, leaving the cursor on
-        ; the now-empty slot. Then redraw the tail (shorter by 1) and
-        ; wipe the trailing character that's now stale on screen.
-        lda #KEY_BS
-        jsr {{ api("write") }}
-        jsr {{ my("redraw_tail_shrunk") }}
-        clc
-        rts
+        jmp @redraw_if_echo
 
     @cursor_left:
         lda {{ var("cursor_pos") }}
-        beq @ignore             ; At line start: ignore.
+        beq @ignore             ; At line start.
         dec {{ var("cursor_pos") }}
-        lda #BIT_ECHO_ON
-        bit {{ var("flags") }}
-        beq @ignore
-        ; Move visible cursor one column left, no erase.
-        ; SCREEN::write maps KEY_LEFT/KEY_RIGHT to bare ESC[D / ESC[C
-        ; (cursor-move escapes), which is exactly what we want here.
-        lda #KEY_LEFT
-        jsr {{ screen_device.api("write") }}
-        clc
-        rts
+        jmp @redraw_if_echo
 
     @cursor_right:
         lda {{ var("cursor_pos") }}
         cmp {{ var("line_len") }}
-        bcs @ignore             ; At end of line: ignore.
+        bcs @ignore             ; At end of line.
         inc {{ var("cursor_pos") }}
-        lda #BIT_ECHO_ON
-        bit {{ var("flags") }}
-        beq @ignore
-        lda #KEY_RIGHT
-        jsr {{ screen_device.api("write") }}
-        clc
-        rts
+        jmp @redraw_if_echo
 
     @enter:
-        ; Always advance cursor on Enter, regardless of echo flag, so the
-        ; user sees something happen and the next prompt sits on a fresh
-        ; line.
+        ; Always advance cursor on Enter, regardless of echo flag.
+        ; First, position the visible cursor at the END of the line
+        ; (so the newline lands on a row that doesn't overlap an
+        ; in-progress edit cursor mid-line). With echo off there's
+        ; nothing rendered, so just emit \n.
+        lda #BIT_ECHO_ON
+        bit {{ var("flags") }}
+        beq @enter_emit_nl
+
+        ; Move visible cursor to end-of-line by re-rendering with
+        ; cursor_pos = line_len.
+        lda {{ var("line_len") }}
+        sta {{ var("cursor_pos") }}
+        jsr {{ my("redraw") }}
+
+    @enter_emit_nl:
         lda #'\n'
         jsr {{ api("write") }}
         sec
         rts
 
     @kill:
-        ; ^U: empty buffer first, then fall through to reprint logic
-        ; (which now redraws an empty line under the prompt).
+        ; ^U: empty buffer, redraw.
         lda #0
         sta {{ var("line_len") }}
         sta {{ var("cursor_pos") }}
-        ; Fall through.
+        jmp @redraw_if_echo
 
     @reprint:
-        ; ^R: emit \r\n, prompt, then current buffer contents.
+        ; ^R: emit \n to drop to a fresh line, set new anchor, redraw.
         lda #'\n'
         jsr {{ api("write") }}
-        PRINT_PTR {{ api("write") }}, {{ zp("prompt") }}
-        jmp {{ my("replay_buffer") }}
+        lda #0
+        sta {{ var("drawn_len") }}     ; Fresh row below; nothing yet at the new anchor.
+        lda #BIT_ECHO_ON
+        bit {{ var("flags") }}
+        beq @ignore
+        jsr {{ my("emit_save_cursor") }}
+        jmp {{ my("redraw") }}    ; tail-call; ends with rts, C=0 from redraw.
 
     @clear_redraw:
-        ; ^L: clear screen, emit prompt, then current buffer contents.
+        ; ^L: clear screen, set anchor at top-left, redraw.
         jsr {{ api("clr") }}
-        PRINT_PTR {{ api("write") }}, {{ zp("prompt") }}
-        jmp {{ my("replay_buffer") }}
-    .endproc
+        lda #0
+        sta {{ var("drawn_len") }}     ; Screen is blank; nothing previously laid down.
+        lda #BIT_ECHO_ON
+        bit {{ var("flags") }}
+        beq @ignore
+        jsr {{ my("emit_save_cursor") }}
+        jmp {{ my("redraw") }}
 
-    ; =====================================================================
-    ; Internal: redraw line_buf[cursor_pos..line_len) and back up the
-    ; visible cursor by the same amount, leaving it at cursor_pos.
-    ;
-    ; Used after a printable insertion in the middle of the line.
-    ;
-    ; Out:
-    ;   A, X, Y = clobbered
-
-    .proc {{ my_def("redraw_tail") }}
-        ; Emit the tail.
-        ldx {{ var("cursor_pos") }}
-    @emit_loop:
-        cpx {{ var("line_len") }}
-        beq @emit_done
-        lda {{ var("line_buf") }},x
-        stx {{ var("scratch_x") }}
-        jsr {{ api("write") }}
-        ldx {{ var("scratch_x") }}
-        inx
-        jmp @emit_loop
-    @emit_done:
-        ; Back the visible cursor up: line_len - cursor_pos cursor-lefts.
-        sec
-        lda {{ var("line_len") }}
-        sbc {{ var("cursor_pos") }}
-        beq @done
-        tax
-    @back_loop:
-        stx {{ var("scratch_x") }}
-        lda #KEY_LEFT
-        jsr {{ screen_device.api("write") }}
-        ldx {{ var("scratch_x") }}
-        dex
-        bne @back_loop
-    @done:
+    @redraw_if_echo:
+        lda #BIT_ECHO_ON
+        bit {{ var("flags") }}
+        beq @ignore
+        jsr {{ my("redraw") }}
+        clc
         rts
     .endproc
 
     ; =====================================================================
-    ; Internal: redraw line_buf[cursor_pos..line_len) after a deletion,
-    ; wiping the now-stale trailing character that the deletion left
-    ; behind on screen, then back up the visible cursor.
+    ; Internal: emit ESC[s (save cursor — DECSC variant supported by
+    ; xterm and friends).
+
+    .proc {{ my_def("emit_save_cursor") }}
+        lda #KEY_ESC
+        jsr {{ screen_device.api("write") }}
+        lda #'['
+        jsr {{ screen_device.api("write") }}
+        lda #'s'
+        jmp {{ screen_device.api("write") }}
+    .endproc
+
+    ; =====================================================================
+    ; Internal: emit ESC[u (restore cursor).
+
+    .proc {{ my_def("emit_restore_cursor") }}
+        lda #KEY_ESC
+        jsr {{ screen_device.api("write") }}
+        lda #'['
+        jsr {{ screen_device.api("write") }}
+        lda #'u'
+        jmp {{ screen_device.api("write") }}
+    .endproc
+
+    ; =====================================================================
+    ; Internal: emit ESC[?25l (hide cursor).
     ;
-    ; Used after backspace-in-the-middle: SCREEN::backspace erased the
-    ; char at the new cursor position, but the tail on screen is one
-    ; column too far right. So we re-emit the tail (which lays it back
-    ; down at the correct position), emit a space (to wipe what was the
-    ; last char before the shrink), and back the visible cursor up by
-    ; (tail_len + 1) columns.
+    ; Used to bracket the redraw routine so the user doesn't see the
+    ; cursor briefly jump to the anchor and back during a full repaint.
+    ; The result is that the line content updates "atomically" from the
+    ; user's perspective, with only the cursor's final position visible.
+
+    .proc {{ my_def("emit_hide_cursor") }}
+        lda #KEY_ESC
+        jsr {{ screen_device.api("write") }}
+        lda #'['
+        jsr {{ screen_device.api("write") }}
+        lda #'?'
+        jsr {{ screen_device.api("write") }}
+        lda #'2'
+        jsr {{ screen_device.api("write") }}
+        lda #'5'
+        jsr {{ screen_device.api("write") }}
+        lda #'l'
+        jmp {{ screen_device.api("write") }}
+    .endproc
+
+    ; =====================================================================
+    ; Internal: emit ESC[?25h (show cursor).
+
+    .proc {{ my_def("emit_show_cursor") }}
+        lda #KEY_ESC
+        jsr {{ screen_device.api("write") }}
+        lda #'['
+        jsr {{ screen_device.api("write") }}
+        lda #'?'
+        jsr {{ screen_device.api("write") }}
+        lda #'2'
+        jsr {{ screen_device.api("write") }}
+        lda #'5'
+        jsr {{ screen_device.api("write") }}
+        lda #'h'
+        jmp {{ screen_device.api("write") }}
+    .endproc
+
+    ; =====================================================================
+    ; Internal: redraw the prompt + line buffer from the saved anchor.
+    ;
+    ; Algorithm:
+    ;   1. ESC[u  → restore cursor to anchor (set just before initial prompt).
+    ;   2. ESC[J  → erase from cursor to end of screen (wipes any prior render).
+    ;   3. emit prompt
+    ;   4. emit line_buf[0..line_len)        — full line laid down.
+    ;   5. ESC[u  → restore cursor to anchor again.
+    ;   6. emit prompt
+    ;   7. emit line_buf[0..cursor_pos)      — visible cursor lands at edit point.
+    ;
+    ; Steps 5–7 are the trick that handles wrapping cleanly: by emitting
+    ; the prefix again from the anchor, the terminal's natural autowrap
+    ; places the cursor exactly where the edit cursor logically is, with
+    ; no row-count math on our end.
+    ;
+    ; The two prompt emissions are redundant on the wire but very cheap
+    ; for typical prompts ("> ", "$ ") and worth the simplicity.
     ;
     ; Out:
+    ;   C = 0 (redraw never completes a line)
     ;   A, X, Y = clobbered
 
-    .proc {{ my_def("redraw_tail_shrunk") }}
-        ; Emit the tail.
-        ldx {{ var("cursor_pos") }}
-    @emit_loop:
+    .proc {{ my_def("redraw") }}
+        ; Hide the cursor for the duration of the repaint so the user
+        ; doesn't see it dart around between the anchor and the final
+        ; position. Most terminals (including minicom) honor ESC[?25l/h;
+        ; the ones that don't will simply show the unhidden behavior.
+        jsr {{ my("emit_hide_cursor") }}
+
+        ; Pass 1: from the anchor, write the prompt and the new line
+        ; contents *over* whatever's already there. No pre-clear: we
+        ; want overwrites to look in-place. If the previous render was
+        ; longer than the new one (e.g. just deleted a char), we trail
+        ; with spaces to wipe the leftover; otherwise nothing extra.
+        jsr {{ my("emit_restore_cursor") }}
+        PRINT_PTR {{ api("write") }}, {{ zp("prompt") }}
+
+        ldx #0
+    @full_loop:
         cpx {{ var("line_len") }}
-        beq @emit_done
+        beq @full_done
         lda {{ var("line_buf") }},x
         stx {{ var("scratch_x") }}
         jsr {{ api("write") }}
         ldx {{ var("scratch_x") }}
         inx
-        jmp @emit_loop
-    @emit_done:
-        ; Wipe the leftover trailing char.
+        bne @full_loop          ; LINE_BUF_MAX < 256, always taken in range.
+    @full_done:
+        ; Wipe trailing leftovers from a previous longer render. We've
+        ; just laid down line_len cells. If drawn_len was bigger, emit
+        ; (drawn_len - line_len) spaces to overwrite the stale tail.
+        sec
+        lda {{ var("drawn_len") }}
+        sbc {{ var("line_len") }}
+        beq @no_wipe                ; New render covers the old length.
+        bcc @no_wipe                ; Defensive: drawn_len < line_len; nothing to wipe.
+        tax
+    @wipe_loop:
+        stx {{ var("scratch_x") }}
         lda #' '
         jsr {{ api("write") }}
-
-        ; Back up: (line_len - cursor_pos) + 1 cursor-lefts.
-        sec
-        lda {{ var("line_len") }}
-        sbc {{ var("cursor_pos") }}
-        clc
-        adc #1
-        tax
-    @back_loop:
-        stx {{ var("scratch_x") }}
-        lda #KEY_LEFT
-        jsr {{ screen_device.api("write") }}
         ldx {{ var("scratch_x") }}
         dex
-        bne @back_loop
-        rts
-    .endproc
-
-    ; =====================================================================
-    ; Internal: re-emit the line buffer contents via TTY::write.
-    ;
-    ; Used by ^R, ^L and ^U to redraw after the prompt.
-    ;
-    ; Out:
-    ;   C = 0 (line is not yet complete)
-    ;   A, X, Y = clobbered
-
-    .proc {{ my_def("replay_buffer") }}
-        ; After a full reprint the visible cursor sits at end-of-line, so
-        ; the edit cursor logically follows along.
+        bne @wipe_loop
+    @no_wipe:
+        ; Update drawn_len = line_len. Whether we wiped or not, what's
+        ; visible after this pass spans exactly line_len cells.
         lda {{ var("line_len") }}
-        sta {{ var("cursor_pos") }}
+        sta {{ var("drawn_len") }}
+
+        ; Pass 2: position the visible cursor at cursor_pos by re-emitting
+        ; the prompt + line_buf[0..cursor_pos). This relies on the
+        ; terminal's natural autowrap to land the cursor exactly where
+        ; the edit cursor logically is, with no row/column math here.
+        jsr {{ my("emit_restore_cursor") }}
+        PRINT_PTR {{ api("write") }}, {{ zp("prompt") }}
+
         ldx #0
-    @loop:
-        cpx {{ var("line_len") }}
+    @prefix_loop:
+        cpx {{ var("cursor_pos") }}
         beq @done
         lda {{ var("line_buf") }},x
         stx {{ var("scratch_x") }}
         jsr {{ api("write") }}
         ldx {{ var("scratch_x") }}
         inx
-        bne @loop               ; Always taken (max 80 < 256).
+        bne @prefix_loop
     @done:
+        jsr {{ my("emit_show_cursor") }}
         clc
         rts
     .endproc
@@ -603,13 +675,8 @@ LINE_BUF_MAX = 80
     ; =====================================================================
     ; Internal: deliver the completed line to the caller's buffer.
     ;
-    ; Truncates to the caller's max length, resets state, and returns
-    ; with C=1 and A=actual length.
-    ;
-    ; Out:
-    ;   A = length of returned line (0..line_max)
-    ;   C = 1
-    ;   X, Y = clobbered
+    ; Truncates to the caller's max length, resets state, returns C=1
+    ; with A=actual length.
 
     .proc {{ my_def("complete_line") }}
         ; len = min(line_len, line_max)
@@ -628,12 +695,13 @@ LINE_BUF_MAX = 80
         lda {{ var("line_buf") }},y
         sta ({{ zp("line_buffer") }}),y
         iny
-        bne @copy_loop          ; Always taken (max 80 < 256).
+        bne @copy_loop          ; LINE_BUF_MAX < 256.
     @done_copy:
         ; Reset internal state for the next line.
         lda #0
         sta {{ var("line_len") }}
         sta {{ var("cursor_pos") }}
+        sta {{ var("drawn_len") }}
         sta {{ var("readline_active") }}
 
         lda {{ var("scratch_len") }}
@@ -651,19 +719,19 @@ LINE_BUF_MAX = 80
     ;   X, Y = consider clobbered (depends on driver implementation)
 
     .proc {{ api_def("write") }}
-        ; Handle CR/LF, by normalizing \r, \n and \r\n to a newline call to the terminal.
+        ; Handle CR/LF, by normalizing \r, \n and \r\n to a single
+        ; newline call.
         cmp #'\r'
         beq @cr
         cmp #'\n'
         beq @lf
 
-        ; Handle DEL (delete) / BS (backspace)
+        ; Handle DEL (delete) / BS (backspace).
         cmp #KEY_DEL           ; Delete? (backspace on many terminals)
         beq @backspace
         cmp #KEY_BS            ; Backspace?
         beq @backspace
 
-        ; Echo the input to the TTY output.
         jmp {{ screen_device.api("write") }}
 
     @backspace:
