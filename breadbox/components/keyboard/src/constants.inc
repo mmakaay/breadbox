@@ -58,3 +58,8 @@ KEY_UP          = 128
 KEY_DOWN        = 129
 KEY_RIGHT       = 130
 KEY_LEFT        = 131
+KEY_HOME        = 132
+KEY_END         = 133
+KEY_DELETE      = 134      ; Forward-delete (the "delete" key on most keyboards;
+                           ; on macOS this is fn+backspace). Distinct from
+                           ; KEY_DEL ($7F) which is the legacy backspace code.

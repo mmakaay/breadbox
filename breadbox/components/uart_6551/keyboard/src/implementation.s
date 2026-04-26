@@ -94,7 +94,8 @@ _ESC_POLLS = 200
         cmp #'['                ; CSI prefix?
         beq @csi
         cmp #'O'                ; SS3 prefix?
-        beq @ss3
+        bne @return_esc
+        jmp @ss3                ; out-of-range → trampoline.
 
         ; Unknown byte after ESC → discard it, return ESC.
     @return_esc:
@@ -142,7 +143,19 @@ _ESC_POLLS = 200
     @csi_final:
         cmp #'R'
         beq @csi_dsr             ; DSR response.
-        ; Otherwise treat as a possible arrow-key sequence.
+        cmp #'~'
+        beq @csi_tilde           ; Tilde-terminated function key.
+        cmp #'H'
+        bne :+
+        lda #KEY_HOME            ; ESC[H → Home (no parameter).
+        sec
+        rts
+    :   cmp #'F'
+        bne :+
+        lda #KEY_END             ; ESC[F → End (no parameter).
+        sec
+        rts
+    :   ; A/B/C/D — arrow keys. Anything else falls through to drop.
         jmp @map_arrow
 
     @csi_dsr:
@@ -160,10 +173,43 @@ _ESC_POLLS = 200
         clc
         rts
 
+    @csi_tilde:
+        ; ESC[<n>~ — function-key sequences. csi_acc holds n.
+        ;   1, 7  →  KEY_HOME    (xterm rxvt)
+        ;   3     →  KEY_DELETE  (forward-delete)
+        ;   4, 8  →  KEY_END     (xterm rxvt)
+        ;   anything else → drop silently (Insert, PageUp/Down, F1..).
+        ldx {{ var("csi_acc") }}
+        cpx #1
+        beq @ret_home
+        cpx #7
+        beq @ret_home
+        cpx #3
+        beq @ret_delete
+        cpx #4
+        beq @ret_end
+        cpx #8
+        beq @ret_end
+        jmp @return_no_key
+
+    @ret_home:
+        lda #KEY_HOME
+        sec
+        rts
+    @ret_end:
+        lda #KEY_END
+        sec
+        rts
+    @ret_delete:
+        lda #KEY_DELETE
+        sec
+        rts
+
     @ss3:
         ; SS3 sequence: final byte follows directly (no parameters).
         jsr {{ my("poll_byte") }}
-        bcc @return_esc
+        bcs @map_arrow
+        jmp @return_esc                ; out-of-range → trampoline.
 
     @map_arrow:
         sec

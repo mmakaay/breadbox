@@ -542,6 +542,36 @@ LINE_BUF_MAX = 240
     :   cmp #KEY_RIGHT
         bne :+
         jmp @cursor_right
+    :   cmp #KEY_STX            ; ^B - cursor left (emacs)
+        bne :+
+        jmp @cursor_left
+    :   cmp #KEY_ACK            ; ^F - cursor right (emacs)
+        bne :+
+        jmp @cursor_right
+    :   cmp #KEY_SOH            ; ^A - move to start of line
+        bne :+
+        jmp @cursor_home
+    :   cmp #KEY_ENQ            ; ^E - move to end of line
+        bne :+
+        jmp @cursor_end
+    :   cmp #KEY_HOME           ; Home key → start of line
+        bne :+
+        jmp @cursor_home
+    :   cmp #KEY_END            ; End key → end of line
+        bne :+
+        jmp @cursor_end
+    :   cmp #KEY_EOT            ; ^D - forward delete
+        bne :+
+        jmp @forward_delete
+    :   cmp #KEY_DELETE         ; Delete key → forward delete
+        bne :+
+        jmp @forward_delete
+    :   cmp #KEY_VT             ; ^K - kill to end of line
+        bne :+
+        jmp @kill_to_end
+    :   cmp #KEY_ETB            ; ^W - kill word backward
+        bne :+
+        jmp @kill_word_back
     :   cmp #KEY_NAK            ; ^U - kill line
         bne :+
         jmp @kill
@@ -714,6 +744,147 @@ LINE_BUF_MAX = 240
         jsr {{ my("position_cursor") }}
         clc
         rts
+
+    @cursor_home:
+        ; ^A: jump the edit cursor to position 0 (just after the
+        ; prompt). No buffer mutation, no redraw — just one CUP.
+        lda {{ var("cursor_pos") }}
+        beq @ignore             ; Already at start.
+        lda #0
+        sta {{ var("cursor_pos") }}
+        lda #BIT_ECHO_ON
+        bit {{ var("flags") }}
+        beq @ignore
+        jsr {{ my("position_cursor") }}
+        clc
+        rts
+
+    @cursor_end:
+        ; ^E: jump the edit cursor to end of line.
+        lda {{ var("cursor_pos") }}
+        cmp {{ var("line_len") }}
+        bcs @ignore             ; Already at end.
+        lda {{ var("line_len") }}
+        sta {{ var("cursor_pos") }}
+        lda #BIT_ECHO_ON
+        bit {{ var("flags") }}
+        beq @ignore
+        jsr {{ my("position_cursor") }}
+        clc
+        rts
+
+    @forward_delete:
+        ; ^D / Delete key: erase the character AT the edit cursor,
+        ; keeping the cursor in place. Mid-line is the common case;
+        ; at end of line there's nothing to delete.
+        lda {{ var("cursor_pos") }}
+        cmp {{ var("line_len") }}
+        bcs @ignore             ; cursor_pos >= line_len: nothing to erase.
+
+        ; Shift line_buf[cursor_pos+1..line_len) left by one onto
+        ; line_buf[cursor_pos..line_len-1), then decrement line_len.
+        ldx {{ var("cursor_pos") }}
+    @fwd_shift_loop:
+        inx
+        cpx {{ var("line_len") }}
+        beq @fwd_shift_done
+        lda {{ var("line_buf") }},x
+        sta {{ var("line_buf") }}-1,x
+        jmp @fwd_shift_loop
+    @fwd_shift_done:
+        dec {{ var("line_len") }}
+        jmp @redraw_if_echo
+
+    @kill_to_end:
+        ; ^K: truncate the line at the cursor. Buffer state mutates;
+        ; the redraw's trailing-wipe logic erases the killed tail
+        ; from the visible display.
+        lda {{ var("cursor_pos") }}
+        cmp {{ var("line_len") }}
+        bcc :+
+        jmp @ignore             ; out-of-range → trampoline.
+    :   sta {{ var("line_len") }}
+        jmp @redraw_if_echo
+
+    @kill_word_back:
+        ; ^W: delete from the cursor back to the start of the previous
+        ; word. The "word" definition mirrors readline's default: skip
+        ; any whitespace immediately before the cursor, then skip the
+        ; run of non-whitespace before that. Whatever's between the
+        ; resulting position and the cursor gets deleted.
+        lda {{ var("cursor_pos") }}
+        bne :+
+        jmp @ignore             ; out-of-range → trampoline.
+    :
+
+        ; Phase 1: walk back over whitespace.
+        ldx {{ var("cursor_pos") }}
+    @kw_skip_ws:
+        dex
+        bmi @kw_phase2_done     ; Hit -1 → buffer is all whitespace.
+        lda {{ var("line_buf") }},x
+        cmp #' '
+        beq @kw_skip_ws
+        cmp #KEY_HT
+        beq @kw_skip_ws
+        ; Found a non-whitespace char at index x.
+
+        ; Phase 2: walk back over non-whitespace.
+    @kw_skip_word:
+        dex
+        bmi @kw_phase2_done
+        lda {{ var("line_buf") }},x
+        cmp #' '
+        beq @kw_phase2_advance
+        cmp #KEY_HT
+        beq @kw_phase2_advance
+        jmp @kw_skip_word
+    @kw_phase2_advance:
+        ; Stopped on a whitespace. The new cursor sits one past it.
+        inx
+    @kw_phase2_done:
+        ; X holds the new cursor position (-1 → 0). Treat the BMI exit
+        ; as "delete everything before cursor".
+        bpl @kw_apply
+        ldx #0
+    @kw_apply:
+        ; new_pos in X. Delete bytes [new_pos..cursor_pos) by shifting
+        ; line_buf[cursor_pos..line_len) left into line_buf[new_pos..).
+        stx {{ var("scratch_x") }}      ; new_pos
+        ; deleted_count = cursor_pos - new_pos.
+        lda {{ var("cursor_pos") }}
+        sec
+        sbc {{ var("scratch_x") }}
+        sta {{ var("scratch_len") }}    ; deleted_count
+
+        ; Shift loop: for i in [cursor_pos..line_len),
+        ;   line_buf[i - deleted_count] = line_buf[i].
+        ldy {{ var("cursor_pos") }}
+    @kw_shift_loop:
+        cpy {{ var("line_len") }}
+        beq @kw_shift_done
+        lda {{ var("line_buf") }},y
+        ; Compute destination index = y - deleted_count.
+        sty {{ var("read_byte") }}      ; reuse read_byte as scratch
+        tax
+        lda {{ var("read_byte") }}
+        sec
+        sbc {{ var("scratch_len") }}
+        tay                              ; y = destination
+        txa
+        sta {{ var("line_buf") }},y
+        ldy {{ var("read_byte") }}
+        iny
+        jmp @kw_shift_loop
+    @kw_shift_done:
+        ; Update cursor_pos and line_len.
+        lda {{ var("scratch_x") }}
+        sta {{ var("cursor_pos") }}
+        lda {{ var("line_len") }}
+        sec
+        sbc {{ var("scratch_len") }}
+        sta {{ var("line_len") }}
+        jmp @redraw_if_echo
 
     @enter:
         ; Always advance cursor on Enter, regardless of echo flag.

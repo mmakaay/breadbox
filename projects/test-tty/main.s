@@ -70,10 +70,7 @@ LINE_MAX = 200
         jsr update_lcd_count
 
     @loop:
-        ; "Concurrency": toggle the LED every iteration. The LED visibly
-        ; blinks while the user is typing, because readline below is
-        ; non-blocking.
-        jsr LED::toggle
+        jsr update_led_task
 
         ; Try to read a line. C=0 → not yet complete, keep looping.
         jsr SERIAL_TTY::readline
@@ -102,6 +99,14 @@ LINE_MAX = 200
         jsr update_lcd_count
 
         jmp @loop
+    .endproc
+
+    .proc update_led_task
+        IF_TIMER_TRIGGERED TICKER::led_toggle_timer
+            jsr LED::toggle
+        ENDIF
+    @done:
+        rts
     .endproc
 
     ; ------------------------------------------------------------------

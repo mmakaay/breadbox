@@ -6,6 +6,14 @@ VIA:
   component: via_w65c22
   address: $6000
 
+TICKER:
+  component: ticker
+  provider: VIA
+  ms_per_tick: 10
+  timers:
+    led_toggle_timer: 1000
+    tty_input_timer: 10
+
 LED:
   component: gpio_pin
   provider: VIA
