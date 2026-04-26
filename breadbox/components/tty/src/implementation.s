@@ -52,11 +52,16 @@ LINE_BUF_MAX = 240
     ; is too large for zero page.
     {{ var("line_buf") }}: .res LINE_BUF_MAX
 
-    ; Staging buffer for keystrokes that arrive during a DSR wait, before
-    ; the anchor is established. After the anchor is set we replay these
-    ; through process_byte so they participate in line editing normally.
-    ; 32 bytes covers ~50 ms of touch typing at 1 keystroke per ~6 ms.
-    STAGING_MAX = 32
+    ; Staging buffer for user keystrokes that arrive during DSR waits,
+    ; and for unprocessed leftover from multi-line pastes that need to
+    ; flow into the next readline activation.
+    ;
+    ; Sized to match the UART RX ring (256 bytes), since that's the
+    ; theoretical maximum amount of in-flight input we can drain in
+    ; one DSR wait. The UART's RTS flow control kicks in when the
+    ; ring is ~80% full, so the host pauses before our staging
+    ; would even be threatened with overflow.
+    STAGING_MAX = 240
     {{ var("staging_buf") }}: .res STAGING_MAX
 
 .segment "KERNALROM"
@@ -406,6 +411,10 @@ LINE_BUF_MAX = 240
     ; participate in line editing normally (Enter completes a line,
     ; backspace edits, etc.).
     ;
+    ; The staging buffer matches LINE_BUF_MAX in size (240 bytes), well
+    ; above the UART RX ring's RTS-drop threshold (~208 bytes), so under
+    ; normal host flow control we don't overflow.
+    ;
     ; Out:
     ;   C = 1 on dsr_pending arrival, 0 on timeout
     ;   A, X, Y = clobbered
@@ -424,8 +433,7 @@ LINE_BUF_MAX = 240
         bcc @no_byte
 
         ; A non-DSR keystroke arrived. Append it to staging_buf for
-        ; later replay through process_byte. Drop silently when full
-        ; (32 bytes is plenty for any reasonable inter-prompt typing).
+        ; later replay through process_byte. Drop silently when full.
         sta {{ var("read_byte") }}
         ldy {{ var("staging_len") }}
         cpy #STAGING_MAX
@@ -434,7 +442,6 @@ LINE_BUF_MAX = 240
         sta {{ var("staging_buf") }},y
         inc {{ var("staging_len") }}
     @drop_byte:
-        ; Continue polling.
         ldx #0
         ldy #0
 
@@ -456,7 +463,11 @@ LINE_BUF_MAX = 240
     ;
     ; Called after the anchor is established and the prompt is laid
     ; down. Each staged byte goes through the canonical-mode state
-    ; machine, so Enter completes the line, backspace edits, etc.
+    ; machine, so Enter completes the line, backspace edits, etc. If
+    ; Enter is encountered mid-staging (e.g. multi-line paste, only
+    ; the first line completes here), the unprocessed tail is shifted
+    ; to the start of staging_buf so it survives into the next
+    ; readline activation as queued input.
     ;
     ; Out:
     ;   C = 1 if Enter was encountered (line complete), 0 otherwise
@@ -469,10 +480,8 @@ LINE_BUF_MAX = 240
     @loop:
         cpx {{ var("staging_len") }}
         beq @done_no_complete
-        ; Save the loop index on the hardware stack — process_byte
-        ; (and its callees compute_target_pos / clamp_anchor_after_
-        ; growth) clobber the shared scratch_x slot, so we can't use
-        ; it as a save area across this jsr.
+        ; Save loop index on the hardware stack — process_byte and its
+        ; callees clobber the shared scratch_x slot.
         txa
         pha
         lda {{ var("staging_buf") }},x
@@ -484,18 +493,14 @@ LINE_BUF_MAX = 240
         jmp @loop
 
     @done_complete:
-        ; Enter pressed mid-staging. Bytes after the Enter are
-        ; carry-over input meant for the *next* readline (e.g. user
-        ; pasted multiple lines, only the first finishes here). Shift
-        ; the leftover down to the start of staging_buf so it survives
-        ; into the next readline as type-ahead. complete_line and
-        ; readline's first-call setup deliberately do NOT clear
-        ; staging_len, so this leftover persists.
-        pla                              ; index of the Enter byte
+        ; Enter mid-staging. Shift any leftover bytes (from the index
+        ; *after* the Enter) down to the start of staging_buf, so they
+        ; survive into the next readline as queued input.
+        pla
         tax
         inx                              ; first byte after Enter
         cpx {{ var("staging_len") }}
-        beq @no_leftover                 ; Enter was the last staged byte.
+        beq @no_leftover
 
         ldy #0
     @shift_loop:
@@ -575,6 +580,12 @@ LINE_BUF_MAX = 240
     :   cmp #KEY_RIGHT
         bne :+
         jmp @cursor_right
+    :   cmp #KEY_UP             ; cursor up: jump back one screen row
+        bne :+
+        jmp @cursor_up
+    :   cmp #KEY_DOWN           ; cursor down: jump forward one screen row
+        bne :+
+        jmp @cursor_down
     :   cmp #KEY_STX            ; ^B - cursor left (emacs)
         bne :+
         jmp @cursor_left
@@ -806,13 +817,109 @@ LINE_BUF_MAX = 240
         clc
         rts
 
+    @cursor_up:
+        ; Cursor up: jump back one visual row of the wrapped line.
+        ;
+        ; Refuse the move if the cursor sits on the first visual row
+        ; (the row containing the prompt) — there's nowhere up to go
+        ; that's still inside the buffer.
+        ;
+        ; First-row test: prompt_len + cursor_pos < term_width.
+        ; If the sum overflows 8 bits, we're definitely past the first
+        ; row (assuming term_width ≤ 255), so the overflow path skips
+        ; the refuse.
+        lda {{ var("prompt_len") }}
+        clc
+        adc {{ var("cursor_pos") }}
+        bcs @cursor_up_apply_calc       ; Sum > 255: past first row.
+        cmp {{ screen_device.zp("term_width") }}
+        bcc @ignore_jump                ; Sum < width: on first row, refuse.
+
+    @cursor_up_apply_calc:
+        ; new_cursor_pos = cursor_pos - term_width.
+        lda {{ var("cursor_pos") }}
+        sec
+        sbc {{ screen_device.zp("term_width") }}
+        bcs @cursor_up_apply
+        ; Underflow guard (cursor on first row but prompt + cursor_pos
+        ; happened to overflow — possible only if prompt_len is bigger
+        ; than term_width; an unusual but not invalid setup): land at 0.
+        lda #0
+    @cursor_up_apply:
+        sta {{ var("cursor_pos") }}
+        lda #BIT_ECHO_ON
+        bit {{ var("flags") }}
+        beq @ignore_jump
+        jsr {{ my("position_cursor") }}
+    @ignore_jump:
+        clc
+        rts
+
+    @cursor_down:
+        ; Cursor down: jump forward one visual row of the wrapped line.
+        ;   - If cursor_pos + term_width <= line_len: move there.
+        ;   - Otherwise: if a down-move would leave the cursor on the
+        ;     same visual row (i.e. the line ends on the current row),
+        ;     refuse. Otherwise clamp to line_len.
+        ;
+        ; Visual-row equality is computed by reusing compute_target_pos:
+        ; first for the current cursor position, then with cursor_pos
+        ; temporarily set to line_len. If both produce the same
+        ; target_row, refuse the move.
+
+        ; Easy case: cursor_pos + term_width <= line_len → straight move.
+        lda {{ var("cursor_pos") }}
+        clc
+        adc {{ screen_device.zp("term_width") }}
+        bcs @down_check_row             ; sum overflowed 8 bits.
+        cmp {{ var("line_len") }}
+        beq @down_apply                 ; lands exactly on line_len.
+        bcc @down_apply                 ; lands before line_len.
+
+    @down_check_row:
+        ; A down-move would overshoot. Decide between "refuse" (cursor
+        ; already on last visual row) and "clamp to line_len".
+        ;
+        ; Compute target_row for the current cursor position.
+        jsr {{ my("compute_target_pos") }}
+        lda {{ var("target_row") }}
+        sta {{ var("scratch_x") }}      ; row_at_cursor
+
+        ; Now compute target_row for line_len. We temporarily rebind
+        ; cursor_pos to line_len, compute, then restore.
+        lda {{ var("cursor_pos") }}
+        sta {{ var("scratch_len") }}    ; saved cursor_pos
+        lda {{ var("line_len") }}
+        sta {{ var("cursor_pos") }}
+        jsr {{ my("compute_target_pos") }}
+        lda {{ var("scratch_len") }}
+        sta {{ var("cursor_pos") }}     ; restored
+
+        lda {{ var("target_row") }}
+        cmp {{ var("scratch_x") }}
+        beq @ignore_jump                ; same visual row → refuse.
+
+        ; Different row → clamp to line_len.
+        lda {{ var("line_len") }}
+
+    @down_apply:
+        sta {{ var("cursor_pos") }}
+        lda #BIT_ECHO_ON
+        bit {{ var("flags") }}
+        beq @ignore_jump
+        jsr {{ my("position_cursor") }}
+        clc
+        rts
+
     @forward_delete:
         ; ^D / Delete key: erase the character AT the edit cursor,
         ; keeping the cursor in place. Mid-line is the common case;
         ; at end of line there's nothing to delete.
         lda {{ var("cursor_pos") }}
         cmp {{ var("line_len") }}
-        bcs @ignore             ; cursor_pos >= line_len: nothing to erase.
+        bcc :+
+        jmp @ignore             ; out-of-range → trampoline.
+    :
 
         ; Shift line_buf[cursor_pos+1..line_len) left by one onto
         ; line_buf[cursor_pos..line_len-1), then decrement line_len.
@@ -998,8 +1105,6 @@ LINE_BUF_MAX = 240
         ; (newly set) anchor.
         jsr {{ my("redraw") }}
         ; Replay any keystrokes that arrived during the DSR waits.
-        ; replay_staging returns C=1 if Enter was encountered (line
-        ; complete) or C=0 otherwise.
         jmp {{ my("replay_staging") }}
 
     @clear_redraw:
@@ -1306,10 +1411,10 @@ LINE_BUF_MAX = 240
     @done_copy:
         ; Reset internal state for the next line. Deliberately do NOT
         ; clear staging_len: if the user pasted multiple lines, the
-        ; bytes after the just-completed Enter are leftover paste
-        ; sitting at the start of staging_buf (replay_staging shifted
-        ; them down). We want those preserved so the next readline
-        ; activation picks them up as queued input.
+        ; bytes after the just-completed Enter are sitting at the
+        ; start of staging_buf (replay_staging shifted them down). We
+        ; want those preserved so the next readline activation picks
+        ; them up as queued input.
         lda #0
         sta {{ var("line_len") }}
         sta {{ var("cursor_pos") }}

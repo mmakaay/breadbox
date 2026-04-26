@@ -35,7 +35,7 @@ LINE_MAX = 80
 .segment "DATA"
 
     msg_banner:    .asciiz "\nTTY readline demo. Type a line and press Enter.\n\n"
-    msg_prompt:    .asciiz "> "
+    msg_prompt:    .asciiz "BREADBOX > "
     msg_you_typed: .asciiz "\nyou typed: \""
     msg_quote_nl:  .byte '"', '\n', 0
     msg_lcd_label: .asciiz "Lines: "
