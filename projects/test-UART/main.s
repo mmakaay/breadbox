@@ -35,7 +35,7 @@ CTRL_D = $04
 .segment "CODE"
 
     msg_title:   .asciiz "Serial test"
-    msg_hint:    .asciiz "^D = debug"
+    msg_hint:    .asciiz "^D debug/^E echo"
 
     .proc main
         lda #0
@@ -57,10 +57,13 @@ CTRL_D = $04
         sta rxbyte               ; Save received byte.
 
         cmp #KEY_ESC
-        beq @toggle
+        beq @toggle_debug
 
-        cmp #CTRL_D
-        beq @toggle
+        cmp #KEY_EOT
+        beq @toggle_debug
+
+        cmp #KEY_ENQ
+        beq @toggle_echo
 
         ; In debug mode, display the byte on LCD line 1.
         lda debug_mode
@@ -82,7 +85,11 @@ CTRL_D = $04
 
         jmp @loop
 
-    @toggle:
+    @toggle_echo:
+        jsr TTY::disable_echo
+        jmp @loop
+
+    @toggle_debug:
         lda debug_mode
         eor #1
         sta debug_mode

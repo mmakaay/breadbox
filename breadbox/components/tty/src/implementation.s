@@ -23,7 +23,7 @@
     ; Enables canonical mode and echoing of input characters.
     ;
     ; Out:
-    ;   A, X, y = prserved
+    ;   A, X, y = preserved
 
     .proc {{ my("init") }}
         jsr {{ api("enable_canonical") }}
@@ -35,12 +35,12 @@
     ; Enable canonical mode.
     ;
     ; Out:
-    ;   A, X, y = prserved
+    ;   A, X, y = preserved
 
-    .proc {{ api("enable_canonical") }}
+    .proc {{ api_def("enable_canonical") }}
         pha
         lda {{ var("flags") }}
-        and #BIT_CANONICAL_ON
+        ora #BIT_CANONICAL_ON
         sta {{ var("flags") }}
         pla
         rts
@@ -50,9 +50,9 @@
     ; Disable canonical mode.
     ;
     ; Out:
-    ;   A, X, y = prserved
+    ;   A, X, y = preserved
 
-    .proc {{ api("disable_canonical") }}
+    .proc {{ api_def("disable_canonical") }}
         pha
         lda {{ var("flags") }}
         and #<~BIT_CANONICAL_ON
@@ -65,12 +65,12 @@
     ; Enable echoing of input characters.
     ;
     ; Out:
-    ;   A, X, y = prserved
+    ;   A, X, y = preserved
 
-    .proc {{ api("enable_echo") }}
+    .proc {{ api_def("enable_echo") }}
         pha
         lda {{ var("flags") }}
-        and #BIT_ECHO_ON
+        ora #BIT_ECHO_ON
         sta {{ var("flags") }}
         pla
         rts
@@ -80,9 +80,9 @@
     ; Disable echoing of input characters.
     ;
     ; Out:
-    ;   A, X, y = prserved
+    ;   A, X, y = preserved
 
-    .proc {{ api("disable_echo") }}
+    .proc {{ api_def("disable_echo") }}
         pha
         lda {{ var("flags") }}
         and #<~BIT_ECHO_ON
@@ -114,9 +114,14 @@
         pha
 
         jsr {{ keyboard_device.api("read") }}
-        bcc @done                   ; Return with carry clear.
+        bcc @done                   ; No input, return with carry clear.
         sta {{ var("read_byte") }}  ; Save received byte before echo.
-        jsr {{ api_def("write") }}  ; Echo received input to the screen.
+        lda #BIT_ECHO_ON            ; Check if echo is enabled.
+        bit {{ var("flags") }}
+        beq @done_with_carry
+        lda {{ var("read_byte") }}  ; Yes, echo received input to the screen.
+        jsr {{ api_def("write") }}
+    @done_with_carry:
         sec                         ; Set carry to indicate "got input".
     @done:
         pla

@@ -132,7 +132,7 @@
         jmp {{ provider_device.api("write") }}
     .endproc
 
-    @arrow_escapes:
+    arrow_escapes:
         .byte 'A'   ; KEY_UP    (128, index 0)
         .byte 'B'   ; KEY_DOWN  (129, index 1)
         .byte 'C'   ; KEY_RIGHT (130, index 2)
