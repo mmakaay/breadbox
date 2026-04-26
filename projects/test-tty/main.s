@@ -20,11 +20,11 @@
 .export main
 
 ; Caller-side buffer cap. The TTY internally caps at 240 bytes; this
-; sets the demo's ceiling to 200 chars per line. The TTY beeps and
+; sets the demo's ceiling to 80 chars per line. The TTY beeps and
 ; refuses to accept further input when the user hits this cap (rather
 ; than silently truncating on Enter, which is the legacy POSIX behavior
 ; we deliberately don't replicate here).
-LINE_MAX = 200
+LINE_MAX = 80
 
 .segment "ZEROPAGE"
 

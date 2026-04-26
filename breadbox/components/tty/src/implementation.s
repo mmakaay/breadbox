@@ -255,10 +255,11 @@ LINE_BUF_MAX = 240
         lda #1
         sta {{ var("readline_active") }}
 
-        ; Reset the staging buffer; it accumulates keystrokes that
-        ; arrive during DSR waits in this readline activation.
-        lda #0
-        sta {{ var("staging_len") }}
+        ; Note: we deliberately do NOT clear staging_len here. If the
+        ; previous readline finished mid-staging (e.g. multi-line
+        ; paste), replay_staging shifted the unprocessed leftover to
+        ; the start of staging_buf — those bytes are queued for *this*
+        ; readline activation. Wiping staging_len would drop them.
 
         ; Compute prompt length once, so redraw can re-position by
         ; pure arithmetic without re-walking the prompt string.
@@ -468,17 +469,49 @@ LINE_BUF_MAX = 240
     @loop:
         cpx {{ var("staging_len") }}
         beq @done_no_complete
+        ; Save the loop index on the hardware stack — process_byte
+        ; (and its callees compute_target_pos / clamp_anchor_after_
+        ; growth) clobber the shared scratch_x slot, so we can't use
+        ; it as a save area across this jsr.
+        txa
+        pha
         lda {{ var("staging_buf") }},x
-        stx {{ var("scratch_x") }}
         jsr {{ my("process_byte") }}
         bcs @done_complete
-        ldx {{ var("scratch_x") }}
+        pla
+        tax
         inx
         jmp @loop
 
     @done_complete:
-        ; Enter pressed mid-staging. Drop any further staged bytes;
-        ; complete_line will reset staging_len.
+        ; Enter pressed mid-staging. Bytes after the Enter are
+        ; carry-over input meant for the *next* readline (e.g. user
+        ; pasted multiple lines, only the first finishes here). Shift
+        ; the leftover down to the start of staging_buf so it survives
+        ; into the next readline as type-ahead. complete_line and
+        ; readline's first-call setup deliberately do NOT clear
+        ; staging_len, so this leftover persists.
+        pla                              ; index of the Enter byte
+        tax
+        inx                              ; first byte after Enter
+        cpx {{ var("staging_len") }}
+        beq @no_leftover                 ; Enter was the last staged byte.
+
+        ldy #0
+    @shift_loop:
+        lda {{ var("staging_buf") }},x
+        sta {{ var("staging_buf") }},y
+        inx
+        iny
+        cpx {{ var("staging_len") }}
+        bne @shift_loop
+        sty {{ var("staging_len") }}
+        sec
+        rts
+
+    @no_leftover:
+        lda #0
+        sta {{ var("staging_len") }}
         sec
         rts
 
@@ -1271,13 +1304,17 @@ LINE_BUF_MAX = 240
         iny
         bne @copy_loop          ; LINE_BUF_MAX < 256.
     @done_copy:
-        ; Reset internal state for the next line.
+        ; Reset internal state for the next line. Deliberately do NOT
+        ; clear staging_len: if the user pasted multiple lines, the
+        ; bytes after the just-completed Enter are leftover paste
+        ; sitting at the start of staging_buf (replay_staging shifted
+        ; them down). We want those preserved so the next readline
+        ; activation picks them up as queued input.
         lda #0
         sta {{ var("line_len") }}
         sta {{ var("cursor_pos") }}
         sta {{ var("drawn_len") }}
         sta {{ var("readline_active") }}
-        sta {{ var("staging_len") }}
 
         lda {{ var("scratch_len") }}
         sec
