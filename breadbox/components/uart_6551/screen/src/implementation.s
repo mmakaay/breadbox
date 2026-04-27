@@ -29,6 +29,13 @@
     ; The TTY layer reads these for wrap-aware cursor positioning.
     {{ zp_def("term_width") }}: .res 1
     {{ zp_def("term_height") }}: .res 1
+    {{ zp_def("scroll_capable") }}: .res 1
+        ; 1 if the screen has scrollback (off-screen content survives a
+        ; scroll-up). Serial terminals: 1. Pure-display backends like
+        ; the LCD: 0. The TTY refuses to type past the visible area on
+        ; screens that would lose content on scroll, since its cursor
+        ; arithmetic relies on the line's start row remaining a stable
+        ; reference point.
 
 .segment "KERNALROM"
 
@@ -49,6 +56,8 @@
         sta {{ zp("term_width") }}
         lda #{{ height }}
         sta {{ zp("term_height") }}
+        lda #1                          ; serial terminals have scrollback.
+        sta {{ zp("scroll_capable") }}
         ESCAPE
         SEND '?'
         SEND '7'
@@ -178,6 +187,36 @@
         .byte 'B'   ; KEY_DOWN  (129, index 1)
         .byte 'C'   ; KEY_RIGHT (130, index 2)
         .byte 'D'   ; KEY_LEFT  (131, index 3)
+
+    ; =====================================================================
+    ; Hide the cursor (DECTCEM off).
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("hide_cursor") }}
+        ESCAPE
+        SEND '?'
+        SEND '2'
+        SEND '5'
+        SEND 'l'
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Show the cursor (DECTCEM on).
+    ;
+    ; Out:
+    ;   A = clobbered
+
+    .proc {{ api_def("show_cursor") }}
+        ESCAPE
+        SEND '?'
+        SEND '2'
+        SEND '5'
+        SEND 'h'
+        rts
+    .endproc
 
     ; =====================================================================
     ; Send a DSR (Device Status Report) request for the current cursor

@@ -303,11 +303,7 @@ LINE_BUF_MAX = 240
         jsr {{ my("apply_dsr_size") }}
     @size_done:
 
-        ; Force column 0 so the anchor sits at a known column.
-        lda #'\r'
-        jsr {{ api("write") }}
-
-        ; Ask the terminal where the cursor is now (1-indexed row).
+        ; Ask the screen where the cursor currently is (1-indexed row).
         ; Sync (LCD): row in A directly. Async (UART): wait for the
         ; response. On any failure, fall back to row 1 — positioning
         ; may be off until ^L re-anchors.
@@ -322,6 +318,17 @@ LINE_BUF_MAX = 240
         lda #1
     @anchor_set:
         sta {{ var("anchor_row") }}
+
+        ; Move the cursor to column 0 of that row, so the anchor sits
+        ; at a known column — the CUP arithmetic in compute_target_pos
+        ; assumes the line starts at column 0. Going through the
+        ; abstract move_cursor API keeps both backends happy: the
+        ; serial screen translates this to ESC[<row>;1H, the LCD
+        ; screen translates to a chip-level cursor-set command.
+        ldx {{ var("anchor_row") }}
+        dex                              ; SCREEN::move_cursor is 0-indexed.
+        ldy #0
+        jsr {{ screen_device.api("move_cursor") }}
 
         ; Emit the prompt from the anchor.
         PRINT_PTR {{ api("write") }}, {{ zp("prompt") }}
@@ -379,6 +386,76 @@ LINE_BUF_MAX = 240
         bne @loop                    ; saturate at 255
     @done:
         sty {{ var("prompt_len") }}
+        rts
+    .endproc
+
+    ; =====================================================================
+    ; Internal: compute the maximum line_len that fits on screen below
+    ; the prompt without forcing a scroll. Used to cap input on screens
+    ; that don't have scrollback (LCD).
+    ;
+    ;   visible_rows  = term_height - anchor_row + 1
+    ;   total_cells   = visible_rows * term_width
+    ;   capacity      = total_cells - prompt_len - 1  (clamped to >= 0)
+    ;
+    ; The "-1" reserves the bottom-right cell as a cursor parking spot.
+    ; Without it, typing the last cell triggers the LCD screen's
+    ; auto-newline (since screen.write wraps to next row when writing
+    ; the rightmost column), which would scroll the visible area and
+    ; invalidate our anchor.
+    ;
+    ; Saturates at 255 (one byte). For typical configs (height=2,
+    ; width=16, prompt_len<=32) the result fits comfortably.
+    ;
+    ; Out:
+    ;   A = visible capacity in characters
+    ;   X, Y = clobbered
+
+    .proc {{ my_def("compute_visible_cap") }}
+        ; visible_rows = term_height - anchor_row + 1.
+        ; If anchor_row > term_height, return 0 (defensive).
+        sec
+        lda {{ screen_device.zp("term_height") }}
+        sbc {{ var("anchor_row") }}
+        bcs @rows_ok
+        lda #0
+        rts                             ; A = 0.
+    @rows_ok:
+        clc
+        adc #1
+        tax                             ; X = visible_rows.
+
+        ; total_cells = visible_rows * term_width, saturating at 255.
+        lda #0
+        ldy {{ screen_device.zp("term_width") }}
+    @mul_loop:
+        cpx #0
+        beq @mul_done
+        clc
+        adc {{ screen_device.zp("term_width") }}
+        bcs @saturate                   ; Overflow: saturate.
+        dex
+        jmp @mul_loop
+    @saturate:
+        lda #255
+        jmp @cap_subtract
+    @mul_done:
+        ; A = total_cells.
+    @cap_subtract:
+        ; capacity = total_cells - prompt_len - 1, clamped to >= 0.
+        ; The extra -1 reserves the bottom-right cell so the LCD
+        ; screen layer's auto-newline-on-write-to-last-column never
+        ; triggers from typed input.
+        sec
+        sbc {{ var("prompt_len") }}
+        bcc @clamp_zero
+        sec
+        sbc #1
+        bcc @clamp_zero
+        rts
+    @clamp_zero:
+        lda #0
+    @done:
         rts
     .endproc
 
@@ -647,6 +724,22 @@ LINE_BUF_MAX = 240
         cpx {{ zp("line_max") }}
         bcs @full
 
+        ; On screens that can't scroll losslessly (e.g. LCD), cap the
+        ; live editing area at what fits on screen *below* the prompt:
+        ;   capacity = (term_height - anchor_row + 1) * term_width
+        ;              - prompt_len
+        ; Anything beyond would force a scroll, which throws away the
+        ; top of the line and breaks the cursor arithmetic. Bell and
+        ; refuse instead.
+        lda {{ screen_device.zp("scroll_capable") }}
+        bne @cap_ok
+        jsr {{ my("compute_visible_cap") }}     ; returns cap in A.
+        cmp {{ var("line_len") }}
+        beq @full                       ; cap == line_len: at cap, refuse.
+        bcc @full                       ; cap < line_len: would scroll, refuse.
+    @cap_ok:
+        ldx {{ var("line_len") }}       ; reload after the helper clobbered X.
+
         ; Fast path: append at end of line. cursor_pos == line_len
         ; means there's no tail to shift, and the visible result of
         ; inserting here is "advance the cursor by one cell on screen".
@@ -655,6 +748,8 @@ LINE_BUF_MAX = 240
         cpx {{ var("cursor_pos") }}
         bne @insert_middle
 
+        ; Reload A from read_byte — the cap check above clobbered it.
+        lda {{ var("read_byte") }}
         sta {{ var("line_buf") }},x
         inc {{ var("line_len") }}
         inc {{ var("cursor_pos") }}
@@ -1084,9 +1179,7 @@ LINE_BUF_MAX = 240
         jsr {{ my("apply_dsr_size") }}
     @reprint_size_done:
 
-        ; Force column 0 and re-query cursor row for the new anchor.
-        lda #'\r'
-        jsr {{ api("write") }}
+        ; Re-query the cursor row for the new anchor.
         jsr {{ my("clear_dsr_pending") }}
         jsr {{ screen_device.api("query_cursor_pos") }}
         bcs @reprint_anchor_set         ; Sync — A holds the row.
@@ -1098,6 +1191,14 @@ LINE_BUF_MAX = 240
         lda #1
     @reprint_anchor_set:
         sta {{ var("anchor_row") }}
+
+        ; Move to column 0 of the anchor row via the abstract
+        ; move_cursor API (no raw \r emission — that wouldn't work
+        ; on the LCD backend, where newline is row-advance).
+        ldx {{ var("anchor_row") }}
+        dex                              ; SCREEN::move_cursor is 0-indexed.
+        ldy #0
+        jsr {{ screen_device.api("move_cursor") }}
 
         lda #0
         sta {{ var("drawn_len") }}
@@ -1274,40 +1375,15 @@ LINE_BUF_MAX = 240
     .endproc
 
     ; =====================================================================
-    ; Internal: emit ESC[?25l (hide cursor).
+    ; Internal: hide / show cursor via the screen-agnostic API.
+    ;
+    ; The serial screen translates these to ESC[?25l / ESC[?25h
+    ; (DECTCEM); the LCD screen translates them to chip-level
+    ; cursor_off / cursor_on commands. This indirection keeps the
+    ; TTY free of any backend-specific control sequences.
 
-    .proc {{ my_def("emit_hide_cursor") }}
-        lda #KEY_ESC
-        jsr {{ screen_device.api("write") }}
-        lda #'['
-        jsr {{ screen_device.api("write") }}
-        lda #'?'
-        jsr {{ screen_device.api("write") }}
-        lda #'2'
-        jsr {{ screen_device.api("write") }}
-        lda #'5'
-        jsr {{ screen_device.api("write") }}
-        lda #'l'
-        jmp {{ screen_device.api("write") }}
-    .endproc
-
-    ; =====================================================================
-    ; Internal: emit ESC[?25h (show cursor).
-
-    .proc {{ my_def("emit_show_cursor") }}
-        lda #KEY_ESC
-        jsr {{ screen_device.api("write") }}
-        lda #'['
-        jsr {{ screen_device.api("write") }}
-        lda #'?'
-        jsr {{ screen_device.api("write") }}
-        lda #'2'
-        jsr {{ screen_device.api("write") }}
-        lda #'5'
-        jsr {{ screen_device.api("write") }}
-        lda #'h'
-        jmp {{ screen_device.api("write") }}
-    .endproc
+    {{ my_def("emit_hide_cursor") }} = {{ screen_device.api("hide_cursor") }}
+    {{ my_def("emit_show_cursor") }} = {{ screen_device.api("show_cursor") }}
 
     ; =====================================================================
     ; Internal: redraw the prompt + line buffer from the saved anchor.

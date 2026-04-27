@@ -8,7 +8,7 @@
 
     ; The frame buffer is used to store the printed characters in a memory buffer,
     ; making this a shadow of the characters that are visible on the physical display.
-    ; This buffer can be used to referesh the full display, exmaple when the text in
+    ; This buffer can be used to referesh the full display, for example when the text in
     ; the display display must be scrolled.
     {{ var("frame_buffer") }}:  .res {{ width * height }}
 
@@ -53,9 +53,11 @@
     ; or a serial terminal without compile-time branches.
     {{ zp_def("term_width") }}:  .res 1
     {{ zp_def("term_height") }}: .res 1
-
-;    ; A register for tracking "\r" state.
-;    {{ var("previous_was_cr") }}: .res 1
+    {{ zp_def("scroll_capable") }}: .res 1
+        ; 0 — the LCD has no scrollback. Content scrolled off the top
+        ; is permanently lost, which would break the TTY's cursor
+        ; arithmetic (anchored to the original row of the line). The
+        ; TTY refuses to type past the visible area when this is 0.
 
 .segment "KERNALROM"
 
@@ -69,14 +71,13 @@
         jsr {{ my("clear_frame_buffer") }}
         jsr {{ api("home") }}
 
-;        lda #0
-;        sta {{ var("previous_was_cr") }}
-
         ; Publish geometry to the public ZP state.
         lda #{{ width }}
         sta {{ zp("term_width") }}
         lda #{{ height }}
         sta {{ zp("term_height") }}
+        lda #0                          ; LCD has no scrollback.
+        sta {{ zp("scroll_capable") }}
 
         ; Initialize the logical -> frame buffer row mapping:
         ;   row 0 -> framebuffer row 0
@@ -184,6 +185,26 @@
         sec
         rts
     .endproc
+
+    ; =====================================================================
+    ; Hide the cursor.
+    ;
+    ; Pass-through to the chip-level cursor_off command.
+    ;
+    ; Out:
+    ;   A, X, Y = clobbered
+
+    {{ api_def("hide_cursor") }} = {{ provider_device.api("cursor_off") }}
+
+    ; =====================================================================
+    ; Show the cursor.
+    ;
+    ; Pass-through to the chip-level cursor_on command.
+    ;
+    ; Out:
+    ;   A, X, Y = clobbered
+
+    {{ api_def("show_cursor") }} = {{ provider_device.api("cursor_on") }}
 
     ; =====================================================================
     ; Write a character to the display at the current cursor position.
