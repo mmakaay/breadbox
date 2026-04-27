@@ -88,9 +88,9 @@ map:
 
 msg_banner:
     .byte "\n"
-    .byte "============================================\n"
-    .byte "          H U N T   T H E   W U M P U S\n"
-    .byte "============================================\n"
+    .byte "=============================================\n"
+    .byte "        H U N T   T H E   W U M P U S\n"
+    .byte "=============================================\n"
     .byte "\n"
     .byte "You are in a cave system shaped like a\n"
     .byte "dodecahedron. Each cave has three tunnels.\n"
@@ -110,7 +110,6 @@ msg_help:
     .byte "                       from the previous, otherwise the\n"
     .byte "                       arrow ricochets randomly.\n"
     .byte "  H or ?               Show this help.\n"
-    .byte "  Q                    Quit.\n"
     .byte "\n"
     .byte "Hazards:\n"
     .byte "  Wumpus: smell it from one cave away. If you walk into\n"
@@ -122,30 +121,36 @@ msg_help:
     .byte "\n"
     .byte 0
 
-; Schlegel-projection diagram of the dodecahedron, showing all 30 edges:
-;   - outer pentagon 1-2-3-4-5
-;   - middle belt 6-7-8-9-10-11-12-13-14-15
-;   - inner pentagon 16-17-18-19-20
-; The bottom corners are visually busy because the outer pentagon edges
-; (5\\\4 and 2///3) and the top spokes 14/4 and 12\3 share the same
-; corner glyphs but follow different diagonals.
+; Schlegel-projection diagram of the dodecahedron, showing all 30 edges.
+;
+; Cave numbers are encoded as CAVE+N ($81..$94) so they can be
+; distinguished from literal ASCII at print time. print_map walks the
+; string byte by byte: bytes < $81 are sent to the TTY as-is; bytes
+; $81..$94 are printed as their 1-indexed cave number, wrapped in
+; parentheses if that cave is the player's current location.
+;
+; Using $81+ avoids any collision with printable ASCII ($20..$7E) and
+; with the newline byte ($0A = 10), which also happens to be the value
+; for cave 10 in a raw 1-indexed encoding.
+
+CAVE = $80  ; base: CAVE+N encodes cave N (1-indexed, N=1..20)
+
 msg_map:
-    .byte "\n"
-    .byte "       .-------1------.\n"
-    .byte "      /        |       \\\n"
-    .byte "     /    7----8---9    \\\n"
-    .byte "    /    / \\      / \\    \\\n"
-    .byte "   5----6  17----18  10---2\n"
-    .byte "   |    |   |    |   |    |\n"
-    .byte "   |   15--16    19--11   |\n"
-    .byte "   |    |    \\  /    /    |\n"
-    .byte "   |     \\    20    /     |\n"
-    .byte "    \\    14    |   12    /\n"
-    .byte "     \\   / `--13--' \\   /\n"
-    .byte "      \\ /            \\ /\n"
-    .byte "       4--------------3\n"
-    .byte "\n"
-    .byte 0
+    .byte 10
+    .byte "       .-------", CAVE+ 1, "------.", 10
+    .byte "      /        |       \\", 10
+    .byte "     /    ", CAVE+ 7, "----", CAVE+ 8, "---", CAVE+ 9, "    \\", 10
+    .byte "    /    / \\      / \\    \\", 10
+    .byte "   ", CAVE+ 5, "----", CAVE+ 6, "  ", CAVE+17, "----", CAVE+18, "  ", CAVE+10, "---", CAVE+ 2, " ", 10
+    .byte "   |    |   |    |   |    |", 10
+    .byte "   |   ", CAVE+15, "--", CAVE+16, "    ", CAVE+19, "--", CAVE+11, "   |", 10
+    .byte "   |    |    \\  /    /    |", 10
+    .byte "   |     \\    ", CAVE+20, "    /     |", 10
+    .byte "    \\    ", CAVE+14, "    |   ", CAVE+12, "    /", 10
+    .byte "     \\   / `--", CAVE+13, "--' \\   /", 10
+    .byte "      \\ /            \\ /", 10
+    .byte "       ", CAVE+ 4, "--------------", CAVE+ 3, " ", 10
+    .byte 10, 0
 
 msg_prompt:        .asciiz "> "
 msg_press_enter:   .asciiz "Press Enter to start. "
@@ -164,10 +169,8 @@ msg_arrow_miss:    .asciiz "Missed.\n"
 msg_arrow_ricochet:.asciiz "* The arrow ricochets!\n"
 msg_wumpus_wakes:  .asciiz "* You hear lumbering. The Wumpus is on the move...\n"
 msg_out_of_arrows: .asciiz "\n** Out of arrows. **\n"
-msg_won:           .asciiz "\nYou win! Care for another round?\n"
-msg_lost:          .asciiz "\nGame over. Better luck next time.\n"
-msg_play_again:    .asciiz "Play again? (Y/N) "
-msg_bye:           .asciiz "\nThanks for playing.\n"
+msg_won:           .asciiz "\nYou win!\n"
+msg_lost:          .asciiz "\nGame over.\n"
 msg_huh:           .asciiz "I don't understand that. Type H for help.\n"
 msg_not_adjacent:  .asciiz "That cave isn't connected to this one.\n"
 msg_bad_cave:      .asciiz "That isn't a valid cave number.\n"
@@ -216,6 +219,8 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
     parse_acc:   .res 1   ; running accumulator in parse_cave_arg
     parse_dig:   .res 1   ; scratch in parse_cave_arg's *10 step
     lookup_tmp:  .res 1   ; scratch *inside* lookup_neighbour only.
+    map_ptr:     .res 2   ; 16-bit pointer used by print_map.
+    map_buf:     .res 1   ; one-byte look-behind buffer in print_map.
 
 ; ===========================================================================
 ; Public entry point.
@@ -275,28 +280,37 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
         lda game_over
         beq @after_action
 
-        ; Game ended this turn. Print the closing banner, ask to replay.
+        ; Game ended this turn. Show outcome, then loop back to the
+        ; Press-Enter prompt for a fresh round with a new PRNG seed.
         cmp #GAME_WON
         bne @lost
         PRINT TTY::write, msg_won
         jsr lcd_show_win
-        jmp @ask_replay
+        jmp @next_round
     @lost:
         PRINT TTY::write, msg_lost
         jsr lcd_show_dead
-    @ask_replay:
-        jsr ask_replay
-        bcc @bye
+    @next_round:
+        ; Re-use the same Press-Enter prompt + seed mechanism as at boot.
+        ; The player takes a non-deterministic amount of time to read the
+        ; outcome and press Enter, giving us fresh entropy every round.
+        SET_POINTER TTY::prompt, msg_press_enter
+    @wait_next:
+        jsr TTY::readline
+        bcc @wait_next
+        lda TICKER::ticks
+        ora #1
+        sta prng__seed_lo
+        lda TICKER::ticks + 1
+        sta prng__seed_hi
+        SET_POINTER TTY::prompt, msg_prompt
+        jsr lcd_show_welcome
         jmp @new_game
 
     @after_action:
         jsr update_lcd_status
         jsr show_room
         jmp @turn_loop
-
-    @bye:
-        PRINT TTY::write, msg_bye
-        rts
     .endproc
 
 ; ===========================================================================
@@ -539,10 +553,6 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
         beq @shoot
         cmp #'s'
         beq @shoot
-        cmp #'Q'
-        beq @quit
-        cmp #'q'
-        beq @quit
         cmp #'H'
         beq @help
         cmp #'h'
@@ -572,7 +582,7 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
         jmp @move_parse
 
     @show_map:
-        PRINT TTY::write, msg_map
+        jsr print_map
         rts
 
     @move_parse:
@@ -583,11 +593,6 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
     @shoot:
         inc parse_idx
         jmp do_shoot
-
-    @quit:
-        lda #GAME_LOST
-        sta game_over
-        rts
 
     @help:
         PRINT TTY::write, msg_help
@@ -946,40 +951,7 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
 ; ---------------------------------------------------------------------------
 
     ; Out: C=1 → play again, C=0 → quit.
-    .proc ask_replay
-        SET_POINTER TTY::prompt, msg_play_again
-    @wait:
-        jsr TTY::readline
-        bcc @wait
-        sta parse_len
 
-        ; Restore the game prompt for the next round.
-        SET_POINTER TTY::prompt, msg_prompt
-
-        lda parse_len
-        beq @no                         ; empty answer → quit.
-
-        ldx #0
-    @skip:
-        cpx parse_len
-        bcs @no
-        lda line_buffer,x
-        cmp #' '
-        bne @check
-        inx
-        jmp @skip
-    @check:
-        cmp #'Y'
-        beq @yes
-        cmp #'y'
-        beq @yes
-    @no:
-        clc
-        rts
-    @yes:
-        sec
-        rts
-    .endproc
 
 ; ---------------------------------------------------------------------------
 ; Helpers.
@@ -990,6 +962,125 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
         sta fmtdec::value
         jsr fmtdec
         PRINT_PTR TTY::write, fmtdec::decimal
+        rts
+    .endproc
+
+    ; -----------------------------------------------------------------------
+    ; Advance the map string pointer by one byte (helper for print_map).
+
+    .proc advance_map_ptr
+        inc map_ptr
+        bne :+
+        inc map_ptr + 1
+    :   rts
+    .endproc
+
+    ; -----------------------------------------------------------------------
+    ; Print the cave map, wrapping the player's cave in parentheses while
+    ; keeping every line exactly the same width as the unmarked diagram.
+    ;
+    ; The trick: use a one-byte look-behind buffer (map_buf). We stay one
+    ; step behind the read head. When we hit a cave byte, the previously
+    ; read char (still unprinted in map_buf) is the LEFT FLANK — a dash or
+    ; space that we absorb into '(' for the active cave, or emit normally
+    ; for any other cave. After printing the cave number, we peek at the
+    ; next byte: if it's a dash or space (the RIGHT FLANK), we consume it
+    ; and it becomes ')'. Result:
+    ;
+    ;    inactive cave 13 in `--13--`:  emit `-`, emit `13`, next loop: `-`
+    ;    active   cave 13 in `--13--`:  emit `(`, emit `13`, emit `)`, skip `-`
+    ;
+    ; Both produce the same on-screen width. The diagram layout is
+    ; preserved regardless of which cave the player is in.
+    ;
+    ; Caves 2 and 3 sit at line-ends (right neighbour = newline). A
+    ; trailing space is appended to their encoded lines so the right-flank
+    ; absorber always has a space to consume; the trailing space is
+    ; invisible on a typical terminal.
+
+    .proc print_map
+        lda #<msg_map
+        sta map_ptr
+        lda #>msg_map
+        sta map_ptr + 1
+        lda #0
+        sta map_buf                 ; buffer empty at start
+
+    @loop:
+        ldy #0
+        lda (map_ptr),y
+        beq @flush_done
+
+        cmp #CAVE + 1
+        bcc @regular
+        cmp #CAVE + 21
+        bcs @regular
+
+        ; ---------- cave byte CAVE+N ----------
+        sta lookup_tmp              ; save encoded byte
+
+        ; Is this the player's cave? (convert 1-indexed N to 0-indexed)
+        sec
+        sbc #CAVE + 1               ; A = N - 1 (0-indexed)
+        cmp player_cave
+        bne @cave_inactive
+
+        ; Active cave: discard left-flank buffer, emit ( N )
+        lda #'('
+        jsr TTY::write
+        lda lookup_tmp
+        sec
+        sbc #CAVE                   ; A = N (1-indexed)
+        jsr print_dec_a
+        lda #')'
+        jsr TTY::write
+        jsr advance_map_ptr         ; skip past the cave byte
+        ; Peek at next byte; absorb as right flank if it's '-' or ' '.
+        ldy #0
+        lda (map_ptr),y
+        cmp #'-'
+        beq @skip_right
+        cmp #' '
+        bne @cave_done
+    @skip_right:
+        jsr advance_map_ptr         ; consume right flank
+    @cave_done:
+        lda #0
+        sta map_buf
+        jmp @loop
+
+    @cave_inactive:
+        ; Emit buffered left flank normally, then emit the cave number.
+        lda map_buf
+        beq :+
+        jsr TTY::write
+    :   lda #0
+        sta map_buf
+        lda lookup_tmp
+        sec
+        sbc #CAVE                   ; A = N (1-indexed)
+        jsr print_dec_a
+        jsr advance_map_ptr         ; skip past the cave byte
+        jmp @loop
+
+        ; ---------- regular ASCII byte ----------
+    @regular:
+        ; Save the current byte across the TTY::write call (which clobbers A).
+        pha
+        lda map_buf
+        beq :+
+        jsr TTY::write
+    :   pla
+        sta map_buf
+        jsr advance_map_ptr
+        jmp @loop
+
+    @flush_done:
+        ; Emit any byte still in the buffer, then stop.
+        lda map_buf
+        beq @done
+        jsr TTY::write
+    @done:
         rts
     .endproc
 

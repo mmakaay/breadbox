@@ -21,6 +21,7 @@
       <excludeFolder url="file://$MODULE_DIR$/projects/test-ticker/build" />
       <excludeFolder url="file://$MODULE_DIR$/projects/test-tty/build" />
       <excludeFolder url="file://$MODULE_DIR$/projects/wozmon/build" />
+      <excludeFolder url="file://$MODULE_DIR$/projects/wumpus/build" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.13 (breadbox)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

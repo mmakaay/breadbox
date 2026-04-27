@@ -14,7 +14,5 @@
 .segment "CODE"
 
     .proc main
-        jsr wumpus_run
-    @halt:
-        jmp @halt
+        jmp wumpus_run              ; never returns — the game loops forever.
     .endproc
