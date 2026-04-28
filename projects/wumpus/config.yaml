@@ -12,6 +12,13 @@ TICKER:
   ms_per_tick: 10
   timers: {}
 
+LED:
+  component: gpio_pin
+  provider: VIA
+  pin: PA1
+  default: off
+  direction: out
+
 LCD:
   component: lcd_hd44780
   cmnd_pins:

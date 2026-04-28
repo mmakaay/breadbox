@@ -6,8 +6,8 @@
 ; repeating; the all-zero state is a fixed point and must never be
 ; the seed.
 ;
-; Public API (all symbols exported with the prng__ prefix to avoid
-; namespace clashes when imported into wumpus.s):
+; Public API
+:
 ;   prng__seed_lo / prng__seed_hi    Current LFSR state (16-bit, non-zero).
 ;                                    Caller seeds these once at startup;
 ;                                    every step() call advances them.

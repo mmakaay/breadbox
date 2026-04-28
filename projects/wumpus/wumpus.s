@@ -136,21 +136,21 @@ msg_help:
 CAVE = $80  ; base: CAVE+N encodes cave N (1-indexed, N=1..20)
 
 msg_map:
-    .byte 10
-    .byte "       .-------", CAVE+ 1, "------.", 10
-    .byte "      /        |       \\", 10
-    .byte "     /    ", CAVE+ 7, "----", CAVE+ 8, "---", CAVE+ 9, "    \\", 10
-    .byte "    /    / \\      / \\    \\", 10
-    .byte "   ", CAVE+ 5, "----", CAVE+ 6, "  ", CAVE+17, "----", CAVE+18, "  ", CAVE+10, "---", CAVE+ 2, " ", 10
-    .byte "   |    |   |    |   |    |", 10
-    .byte "   |   ", CAVE+15, "--", CAVE+16, "    ", CAVE+19, "--", CAVE+11, "   |", 10
-    .byte "   |    |    \\  /    /    |", 10
-    .byte "   |     \\    ", CAVE+20, "    /     |", 10
-    .byte "    \\    ", CAVE+14, "    |   ", CAVE+12, "    /", 10
-    .byte "     \\   / `--", CAVE+13, "--' \\   /", 10
-    .byte "      \\ /            \\ /", 10
-    .byte "       ", CAVE+ 4, "--------------", CAVE+ 3, " ", 10
-    .byte 10, 0
+    .byte "\n"
+    .byte "       .-------", CAVE+1, "------.\n"
+    .byte "      /        |       \\\n"
+    .byte "     /    ", CAVE+7, "----", CAVE+8, "---", CAVE+9, "    \\\n"
+    .byte "    /    / \\      / \\    \\\n"
+    .byte "   ", CAVE+5, "----", CAVE+6, "  ", CAVE+17, "----", CAVE+18, "  ", CAVE+10, "---", CAVE+ 2, " \n"
+    .byte "   |    |   |    |   |    |\n"
+    .byte "   |   ", CAVE+15, "--", CAVE+16, "    ", CAVE+19, "--", CAVE+11, "   |\n"
+    .byte "   |    |    \\  /    /    |\n"
+    .byte "   |     \\    ", CAVE+20, "    /     |\n"
+    .byte "    \\    ", CAVE+14, "    |   ", CAVE+12, "    /\n"
+    .byte "     \\   / `--", CAVE+13, "--' \\   /\n"
+    .byte "      \\ /            \\ /\n"
+    .byte "       ", CAVE+4, "--------------", CAVE+3, " \n"
+    .byte "\n", 0
 
 msg_prompt:        .asciiz "> "
 msg_press_enter:   .asciiz "Press Enter to start. "
@@ -178,12 +178,9 @@ msg_too_long_path: .asciiz "An arrow can travel through at most 5 caves.\n"
 msg_no_arrows:     .asciiz "You have no arrows left!\n"
 msg_no_path:       .asciiz "Where would you shoot? Specify at least one cave.\n"
 msg_comma:         .asciiz ", "
-msg_dot_nl:        .byte ".", 10, 0
+msg_dot_nl:        .asciiz ".\n"
 msg_and:           .asciiz "and "
-msg_separator:
-    .byte "\n"
-    .byte "------------------------\n"
-    .byte 0
+msg_separator:     .asciiz "\n------------------------\n"
 msg_lcd_dead:      .asciiz "*** GAME OVER ***"
 msg_lcd_win:       .asciiz "  YOU WIN! :-) "
 msg_lcd_welcome1:  .asciiz "Hunt the Wumpus "
@@ -210,7 +207,7 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
 
     parse_idx:   .res 1   ; cursor in line_buffer during parsing
     parse_len:   .res 1   ; length returned from readline
-    arrow_count: .res 1   ; caves named in this shot
+    arrow_count: .res 1   ; number of caves named in a shot
     arrow_idx:   .res 1   ; loop index while flying the arrow
     arrow_pos:   .res 1   ; cave the arrow is currently in (fly_arrow)
     arrow_next:  .res 1   ; next cave the arrow will travel to
@@ -236,7 +233,7 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
         sta TTY::line_max
 
         ; Show a welcome on the LCD while we wait for the user. As soon
-        ; as the game starts, update_lcd_status will overwrite it with
+        ; as the game starts, lcd_show_cave_and_arrows will overwrite it with
         ; the live "Cave NN / Arrows N" status display.
         jsr lcd_show_welcome
 
@@ -264,7 +261,8 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
 
     @new_game:
         jsr setup_world
-        jsr update_lcd_status
+        jsr lcd_show_cave_and_arrows
+        jsr update_led
         jsr show_room
 
     @turn_loop:
@@ -291,6 +289,9 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
         PRINT TTY::write, msg_lost
         jsr lcd_show_dead
     @next_round:
+        ; Turn the LED off while waiting between rounds so it doesn't
+        ; mislead the player about Wumpus proximity in the new game.
+        jsr LED::turn_off
         ; Re-use the same Press-Enter prompt + seed mechanism as at boot.
         ; The player takes a non-deterministic amount of time to read the
         ; outcome and press Enter, giving us fresh entropy every round.
@@ -308,7 +309,8 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
         jmp @new_game
 
     @after_action:
-        jsr update_lcd_status
+        jsr lcd_show_cave_and_arrows
+        jsr update_led
         jsr show_room
         jmp @turn_loop
     .endproc
@@ -947,13 +949,6 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
     .endproc
 
 ; ---------------------------------------------------------------------------
-; Replay prompt.
-; ---------------------------------------------------------------------------
-
-    ; Out: C=1 → play again, C=0 → quit.
-
-
-; ---------------------------------------------------------------------------
 ; Helpers.
 ; ---------------------------------------------------------------------------
 
@@ -976,8 +971,7 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
     .endproc
 
     ; -----------------------------------------------------------------------
-    ; Print the cave map, wrapping the player's cave in parentheses while
-    ; keeping every line exactly the same width as the unmarked diagram.
+    ; Print the cave map, wrapping the player's cave in parentheses.
     ;
     ; The trick: use a one-byte look-behind buffer (map_buf). We stay one
     ; step behind the read head. When we hit a cave byte, the previously
@@ -995,8 +989,7 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
     ;
     ; Caves 2 and 3 sit at line-ends (right neighbour = newline). A
     ; trailing space is appended to their encoded lines so the right-flank
-    ; absorber always has a space to consume; the trailing space is
-    ; invisible on a typical terminal.
+    ; absorber always has a space to consume.
 
     .proc print_map
         lda #<msg_map
@@ -1035,14 +1028,13 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
         lda #')'
         jsr TTY::write
         jsr advance_map_ptr         ; skip past the cave byte
-        ; Peek at next byte; absorb as right flank if it's '-' or ' '.
+        ; Consume one more byte as the right flank, unless we've hit the
+        ; null terminator. Every non-null byte after a cave number in the
+        ; diagram is a valid flank character (dash, space, or the trailing
+        ; space added to end-of-line caves 2 and 3).
         ldy #0
         lda (map_ptr),y
-        cmp #'-'
-        beq @skip_right
-        cmp #' '
-        bne @cave_done
-    @skip_right:
+        beq @cave_done              ; null terminator — nothing to consume.
         jsr advance_map_ptr         ; consume right flank
     @cave_done:
         lda #0
@@ -1076,11 +1068,10 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
         jmp @loop
 
     @flush_done:
-        ; Emit any byte still in the buffer, then stop.
+        ; The null terminator was reached. map_buf holds the last byte of
+        ; the string. Emit it and return.
         lda map_buf
-        beq @done
         jsr TTY::write
-    @done:
         rts
     .endproc
 
@@ -1088,7 +1079,20 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
 ; LCD status display.
 ; ---------------------------------------------------------------------------
 
-    .proc update_lcd_status
+    .proc lcd_show_welcome
+        jsr LCD::clr
+        ldx #0
+        ldy #0
+        jsr LCD::move_cursor
+        PRINT LCD::write, msg_lcd_welcome1
+        ldx #1
+        ldy #0
+        jsr LCD::move_cursor
+        PRINT LCD::write, msg_lcd_welcome2
+        rts
+    .endproc
+
+    .proc lcd_show_cave_and_arrows
         jsr LCD::clr
 
         ; Row 0: "Cave NN"
@@ -1155,15 +1159,22 @@ msg_lcd_welcome2:  .asciiz "Enter to start  "
         rts
     .endproc
 
-    .proc lcd_show_welcome
-        jsr LCD::clr
-        ldx #0
-        ldy #0
-        jsr LCD::move_cursor
-        PRINT LCD::write, msg_lcd_welcome1
-        ldx #1
-        ldy #0
-        jsr LCD::move_cursor
-        PRINT LCD::write, msg_lcd_welcome2
-        rts
+    ; -----------------------------------------------------------------------
+    ; Update the LED to reflect Wumpus proximity.
+    ;
+    ;   LED on  → Wumpus is in an adjacent cave (you can smell it).
+    ;   LED off → Wumpus is not adjacent.
+    ;
+    ; This gives a real-world, glanceable indicator independent of the
+    ; terminal output. The LED turns off automatically at round start /
+    ; the Press-Enter screen so it doesn't mislead between games.
+
+    .proc update_led
+        lda wumpus_cave
+        sta probe_cave
+        jsr is_neighbour_of_player
+        bcs @on
+        jmp LED::turn_off
+    @on:
+        jmp LED::turn_on
     .endproc
